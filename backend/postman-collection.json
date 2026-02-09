@@ -1,0 +1,2549 @@
+{
+  "info": {
+    "_postman_id": "b0156136-b412-4c43-8285-434f4bfd9bf0",
+    "name": "School Management APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "30812601"
+  },
+  "item": [
+    {
+      "name": "Tenant Management",
+      "item": [
+        {
+          "name": "Create Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Sri Santhinikethan English Medium High School, Kadiri\",\n  \"contactAddress\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Springfield\",\n    \"state\": \"IL\",\n    \"zip\": \"515591\"\n  },\n  \"contactPhone\": \"+917416557472\",\n  \"contactEmail\": \"tenant@gmail.com\",\n  \"adminFullName\": \"Siddiq\",\n  \"adminPhone\": \"+917416557472\",\n  \"adminEmail\": \"tenant@gmail.com\",\n  \"subscriptionPlan\": \"premium\"\n}\n"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/tenants",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "tenants"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tenants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyJwt}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/tenants",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "tenants"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tenant By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyJwt}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/tenants/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "tenants",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tenant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Tenant Name\",\n  \"address\": \"Updated Address\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/tenants/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "tenants",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Tenant",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyJwt}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/tenants/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "tenants",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Details By Domain",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "",
+                "value": "",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"domain\": \"https://devyaseen.in\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/public/domain",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "public",
+                "domain"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Shabbu\",\n  \"lastName\": \"Mohammed\",\n  \"email\": \"smd@aiyaan.com\",\n  \"password\": \"shabbu@123\",\n  \"role\": \"super_admin\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Company User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Yaseen\",\n  \"email\": \"yaseen@aiyaan.com\",\n  \"password\": \"Yaseen@123\",\n  \"userType\": \"company\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/company",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                "company"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Company Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/company",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                "company"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"fullName\": \"Jane Doe\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"oldPassword123\",\n  \"newPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/password",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                "password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forget Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/forget-password",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                "forget-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password With OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/reset-password",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/users/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Courses Module",
+      "item": [
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseName\": \"Bi.P.C\",\n  \"courseDescription\": \"Deals with Biology, Physics and Chemistry.\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/courses",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/courses",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Course By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/courses/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "courses",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Course",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseName\": \"Advanced Mathematics\",\n  \"courseDescription\": \"An updated description for the course.\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/courses/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "courses",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Course",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/courses/c8d384d5-3e74-4f6c-8314-db65b1611c6a",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "courses",
+                "c8d384d5-3e74-4f6c-8314-db65b1611c6a"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleName\": \"Admin\",\n  \"description\": \"Administrator role with all permissions.\",\n  \"permissions\": [\"manage_users\", \"view_reports\", \"edit_content\"]\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/roles",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "roles"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/roles",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "roles"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/roles/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleName\": \"Updated Admin\",\n  \"permissions\": [\"manage_users\", \"view_reports\"]\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/roles/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/roles/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"yaseen@aiyaan.com\",\n  \"password\": \"Yaseen@123\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Tenant Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"admin@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyJwt}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/auth/logout",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Grades",
+      "item": [
+        {
+          "name": "Create Grade",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"<course_id>\",\n  \"gradeName\": \"Grade 10\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/grades",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "grades"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Grades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/grades",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "grades"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Grade By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/grades/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "grades",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Grade",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"<updated_course_id>\",\n  \"gradeName\": \"Updated Grade Name\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/grades/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "grades",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Grade",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/grades/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "grades",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sections",
+      "item": [
+        {
+          "name": "Create Section",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gradeId\": \"<grade_id>\",\n  \"sectionName\": \"Section A\",\n  \"subjectIds\": [\n    \"<subject_id_1>\",\n    \"<subject_id_2>\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/sections",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "sections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Sections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/sections",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "sections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Section By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/sections/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "sections",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Section",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gradeId\": \"<updated_grade_id>\",\n  \"sectionName\": \"Updated Section A\",\n  \"subjectIds\": [\n    \"<updated_subject_id_1>\",\n    \"<updated_subject_id_2>\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/sections/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "sections",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Section",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "tenantId",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/sections/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "sections",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Subjects",
+      "item": [
+        {
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectName\": \"Physics\",\n  \"courseId\": \"87a3891a-609f-41f8-a4aa-538004756765\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/subjects",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "subjects"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Subjects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/subjects",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "subjects"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Subjects By Course",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/subjects/course/87a3891a-609f-41f8-a4aa-538004756765",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "subjects",
+                "course",
+                "87a3891a-609f-41f8-a4aa-538004756765"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Subject By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/subjects/58b39fed-aafe-4210-9b49-15c7af9fe7ec",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "subjects",
+                "58b39fed-aafe-4210-9b49-15c7af9fe7ec"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Subject",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectName\": \"Biology\",\n  \"isCommon\": true\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/subjects/58b39fed-aafe-4210-9b49-15c7af9fe7ec",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "subjects",
+                "58b39fed-aafe-4210-9b49-15c7af9fe7ec"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Subject",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/subjects/c1c8bf0a-71b5-49e5-ac73-1bbad185175f",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "subjects",
+                "c1c8bf0a-71b5-49e5-ac73-1bbad185175f"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory Management",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Electronics\",\n  \"description\": \"Category for electronic items.\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/inventory/categories",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "inventory",
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantJwt}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/inventory/categories",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "inventory",
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Laptop\",\n  \"description\": \"A high-performance laptop.\",\n  \"categoryId\": \"example-category-id\",\n  \"stockAvailable\": 50\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/inventory/items",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "inventory",
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantJwt}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/inventory/items",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "inventory",
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Adjust Stock",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantJwt}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adjustmentAmount\": 10,\n  \"reason\": \"Restock\",\n  \"borrowerName\": \"\",\n  \"borrowerId\": \"\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/inventory/items/:id/stock",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "inventory",
+                "items",
+                ":id",
+                "stock"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "example-item-id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Uploads Management",
+      "item": [
+        {
+          "name": "Generate Pre-signed URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/uploads/presigned-url",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "uploads",
+                "presigned-url"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Store File Metadata",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"middle_name\": \"M.\",\n  \"last_name\": \"Doe\",\n  \"date_of_birth\": \"2010-05-15\",\n  \"gender\": \"Male\",\n  \"aadhaar_number\": \"123456789012\",\n  \"caste_category\": \"General\",\n  \"sub_caste\": \"NA\",\n  \"religion\": \"Christianity\",\n  \"mother_tongue\": \"English\",\n  \"blood_group\": \"O+\",\n  \"nationality\": \"Indian\",\n  \"identification_marks\": \"Mole on left hand\",\n  \"class_applying_for\": \"5th Grade\",\n  \"medium_of_instruction\": \"English\",\n  \"previous_school_name\": \"ABC Primary School\",\n  \"previous_class_attended\": \"4th Grade\",\n  \"transfer_certificate_number\": \"TC123456\",\n  \"date_of_issue_tc\": \"2023-03-25\",\n  \"mode_of_transport\": \"School Bus\",\n  \"father_name\": \"Michael Doe\",\n  \"father_occupation\": \"Engineer\",\n  \"father_phone\": \"9876543210\",\n  \"father_aadhaar\": \"123456789012\",\n  \"mother_name\": \"Sarah Doe\",\n  \"mother_occupation\": \"Doctor\",\n  \"mother_phone\": \"8765432109\",\n  \"mother_aadhaar\": \"098765432109\",\n  \"guardian_name\": \"Uncle Joe\",\n  \"guardian_relation\": \"Uncle\",\n  \"guardian_contact\": \"7654321098\",\n  \"permanent_address\": \"123, Green Street, New Delhi\",\n  \"village_town\": \"Delhi\",\n  \"mandal\": \"NA\",\n  \"district\": \"South Delhi\",\n  \"state\": \"Delhi\",\n  \"pincode\": \"110001\",\n  \"communication_address\": \"Same as permanent address\",\n  \"known_allergies\": \"Peanuts\",\n  \"medical_conditions\": \"None\",\n  \"disability_status\": \"None\",\n  \"immunization_details\": \"All vaccinations completed\",\n  \"photo_url\": \"https://example.com/photo.jpg\",\n  \"birth_certificate_url\": \"https://example.com/birth_certificate.pdf\",\n  \"aadhaar_card_url\": \"https://example.com/aadhaar.pdf\",\n  \"caste_certificate_url\": \"https://example.com/caste_certificate.pdf\",\n  \"income_certificate_url\": \"https://example.com/income_certificate.pdf\",\n  \"domicile_certificate_url\": \"https://example.com/domicile_certificate.pdf\",\n  \"previous_marksheet_url\": \"https://example.com/marksheet.pdf\",\n  \"transfer_certificate_url\": \"https://example.com/transfer_certificate.pdf\",\n  \"ration_card_url\": \"https://example.com/ration_card.pdf\",\n  \"fee_payment_mode\": \"Online\",\n  \"bank_account_details\": \"Bank of India, A/C No: 123456789012, IFSC: BOI123456\",\n  \"mid_day_meal_eligibility\": true,\n  \"declaration_by_parent\": true,\n  \"parent_signature_url\": \"https://example.com/parent_signature.jpg\",\n  \"student_signature_url\": \"https://example.com/student_signature.jpg\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/uploads",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "uploads"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Files for an Entity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/uploads/tenant123/students/student_123",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "uploads",
+                "tenant123",
+                "students",
+                "student_123"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific File for an Entity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/uploads/tenant123/students/student_123/profile_picture",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "uploads",
+                "tenant123",
+                "students",
+                "student_123",
+                "profile_picture"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/uploads/tenant123/students/student_123/abcd1234",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "uploads",
+                "tenant123",
+                "students",
+                "student_123",
+                "abcd1234"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "New Request",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{companyJwt}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n       \"cors\": [\n         {\n           \"origin\": [\"http://localhost:3000\"],\n           \"method\": [\"GET\", \"PUT\", \"POST\", \"DELETE\"],\n           \"responseHeader\": [\"Content-Type\", \"Authorization\"],\n           \"maxAgeSeconds\": 3600\n         }\n       ]\n     }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5001/api/gcs/update-cors",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5001",
+          "path": [
+            "api",
+            "gcs",
+            "update-cors"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "New Request",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{companyJwt}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/api/gcs/view-metadata",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5001",
+          "path": [
+            "api",
+            "gcs",
+            "view-metadata"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Students",
+      "items": [
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/students",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "students"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dateOfBirth\": \"2008-05-12\",\n  \"gender\": \"Male\",\n  \"courseId\": \"uuid-course\",\n  \"gradeId\": \"uuid-grade\",\n  \"sectionId\": \"uuid-section\",\n  \"admissionNumber\": \"ADM12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/students",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "students"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/students/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "students",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/students/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "students",
+                ":id"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"gradeId\": \"new-uuid-grade\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Student",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/students/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "students",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Academic Years",
+      "item": [
+        {
+          "name": "Create Academic Year",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2025-26\",\n  \"startDate\": \"2025-04-01T00:00:00Z\",\n  \"endDate\": \"2026-03-31T23:59:59Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Academic Years",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Academic Year",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years/active",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years",
+                "active"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Academic Year By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Academic Year",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2025-26-Updated\",\n  \"startDate\": \"2025-04-01T00:00:00Z\",\n  \"endDate\": \"2026-03-31T23:59:59Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years/:id",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Academic Year",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years/:id/activate",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years",
+                ":id",
+                "activate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Archive Academic Year",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "type": "text",
+                "key": "x-tenant-id",
+                "value": "{{x-tenant-id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/academic-years/:id/archive",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "academic-years",
+                ":id",
+                "archive"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMzg0OTdhOTQtZDRhMy00NzYwLWExODctOTA2YzNmZGM3MWMxIiwidXNlcl90eXBlIjoidGVuYW50IiwidGVuYW50X2lkIjoiYjBiZmEzYjEtZTMyMC00YTNmLTgxNzYtMWI4NzI4ZmY5NDBmIiwiaWF0IjoxNzM4MTU2MDYwLCJleHAiOjE4MjU5OTYwNjB9.nfcC7C_ZCnv_MEsF7IOuQaoZVJAGLIVSWM868vS0f9w",
+      "type": "string"
+    },
+    {
+      "key": "x-tenant-id",
+      "value": "b0bfa3b1-e320-4a3f-8176-1b8728ff940f",
+      "type": "string"
+    },
+    {
+      "key": "host",
+      "value": "localhost",
+      "type": "string"
+    },
+    {
+      "key": "port",
+      "value": "5001",
+      "type": "string"
+    },
+    {
+      "key": "companyJwt",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNGMwY2NlMTctY2JjYS00YjU5LTlmMmQtMWEzOWQyMDBlMDhkIiwidXNlcl90eXBlIjoiY29tcGFueSIsInRlbmFudF9pZCI6bnVsbCwiaWF0IjoxNzM4MTU1OTYyLCJleHAiOjE4MjU5OTU5NjJ9.3zLMeVi1tzJMX2vJc4uf-0TLD9t4-Eda9ftamt4kDr0",
+      "type": "string"
+    }
+  ]
+}

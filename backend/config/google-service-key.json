@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "compact-gadget-449609-h1",
+  "private_key_id": "2daad171303c3d5bfc197413eab5d9e60c37d4fc",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCyiu6prR6+Xitg\nLM3vXG7ewoWuRdsTxeHB/LuzN5Bc5MlCEgeGI5nWxvs4sgBRdAtjzx5UHNf58D6i\nG2BPDEYWdOnQpChiRj0O1YVSbVfxYQ9ZOpMjRVMJc53SZBRLfMdEkj7WiREBxmRk\nboJOf7N6NfK3RNYL8Y9n10WoRcNb4c+knwbQPKiWugAiaSqokmDjW64xgW6zB/oM\nG1jXJKd/35iDd05lBAsMdAZ7TO4tJh+5jB8ciPDE/VelqU8BKn071HCMIIwLSFVj\nhE8ZfgNzjWD1FQCcFjT5ZyAyb+nnQX04gavzZVunDXHvFLiQW7tue83YxDBwH6+2\n6E3MxOBNAgMBAAECggEAHlOzDmc1nahpPcDeihXtTzFDe8Kp38Xw/v5q85owj1bd\nSLe/R22sp+rMqWiy3SMU/DMmN6telDnWqbp0tXikPxRE0wfPREIiBO8H4mRoV7vg\n24sziv4viJ9241HUkK31OxSMT+ygUujcDKMoxySx28RmIfMzWHwDm+PZFSgkcuqz\ne+DWi/257dBS9Vfk0PsfpIY7midBROCZ/xDduwQ6ELiWTvfN/jDUV8TmXZum+32H\nuN75E7S90ap8h3HuwaoLWtOnO67RY4Vc488OJ2nJuD0zEV1xWB3l2V7FEE8TuyGI\nQnxVEwrMVydL8AyvfbLNyRfhkuus5DvTH9Si2UEWEQKBgQDnRU3Rs1dhnVCrr4nK\nqOPAcNzClCMBkR5CvRdMlvjPNmgIcAzHLz+jv4EzHNOvA9+dDw77XOy60MngBVhZ\nWx8PMIM2TQWEwBzcltGoBTP7mWWehkOCzg8YDBMWjJYmiSXWD1R8P0M8P0A6/P/L\nKGgieVQQifBbqA9ZnqgWS15sOwKBgQDFokbB1YHjFj5aql391BTm6t0cuhhYbq3b\nvkEb5COiFbWVmvTax8ca2Hbet78ksEz3tdVPeQOpQBVWSFHruSjXoBVL7Fyuv4/p\njH39rJ8AK65CsiQgIEgaRrm4KyL7441c7UeBN/QksiKxBwpcAv0tDyY006DIXYa9\nCUMw1sQFFwKBgET6g8JnBkoEHNqIScXbZ8qvHvkeK+68tNTdB0T9xoovRQo3OWhz\nbDzP0p5HG9AYjKqQojxQs/7oZT3e+kH0jqf+JTSd9mZo0nLsvO2rV5zUXN3SV/J8\nuT3H5C2WkvY9c76L5fwE9m3Sw7qUWUrj62NU4sDoE3uS/bkSPDoiErCfAoGBAKdF\nDXYI6wH0VZoPD7ZBxd8bcUFbEDfolSWjBSBCGxaYITQaDpsM8yt5gkJGanT28m3F\nbGDzH3IkVurMEunbsQGu79dumZMddwRIcGo/q+NNFRRGCeVW7S+wJIgHmnhuw7qe\n6SIo5W4ZhtsmBlKSBQ4aAFA9vZtX7S4ZpNC1NPrJAoGABmtTYZrHo9TVHsXWnrcX\npauIgaEsCoStI8fWJUOYjLasOhhDlae1SvinFfov7+jNsagALNyo5N4dhEX/SLF2\nBiDgZ3oFgBwZjAQ8yOQ+/U6GPAhNkci9ZY8qK/hrGjUq7Sk2bLOq5isKzfkSeQrq\n9nRxzCmpkPsUgzscyeFuGlk=\n-----END PRIVATE KEY-----\n",
+  "client_email": "school-management-admin@compact-gadget-449609-h1.iam.gserviceaccount.com",
+  "client_id": "115032291199343049236",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/school-management-admin%40compact-gadget-449609-h1.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
