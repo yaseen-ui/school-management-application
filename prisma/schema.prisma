@@ -15,6 +15,12 @@ enum UserType {
   tenant
 }
 
+enum EntityStatus {
+  active
+  inactive
+  suspended
+}
+
 enum Gender {
   Male
   Female
@@ -66,20 +72,36 @@ enum ExamStatus {
   archived
 }
 
+enum HolidayType {
+  public
+  school
+  optional
+  vacation
+}
+
+enum SubscriptionPlan {
+  free
+  starter
+  growth
+  enterprise
+}
+
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
-  id               String   @id @default(uuid())
+  id               String           @id @default(uuid())
   schoolName       String
   contactAddress   Json?
   contactPhone     String?
   contactEmail     String?
-  adminEmail       String?
-  subscriptionPlan String?
-  domain           String?  @unique
-  logo             String?  @unique
-  caption          String?  @unique
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  subscriptionPlan SubscriptionPlan @default(free)
+  domain           String?          @unique
+  logo             String?
+  caption          String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // relations
   users               User[]
@@ -117,42 +139,66 @@ model Tenant {
   examPapers    ExamPaper[]
   examMarks     ExamMark[]
   gradingScales GradingScale[]
+  gradingBands  GradingBand[]
+
+  // calendar
+  holidays Holiday[]
 
   @@map("tenants")
 }
 
 model User {
-  id           String   @id @default(uuid())
-  tenantId     String?
-  fullName     String
-  email        String   @unique
-  password     String
-  userType     UserType @default(tenant)
-  roleId       String?
+  id       String   @id @default(uuid())
+  tenantId String?
+  fullName String
+  email    String
+  password String
+  userType UserType @default(tenant)
+  roleId   String?
+
+  // OTP fields (consider extracting to dedicated OtpToken table later)
   otp          String?
-  isFirstLogin Boolean  @default(true)
-  phone        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  otpExpiresAt DateTime?
+  otpPurpose   String? // 'login' | 'password_reset' | 'first_login'
+  isFirstLogin Boolean   @default(true)
+
+  phone String?
+
+  status    EntityStatus @default(active)
+  deletedAt DateTime?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  role Role? @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  role   Role?   @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   // optional domain mappings
   teacher Teacher?
   parent  Parent?
 
+  // NOTE: For UserType.company rows (tenantId IS NULL), Postgres treats multiple
+  // NULL tenantIds as distinct, so the composite unique below does not prevent
+  // duplicate emails. Add this partial unique index in a raw SQL migration:
+  //   CREATE UNIQUE INDEX users_company_email_unique
+  //     ON users (email) WHERE tenant_id IS NULL;
+  @@unique([tenantId, email], name: "user_email_per_tenant")
   @@index([tenantId])
+  @@index([tenantId, status])
   @@map("users")
 }
 
 model Role {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   tenantId    String
   roleName    String
   description String?
   permissions Json
+
+  createdById String?
+  updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -280,8 +326,11 @@ model AcademicYear {
   startDate DateTime
   endDate   DateTime
   status    AcademicYearStatus @default(draft)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
@@ -289,9 +338,14 @@ model AcademicYear {
   teacherAssignments TeacherAssignment[]
   timetableEntries   TimetableEntry[]
   attendanceSessions AttendanceSession[]
+  holidays           Holiday[]
 
   exams Exam[]
 
+  // NOTE: Only one AcademicYear may be `active` per tenant. Prisma cannot
+  // express partial unique indexes; add this in a raw SQL migration:
+  //   CREATE UNIQUE INDEX academic_year_one_active_per_tenant
+  //     ON academic_years (tenant_id) WHERE status = 'active';
   @@unique([tenantId, name], name: "academicYearNamePerTenant")
   @@unique([id, tenantId], name: "academic_year_tenant_identity")
   @@index([tenantId, status])
@@ -309,16 +363,18 @@ model StudentEnrollment {
   status         EnrollmentStatus @default(active)
   joinedAt       DateTime         @default(now())
   leftAt         DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   student      Student      @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   academicYear AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
-  grade   Grade   @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  grade        Grade        @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section      Section      @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   electiveSelections StudentEnrollmentElective[]
   attendanceMarks    AttendanceMark[]
@@ -362,23 +418,29 @@ model Teacher {
   gender       Gender?
   employeeCode String?
 
-  // Onboarding Profile
+  // Onboarding profile
   profilePhotoUrl   String?
   yearsOfExperience Float?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    EntityStatus @default(active)
+  deletedAt DateTime?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  assignments            TeacherAssignment[]
-  qualifications         TeacherQualification[]
-  employmentHistory      TeacherEmploymentHistory[]
+  assignments       TeacherAssignment[]
+  qualifications    TeacherQualification[]
+  employmentHistory TeacherEmploymentHistory[]
 
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
   @@unique([id, tenantId], name: "teacher_tenant_identity")
   @@index([tenantId])
+  @@index([tenantId, status])
   @@map("teachers")
 }
 
@@ -391,11 +453,11 @@ model TeacherQualification {
   institution       String?
   score             Float? // percentage or CGPA
   yearOfPassing     Int?
-  documentUrl       String? // reference to Upload.s3Url
+  documentUrl       String? // reference to Upload.fileUrl
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   teacher Teacher @relation(fields: [teacherId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "teacher_qualification_tenant_identity")
@@ -405,19 +467,19 @@ model TeacherQualification {
 }
 
 model TeacherEmploymentHistory {
-  id                String   @id @default(uuid())
-  tenantId          String
-  teacherId         String
-  organizationName  String
-  role              String // designation / position
-  startDate         DateTime?
-  endDate           DateTime?
-  reasonForLeaving  String?
-  experienceYears   Float? // snapshot at the time of entry
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String    @id @default(uuid())
+  tenantId         String
+  teacherId        String
+  organizationName String
+  role             String // designation / position
+  startDate        DateTime?
+  endDate          DateTime?
+  reasonForLeaving String?
+  experienceYears  Float? // snapshot at the time of entry
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   teacher Teacher @relation(fields: [teacherId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "teacher_employment_history_tenant_identity")
@@ -433,8 +495,11 @@ model TeacherAssignment {
   teacherId        String
   sectionSubjectId String
   role             TeacherRole @default(subject_teacher)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
@@ -446,6 +511,7 @@ model TeacherAssignment {
   attendanceSessions AttendanceSession[]
 
   @@unique([tenantId, academicYearId, teacherId, sectionSubjectId], name: "uniqueTeacherAssignment")
+  @@unique([id, tenantId], name: "teacher_assignment_tenant_identity")
   @@index([tenantId, academicYearId])
   @@index([tenantId, teacherId])
   @@index([tenantId, sectionSubjectId])
@@ -456,9 +522,9 @@ model TeacherAssignment {
 model TimetablePeriod {
   id        String   @id @default(uuid())
   tenantId  String
-  name      String // "P1", "P2", "LAB-1"
-  startTime String // "09:00"
-  endTime   String // "09:45"
+  name      String // "P1", "P2", "LAB-1", "FULL_DAY" (sentinel for daily-mark schools)
+  startTime Int // minutes from midnight, 0-1439; e.g. 09:00 = 540
+  endTime   Int // minutes from midnight, 0-1439; e.g. 09:45 = 585
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -482,18 +548,22 @@ model TimetableEntry {
   sectionSubjectId    String
   teacherAssignmentId String?
   room                String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  academicYear   AcademicYear    @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  period         TimetablePeriod @relation(fields: [periodId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  sectionSubject SectionSubject  @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  academicYear      AcademicYear       @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  period            TimetablePeriod    @relation(fields: [periodId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  sectionSubject    SectionSubject     @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  // NoAction (not SetNull) because the composite FK includes the required tenantId.
+  // Admin must reassign or clear teacherAssignmentId before deleting a TeacherAssignment.
+  teacherAssignment TeacherAssignment? @relation(fields: [teacherAssignmentId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
 
-  teacherAssignment  TeacherAssignment?  @relation(fields: [teacherAssignmentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  attendanceSessions AttendanceSession[]
-
+  @@unique([id, tenantId], name: "timetable_entry_tenant_identity")
   @@index([tenantId, academicYearId])
   @@index([tenantId, sectionSubjectId])
   @@index([tenantId, periodId])
@@ -508,22 +578,24 @@ model AttendanceSession {
   sectionSubjectId    String
   teacherAssignmentId String?
   date                DateTime
-  periodId            String?
+  periodId            String // required; use a "FULL_DAY" sentinel period for daily-mark schools
   notes               String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  academicYear   AcademicYear     @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  sectionSubject SectionSubject   @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  period         TimetablePeriod? @relation(fields: [periodId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  academicYear      AcademicYear       @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  sectionSubject    SectionSubject     @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  period            TimetablePeriod    @relation(fields: [periodId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  // NoAction (not SetNull) preserves the required tenantId on attendance history.
+  // Admin must reassign or clear teacherAssignmentId before deleting a TeacherAssignment.
+  teacherAssignment TeacherAssignment? @relation(fields: [teacherAssignmentId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
 
-  teacherAssignment TeacherAssignment? @relation(fields: [teacherAssignmentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
-  marks            AttendanceMark[]
-  timetableEntry   TimetableEntry?  @relation(fields: [timetableEntryId], references: [id])
-  timetableEntryId String?
+  marks AttendanceMark[]
 
   @@unique([tenantId, academicYearId, sectionSubjectId, date, periodId], name: "uniqueAttendanceSession")
   @@unique([id, tenantId], name: "attendance_session_tenant_identity")
@@ -538,8 +610,11 @@ model AttendanceMark {
   enrollmentId String
   status       AttendanceStatus @default(present)
   remarks      String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
@@ -558,13 +633,20 @@ model Parent {
   tenantId String
   userId   String? @unique
 
-  fullName String
-  phone    String?
-  email    String?
-  relation String // Father / Mother / Guardian
+  fullName      String
+  phone         String?
+  email         String?
+  relation      String // Father / Mother / Guardian
+  aadhaarNumber String?
+  occupation    String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    EntityStatus @default(active)
+  deletedAt DateTime?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -575,6 +657,7 @@ model Parent {
   @@index([tenantId])
   @@index([tenantId, phone])
   @@index([tenantId, email])
+  @@index([tenantId, status])
   @@map("parents")
 }
 
@@ -595,7 +678,7 @@ model StudentParent {
   @@map("student_parents")
 }
 
-// ---------------- Exams / Marks / Grading (NEW) ----------------
+// ---------------- Exams / Marks / Grading ----------------
 model Exam {
   id             String @id @default(uuid())
   tenantId       String
@@ -603,23 +686,28 @@ model Exam {
 
   name        String // "Unit Test 1", "Mid Term"
   description String?
-  examType    String // keep flexible: UNIT_TEST / MID_TERM / FINAL / PRACTICAL / INTERNAL
+  examType    String // UNIT_TEST / MID_TERM / FINAL / PRACTICAL / INTERNAL
   status      ExamStatus @default(draft)
   startDate   DateTime
   endDate     DateTime
 
-  gradingScaleId String? // optional: attach a scale (CBSE, GPA, etc.)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  gradingScaleId String?
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  academicYear AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  gradingScale GradingScale? @relation(fields: [gradingScaleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  academicYear AcademicYear  @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  // NoAction (not SetNull) preserves the required tenantId. Admin must
+  // detach the grading scale from the exam before deleting the scale.
+  gradingScale GradingScale? @relation(fields: [gradingScaleId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
 
   papers ExamPaper[]
 
   @@unique([tenantId, academicYearId, name], name: "uniqueExamNamePerYear")
+  @@unique([id, tenantId], name: "exam_tenant_identity")
   @@index([tenantId, academicYearId])
   @@index([tenantId, status])
   @@map("exams")
@@ -637,16 +725,19 @@ model ExamPaper {
   durationMinutes Int?
   room            String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  exam           Exam           @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exam           Exam           @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   sectionSubject SectionSubject @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   marks ExamMark[]
 
   @@unique([tenantId, examId, sectionSubjectId], name: "uniquePaperPerExamSectionSubject")
+  @@unique([id, tenantId], name: "exam_paper_tenant_identity")
   @@index([tenantId, examId])
   @@index([tenantId, sectionSubjectId])
   @@map("exam_papers")
@@ -661,15 +752,15 @@ model ExamMark {
   marksObtained Float
   isAbsent      Boolean @default(false)
   remarks       String?
+  gradeLabel    String? // snapshot; can also be derived from grading scale
 
-  // optional “computed” grade snapshot (can also be computed dynamically from grading scale)
-  gradeLabel String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  examPaper  ExamPaper         @relation(fields: [examPaperId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  examPaper  ExamPaper         @relation(fields: [examPaperId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   enrollment StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([tenantId, examPaperId, enrollmentId], name: "uniqueMarkPerStudentPerPaper")
@@ -679,20 +770,73 @@ model ExamMark {
 }
 
 model GradingScale {
-  id        String   @id @default(uuid())
-  tenantId  String
-  name      String // "CBSE Scale", "GPA Scale"
-  rules     Json // e.g. [{ "min": 90, "max": 100, "grade": "A+" }, ...]
+  id       String @id @default(uuid())
+  tenantId String
+  name     String // "CBSE Scale", "GPA Scale"
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  bands  GradingBand[]
+  exams  Exam[]
+
+  @@unique([tenantId, name], name: "uniqueGradingScalePerTenant")
+  @@unique([id, tenantId], name: "grading_scale_tenant_identity")
+  @@index([tenantId])
+  @@map("grading_scales")
+}
+
+model GradingBand {
+  id       String @id @default(uuid())
+  tenantId String
+  scaleId  String
+
+  minMarks  Float // inclusive lower bound (percentage or absolute)
+  maxMarks  Float // inclusive upper bound
+  grade     String // "A+", "B", etc.
+  gpa       Float?
+  sortOrder Int    @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  scale  GradingScale @relation(fields: [scaleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
-  exams Exam[]
+  @@unique([tenantId, scaleId, grade], name: "uniqueGradeInScale")
+  @@index([tenantId, scaleId])
+  @@map("grading_bands")
+}
 
-  @@unique([tenantId, name], name: "uniqueGradingScalePerTenant")
-  @@index([tenantId])
-  @@map("grading_scales")
+// ---------------- Holidays / Calendar ----------------
+model Holiday {
+  id             String  @id @default(uuid())
+  tenantId       String
+  academicYearId String?
+
+  date    DateTime
+  name    String
+  type    HolidayType @default(school)
+  fullDay Boolean     @default(true)
+  remarks String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  // NoAction (not SetNull) preserves the required tenantId. Admin must
+  // clear academicYearId from holidays before deleting an AcademicYear.
+  academicYear AcademicYear? @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
+
+  @@unique([tenantId, date, name], name: "uniqueHolidayPerTenantDate")
+  @@index([tenantId, date])
+  @@index([tenantId, academicYearId])
+  @@map("holidays")
 }
 
 // ---------------- Students ----------------
@@ -700,12 +844,14 @@ model Student {
   id       String @id @default(uuid())
   tenantId String
 
+  admissionNumber String? // school's internal admission/roll identifier
+
   firstName   String
+  middleName  String?
   lastName    String
   dateOfBirth DateTime
   gender      Gender
 
-  middleName          String?
   aadhaarNumber       String?
   casteCategory       String?
   subCaste            String?
@@ -723,18 +869,6 @@ model Student {
   dateOfIssueTC         DateTime?
   modeOfTransport       String?
 
-  fatherName       String?
-  fatherPhone      String?
-  motherName       String?
-  motherPhone      String?
-  fatherOccupation String?
-  fatherAadhaar    String?
-  motherOccupation String?
-  motherAadhaar    String?
-  guardianName     String?
-  guardianRelation String?
-  guardianContact  String?
-
   permanentAddress String?
   state            String?
   pincode          String?
@@ -743,25 +877,17 @@ model Student {
   bankAccountDetails    String?
   midDayMealEligibility Boolean @default(false)
 
-  // CURRENT SNAPSHOT (keep to avoid breaking; later derive from active enrollment)
+  // CURRENT SNAPSHOT (keep for fast read; canonical source is active StudentEnrollment)
   gradeId   String
   sectionId String
 
-  studentPassportPhoto       String?
-  motherPassportPhoto        String?
-  fatherPassportPhoto        String?
-  guardianPassportPhoto      String?
-  studentAadharCopy          String?
-  parentsAadharCopy          String?
-  casteCertificateCopy       String?
-  birthCertificateCopy       String?
-  tcCopy                     String?
-  conductCertificateCopy     String?
-  previousYearsMarksheetCopy String?
-  incomeCertificateCopy      String?
+  status    EntityStatus @default(active)
+  deletedAt DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
@@ -769,13 +895,15 @@ model Student {
   section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   enrollments StudentEnrollment[]
-  parents     StudentParent[]
+  parents     StudentParent[] // canonical parent links live here; documents live in Upload
 
   @@unique([tenantId, aadhaarNumber], name: "student_aadhaar_per_tenant")
+  @@unique([tenantId, admissionNumber], name: "student_admission_per_tenant")
   @@unique([id, tenantId], name: "student_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, gradeId])
   @@index([tenantId, sectionId])
+  @@index([tenantId, status])
   @@map("students")
 }
 
@@ -808,7 +936,9 @@ model InventoryItem {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  category    InventoryCategory? @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  // NoAction (not SetNull) preserves the required tenantId. Admin must
+  // clear categoryId from items before deleting an InventoryCategory.
+  category    InventoryCategory? @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
   adjustments StockAdjustment[]
 
   @@unique([id, tenantId], name: "inventory_item_tenant_identity")
@@ -818,15 +948,18 @@ model InventoryItem {
 }
 
 model StockAdjustment {
-  id               String   @id @default(uuid())
+  id               String  @id @default(uuid())
   tenantId         String
   itemId           String?
   adjustmentAmount Int
   reason           String?
   borrowerName     String?
   borrowerId       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   item   InventoryItem? @relation(fields: [itemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
@@ -848,18 +981,22 @@ model TokenBlacklist {
 }
 
 model Upload {
-  id           String   @id @default(uuid())
+  id           String @id @default(uuid())
   tenantId     String
-  category     String
+  entityType   String // canonical values: 'student' | 'teacher' | 'parent' | 'user' | 'tenant' | 'exam'
   entityId     String
-  documentType String
-  s3Url        String
-  uploadedAt   DateTime @default(now())
+  documentType String // e.g. 'aadhaar', 'photo', 'tc', 'birth_certificate', 'caste_certificate', 'marksheet', 'income_certificate'
+  fileUrl      String
+
+  createdById String?
+  uploadedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([tenantId])
-  @@index([tenantId, category])
+  @@index([tenantId, entityType])
   @@index([tenantId, entityId])
+  @@index([tenantId, entityType, entityId])
   @@map("uploads")
 }
