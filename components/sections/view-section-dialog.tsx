@@ -47,7 +47,7 @@ export function ViewSectionDialog({ open, onOpenChange, section }: ViewSectionDi
 
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Grade</h4>
-            <Badge variant="secondary">{section.gradeName || section.gradeId}</Badge>
+            <Badge variant="secondary">{section.grade?.gradeName || section.gradeId}</Badge>
           </div>
 
           <div className="pt-4 border-t space-y-2">

@@ -17,13 +17,15 @@ import { MoreVertical } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 
 interface GradeData {
-  gradeId: string
+  id: string
   tenantId: string
   courseId: string
   gradeName: string
   createdAt: string
   updatedAt: string
-  courseName?: string
+  course?: {
+    courseName: string
+  }
 }
 
 export default function GradesPage() {
@@ -62,7 +64,7 @@ export default function GradesPage() {
 
   // Default columns if API doesn't provide them
   const defaultColumns = [
-    { field: "courseName", headerName: "Course Name" },
+    { field: "course.courseName", headerName: "Course Name" },
     { field: "gradeName", headerName: "Grade Name" },
     { field: "createdAt", headerName: "Created At" },
     { field: "updatedAt", headerName: "Updated At" },
@@ -89,8 +91,8 @@ export default function GradesPage() {
           apiColumns={columns}
           isLoading={isLoading}
           onBulkDelete={handleBulkDelete}
-          idField="gradeId"
-          renderCell={(row: GradeData, field: string) => {
+          idField="id"
+          renderCell={({ row, field }: { row: GradeData; field: string; value: unknown }) => {
             if (field === "gradeName") {
               return (
                 <div className="flex items-center gap-2">
@@ -102,8 +104,8 @@ export default function GradesPage() {
               )
             }
 
-            if (field === "courseName") {
-              return <span className="font-medium text-muted-foreground">{row.courseName || "N/A"}</span>
+            if (field === "course.courseName") {
+              return <span className="font-medium text-muted-foreground">{row.course?.courseName || "N/A"}</span>
             }
 
             if (field === "createdAt" || field === "updatedAt") {

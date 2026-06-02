@@ -38,12 +38,12 @@ interface FormData {
   adminFullName: string
   adminPhone: string
   adminEmail: string
-  subscriptionPlan: "basic" | "standard" | "premium"
+  subscriptionPlan: "free" | "starter" | "growth" | "enterprise"
 }
 
 export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogProps) {
   const { mutate: createTenant, isPending } = useCreateTenant()
-  const [subscriptionPlan, setSubscriptionPlan] = useState<"basic" | "standard" | "premium">("basic")
+  const [subscriptionPlan, setSubscriptionPlan] = useState<"free" | "starter" | "growth" | "enterprise">("free")
   const [logoUrl, setLogoUrl] = useState<string>("")
   const [tempTenantId] = useState<string>(() => `temp-${Date.now()}`)
 
@@ -55,7 +55,7 @@ export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogPro
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      subscriptionPlan: "basic",
+      subscriptionPlan: "free",
       logo: "",
     },
   })
@@ -83,7 +83,7 @@ export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogPro
     createTenant(payload, {
       onSuccess: () => {
         reset()
-        setSubscriptionPlan("basic")
+        setSubscriptionPlan("free")
         setLogoUrl("")
         onOpenChange(false)
       },
@@ -92,7 +92,7 @@ export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogPro
 
   const handleClose = () => {
     reset()
-    setSubscriptionPlan("basic")
+    setSubscriptionPlan("free")
     setLogoUrl("")
     onOpenChange(false)
   }
@@ -166,15 +166,16 @@ export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogPro
               <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
               <Select
                 value={subscriptionPlan}
-                onValueChange={(v) => setSubscriptionPlan(v as "basic" | "standard" | "premium")}
+                onValueChange={(v) => setSubscriptionPlan(v as "free" | "starter" | "growth" | "enterprise")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="growth">Growth</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
                 </SelectContent>
               </Select>
             </div>

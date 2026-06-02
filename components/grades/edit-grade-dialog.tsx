@@ -14,13 +14,15 @@ import { useCourses } from "@/hooks/use-courses"
 import type { UpdateGradeRequest } from "@/lib/api/grades"
 
 interface GradeData {
-  gradeId: string
+  id: string
   tenantId: string
   courseId: string
   gradeName: string
   createdAt: string
   updatedAt: string
-  courseName?: string
+  course?: {
+    courseName: string
+  }
 }
 
 interface EditGradeDialogProps {
@@ -54,7 +56,7 @@ export function EditGradeDialog({ open, onOpenChange, grade }: EditGradeDialogPr
 
     console.log("[v0] Updating grade with data:", data)
     try {
-      await updateGrade.mutateAsync({ id: grade.gradeId, data })
+      await updateGrade.mutateAsync({ id: grade.id, data })
       reset()
       onOpenChange(false)
     } catch (error) {

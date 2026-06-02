@@ -1,15 +1,34 @@
 import { apiClient } from "./client"
 import type { ApiResponse } from "./types"
 
+export interface SectionSubjectRow {
+  id: string
+  tenantId: string
+  sectionId: string
+  subjectId: string
+  isElective: boolean
+  subject: {
+    id: string
+    tenantId: string
+    subjectName: string
+    courseId: string
+    isCommon: boolean
+    createdAt: string
+    updatedAt: string
+  }
+}
+
 export interface Section {
-  subjects: any
   id: string
   tenantId: string
   gradeId: string
   sectionName: string
   createdAt: string
   updatedAt: string
-  gradeName?: string // Returned from list endpoint
+  grade?: {
+    gradeName: string
+  }
+  sectionSubjects?: SectionSubjectRow[]
 }
 
 export interface CreateSectionRequest {

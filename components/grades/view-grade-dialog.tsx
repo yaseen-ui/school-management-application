@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 
 interface GradeData {
-  gradeId: string
+  id: string
   tenantId: string
   courseId: string
   gradeName: string
   createdAt: string
   updatedAt: string
-  courseName?: string
+  course?: {
+    courseName: string
+  }
 }
 
 interface ViewGradeDialogProps {
@@ -59,11 +61,11 @@ export function ViewGradeDialog({ open, onOpenChange, grade }: ViewGradeDialogPr
           </div>
 
           <div className="space-y-3">
-            <InfoItem icon={BookOpen} label="Course" value={grade.courseName || "N/A"} />
+            <InfoItem icon={BookOpen} label="Course" value={grade.course?.courseName || "N/A"} />
 
-            <InfoItem icon={Calendar} label="Created At" value={format(new Date(grade.created_at), "PPp")} />
+            <InfoItem icon={Calendar} label="Created At" value={format(new Date(grade.createdAt), "PPp")} />
 
-            <InfoItem icon={Calendar} label="Last Updated" value={format(new Date(grade.updated_at), "PPp")} />
+            <InfoItem icon={Calendar} label="Last Updated" value={format(new Date(grade.updatedAt), "PPp")} />
           </div>
         </motion.div>
 

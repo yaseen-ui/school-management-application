@@ -54,7 +54,7 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
       reset({
         sectionName: section.sectionName,
         gradeId: section.gradeId,
-        subjectIds: section.subjects?.map((subject: { id: any }) => subject.id) || [],
+        subjectIds: section.sectionSubjects?.map((ss) => ss.subjectId) || [],
       })
     }
   }, [section, open, reset])

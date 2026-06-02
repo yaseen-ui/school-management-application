@@ -35,7 +35,7 @@ export default function SectionsPage() {
   const sections = (data?.data?.rows || []) as Section[]
   const apiColumns: ApiColumn[] = data?.data?.columns || [
     { field: "sectionName", headerName: "Section Name" },
-    { field: "gradeName", headerName: "Grade" },
+    { field: "grade.gradeName", headerName: "Grade" },
     { field: "createdAt", headerName: "Created At" },
   ]
 
@@ -76,8 +76,8 @@ export default function SectionsPage() {
           </div>
         )
 
-      case "gradeName":
-        return <Badge variant="secondary">{row.gradeName || "N/A"}</Badge>
+      case "grade.gradeName":
+        return <Badge variant="secondary">{row.grade?.gradeName || "N/A"}</Badge>
 
       case "createdAt":
         return (

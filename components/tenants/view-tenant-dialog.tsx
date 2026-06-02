@@ -4,6 +4,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Building2, Phone, MapPin, User, Globe, Calendar } from "lucide-react"
 
+interface TenantAdmin {
+  id: string
+  fullName: string
+  email: string
+  phone: string | null
+}
+
 interface TenantData {
   id: string
   schoolName: string
@@ -18,11 +25,9 @@ interface TenantData {
   }
   contactPhone: string
   contactEmail: string
-  adminFullName?: string
-  adminPhone?: string
-  adminEmail: string
   subscriptionPlan: string
   status?: string
+  users?: TenantAdmin[]
   createdAt: string
   updatedAt: string
 }
@@ -34,9 +39,10 @@ interface ViewTenantDialogProps {
 }
 
 const subscriptionColors: Record<string, string> = {
-  basic: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  standard: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  premium: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+  free: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  starter: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  growth: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+  enterprise: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
 }
 
 const statusColors: Record<string, string> = {
@@ -80,7 +86,7 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
           <DialogDescription className="flex items-center gap-2 pt-2">
             <Badge
               variant="secondary"
-              className={subscriptionColors[tenant.subscriptionPlan] || subscriptionColors.basic}
+              className={subscriptionColors[tenant.subscriptionPlan] || subscriptionColors.free}
             >
               {tenant.subscriptionPlan}
             </Badge>
@@ -127,22 +133,30 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
               <User className="h-4 w-4 text-muted-foreground" />
-              Admin Information
+              Admins{tenant.users && tenant.users.length > 1 ? ` (${tenant.users.length})` : ""}
             </h3>
-            <div className="pl-6 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Name</p>
-                <p className="text-foreground font-medium">{tenant.adminFullName || "N/A"}</p>
+            {tenant.users && tenant.users.length > 0 ? (
+              <div className="pl-6 space-y-3 text-sm">
+                {tenant.users.map((admin) => (
+                  <div key={admin.id} className="grid grid-cols-3 gap-4 border-b pb-2 last:border-b-0 last:pb-0">
+                    <div>
+                      <p className="text-muted-foreground">Name</p>
+                      <p className="text-foreground font-medium">{admin.fullName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Email</p>
+                      <p className="text-foreground font-medium">{admin.email || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Phone</p>
+                      <p className="text-foreground font-medium">{admin.phone || "N/A"}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-muted-foreground">Email</p>
-                <p className="text-foreground font-medium">{tenant.adminEmail}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Phone</p>
-                <p className="text-foreground font-medium">{tenant.adminPhone || "N/A"}</p>
-              </div>
-            </div>
+            ) : (
+              <p className="pl-6 text-sm text-muted-foreground">No admin assigned.</p>
+            )}
           </div>
 
           {/* Domain */}

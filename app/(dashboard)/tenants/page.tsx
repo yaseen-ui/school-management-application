@@ -22,6 +22,13 @@ import { ViewTenantDialog } from "@/components/tenants/view-tenant-dialog"
 import { EditTenantDialog } from "@/components/tenants/edit-tenant-dialog"
 import { DeleteTenantDialog } from "@/components/tenants/delete-tenant-dialog"
 
+interface TenantAdmin {
+  id: string
+  fullName: string
+  email: string
+  phone: string | null
+}
+
 interface TenantData {
   id: string
   schoolName: string
@@ -36,19 +43,18 @@ interface TenantData {
   }
   contactPhone: string
   contactEmail: string
-  adminFullName?: string
-  adminPhone?: string
-  adminEmail: string
   subscriptionPlan: string
   status?: string
+  users?: TenantAdmin[]
   createdAt: string
   updatedAt: string
 }
 
 const subscriptionColors: Record<string, string> = {
-  basic: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  standard: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  premium: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+  free: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  starter: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  growth: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+  enterprise: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
 }
 
 const statusColors: Record<string, string> = {
@@ -116,13 +122,23 @@ export default function TenantsPage() {
           </div>
         )
 
-      case "adminEmail":
+      case "adminEmail": {
+        const primary = row.users?.[0]
+        const extra = (row.users?.length ?? 0) - 1
         return (
           <div>
-            <p className="font-medium text-foreground">{row.adminFullName || "N/A"}</p>
-            <p className="text-sm text-muted-foreground">{row.adminEmail}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-foreground">{primary?.fullName || "N/A"}</p>
+              {extra > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  +{extra} more
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">{primary?.email || "N/A"}</p>
           </div>
         )
+      }
 
       case "contactEmail":
         return (
@@ -150,7 +166,7 @@ export default function TenantsPage() {
 
       case "subscriptionPlan":
         return (
-          <Badge variant="secondary" className={subscriptionColors[row.subscriptionPlan] || subscriptionColors.basic}>
+          <Badge variant="secondary" className={subscriptionColors[row.subscriptionPlan] || subscriptionColors.free}>
             {row.subscriptionPlan}
           </Badge>
         )

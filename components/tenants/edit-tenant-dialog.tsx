@@ -34,11 +34,14 @@ interface TenantData {
   }
   contactPhone: string
   contactEmail: string
-  adminFullName?: string
-  adminPhone?: string
-  adminEmail: string
   subscriptionPlan: string
   status?: string
+  users?: Array<{
+    id: string
+    fullName: string
+    email: string
+    phone: string | null
+  }>
   createdAt: string
   updatedAt: string
 }
@@ -63,12 +66,12 @@ interface FormData {
   adminFullName: string
   adminPhone: string
   adminEmail: string
-  subscriptionPlan: "basic" | "standard" | "premium"
+  subscriptionPlan: "free" | "starter" | "growth" | "enterprise"
 }
 
 export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialogProps) {
   const { mutate: updateTenant, isPending } = useUpdateTenant()
-  const [subscriptionPlan, setSubscriptionPlan] = useState<"basic" | "standard" | "premium">("basic")
+  const [subscriptionPlan, setSubscriptionPlan] = useState<"free" | "starter" | "growth" | "enterprise">("free")
   const [logoUrl, setLogoUrl] = useState<string>("")
 
   const {
@@ -81,6 +84,7 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
 
   useEffect(() => {
     if (tenant && open) {
+      const admin = tenant.users?.[0]
       reset({
         schoolName: tenant.schoolName,
         domain: tenant.domain || "",
@@ -92,11 +96,11 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
         contactAddressZip: tenant.contactAddress?.zip || "",
         contactPhone: tenant.contactPhone || "",
         contactEmail: tenant.contactEmail || "",
-        adminFullName: tenant.adminFullName || "",
-        adminPhone: tenant.adminPhone || "",
-        adminEmail: tenant.adminEmail || "",
+        adminFullName: admin?.fullName || "",
+        adminPhone: admin?.phone || "",
+        adminEmail: admin?.email || "",
       })
-      setSubscriptionPlan((tenant.subscriptionPlan as "basic" | "standard" | "premium") || "basic")
+      setSubscriptionPlan((tenant.subscriptionPlan as "free" | "starter" | "growth" | "enterprise") || "free")
       setLogoUrl(tenant.logo || "")
     }
   }, [tenant, open, reset])
@@ -208,15 +212,16 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
               <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
               <Select
                 value={subscriptionPlan}
-                onValueChange={(v) => setSubscriptionPlan(v as "basic" | "standard" | "premium")}
+                onValueChange={(v) => setSubscriptionPlan(v as "free" | "starter" | "growth" | "enterprise")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="growth">Growth</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
                 </SelectContent>
               </Select>
             </div>

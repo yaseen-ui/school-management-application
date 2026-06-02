@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { useDeleteGrade } from "@/hooks/use-grades"
 
 interface GradeData {
-  gradeId: string
+  id: string
   gradeName: string
 }
 
@@ -30,7 +30,7 @@ export function DeleteGradeDialog({ open, onOpenChange, grade }: DeleteGradeDial
     if (!grade) return
 
     try {
-      await deleteGrade.mutateAsync(grade.gradeId)
+      await deleteGrade.mutateAsync(grade.id)
       onOpenChange(false)
     } catch (error) {
       // Error handled by mutation

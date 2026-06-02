@@ -2,13 +2,15 @@ import { apiClient } from "./client"
 import type { ApiResponse } from "./types"
 
 export interface Grade {
-  gradeId: string
+  id: string
   tenantId: string
   courseId: string
   gradeName: string
   createdAt: string
   updatedAt: string
-  courseName?: string // Optional, returned from list endpoint
+  course?: {
+    courseName: string
+  }
 }
 
 export interface CreateGradeRequest {

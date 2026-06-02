@@ -39,6 +39,13 @@ export interface User {
 }
 
 // Tenant Types
+export interface TenantAdminUser {
+  id: string
+  fullName: string
+  email: string
+  phone: string | null
+}
+
 export interface Tenant {
   id: string
   schoolName: string
@@ -53,11 +60,9 @@ export interface Tenant {
   }
   contactPhone: string
   contactEmail: string
-  adminFullName?: string
-  adminPhone?: string
-  adminEmail: string
-  subscriptionPlan: "basic" | "standard" | "premium"
+  subscriptionPlan: "free" | "starter" | "growth" | "enterprise"
   status?: "active" | "inactive" | "suspended"
+  users?: TenantAdminUser[]
   createdAt: string
   updatedAt: string
 }
@@ -93,7 +98,7 @@ export interface CreateTenantRequest {
   adminFullName: string
   adminPhone: string
   adminEmail: string
-  subscriptionPlan: "basic" | "standard" | "premium"
+  subscriptionPlan: "free" | "starter" | "growth" | "enterprise"
 }
 
 export interface UpdateTenantRequest {
@@ -112,7 +117,7 @@ export interface UpdateTenantRequest {
   adminFullName?: string
   adminPhone?: string
   adminEmail?: string
-  subscriptionPlan?: "basic" | "standard" | "premium"
+  subscriptionPlan?: "free" | "starter" | "growth" | "enterprise"
   status?: "active" | "inactive" | "suspended"
 }
 
