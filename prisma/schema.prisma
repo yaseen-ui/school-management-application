@@ -185,6 +185,7 @@ model User {
   //   CREATE UNIQUE INDEX users_company_email_unique
   //     ON users (email) WHERE tenant_id IS NULL;
   @@unique([tenantId, email], name: "user_email_per_tenant")
+  @@unique([id, tenantId], name: "user_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, status])
   @@map("users")
@@ -420,6 +421,8 @@ model Teacher {
 
   // Onboarding profile
   profilePhotoUrl   String?
+  dateOfBirth       DateTime?
+  dateOfJoining     DateTime?
   yearsOfExperience Float?
 
   status    EntityStatus @default(active)
@@ -431,12 +434,13 @@ model Teacher {
   updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  user   User?  @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   assignments       TeacherAssignment[]
   qualifications    TeacherQualification[]
   employmentHistory TeacherEmploymentHistory[]
 
+  @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
   @@unique([id, tenantId], name: "teacher_tenant_identity")
   @@index([tenantId])
@@ -649,10 +653,11 @@ model Parent {
   updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  user   User?  @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   students StudentParent[]
 
+  @@unique([userId, tenantId], name: "parent_user_tenant_unique")
   @@unique([id, tenantId], name: "parent_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, phone])
@@ -860,6 +865,21 @@ model Student {
   bloodGroup          String?
   nationality         String  @default("Indian")
   identificationMarks String?
+
+  // Parent / family details (flat fields for quick read; canonical parent records live in Parent model)
+  fatherName          String?
+  fatherOccupation    String?
+  fatherPhone         String?
+  fatherAadhaar       String?
+  motherName          String?
+  motherOccupation    String?
+  motherPhone         String?
+  motherAadhaar       String?
+  guardianName        String?
+  guardianRelation    String?
+  guardianContact     String?
+  guardianOccupation  String?
+  guardianAadhaar     String?
 
   classApplyingFor      String?
   mediumOfInstruction   String?

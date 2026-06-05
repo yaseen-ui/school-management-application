@@ -35,7 +35,7 @@ export function DeleteTeacherDialog({ teacher, onClose }: DeleteTeacherDialogPro
           <AlertDialogDescription>
             Are you sure you want to delete{" "}
             <span className="font-semibold">
-              {teacher.firstName} {teacher.lastName}
+              {teacher.fullName}
             </span>
             ? This action cannot be undone and will also delete all associated qualifications and employment history.
           </AlertDialogDescription>

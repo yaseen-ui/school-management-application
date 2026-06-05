@@ -11,22 +11,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DatePickerInput } from "@/components/ui/date-picker"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useAddEmploymentHistory, useUpdateEmploymentHistory, useDeleteEmploymentHistory } from "@/hooks/use-teachers"
-import type { EmploymentHistory } from "@/lib/api/teachers"
+import type { TeacherEmploymentHistory } from "@/lib/api/teachers"
 import { format } from "date-fns"
 
-export function TeacherEmploymentHistory() {
+export function TeacherEmploymentHistory({ teacherId: propTeacherId }: { teacherId: string }) {
   const { watch } = useFormContext()
-  const teacherId = watch("id")
+  const teacherId = propTeacherId || watch("id")
   const employmentHistory = watch("employmentHistory") || []
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingRecord, setEditingRecord] = useState<EmploymentHistory | null>(null)
+  const [editingRecord, setEditingRecord] = useState<TeacherEmploymentHistory | null>(null)
   const [formData, setFormData] = useState({
-    institutionName: "",
-    designation: "",
+    organizationName: "",
+    role: "",
     startDate: "",
     endDate: "",
-    responsibilities: "",
+    reasonForLeaving: "",
   })
 
   const createRecord = useAddEmploymentHistory()
@@ -35,38 +35,45 @@ export function TeacherEmploymentHistory() {
 
   const handleAdd = () => {
     setEditingRecord(null)
-    setFormData({ institutionName: "", designation: "", startDate: "", endDate: "", responsibilities: "" })
+    setFormData({ organizationName: "", role: "", startDate: "", endDate: "", reasonForLeaving: "" })
     setIsDialogOpen(true)
   }
 
-  const handleEdit = (record: EmploymentHistory) => {
+  const handleEdit = (record: TeacherEmploymentHistory) => {
     setEditingRecord(record)
     setFormData({
-      institutionName: record.institutionName,
-      designation: record.designation,
-      startDate: record.startDate,
+      organizationName: record.organizationName,
+      role: record.role,
+      startDate: record.startDate || "",
       endDate: record.endDate || "",
-      responsibilities: record.responsibilities || "",
+      reasonForLeaving: record.reasonForLeaving || "",
     })
     setIsDialogOpen(true)
   }
 
   const handleSave = () => {
+    const data = {
+      organizationName: formData.organizationName,
+      role: formData.role,
+      startDate: formData.startDate || undefined,
+      endDate: formData.endDate || undefined,
+      reasonForLeaving: formData.reasonForLeaving || undefined,
+    }
     if (editingRecord) {
       updateRecord.mutate({
         teacherId,
-        historyId: editingRecord.id,
-        data: formData,
+        employmentHistoryId: editingRecord.id,
+        data,
       })
     } else {
-      createRecord.mutate({ teacherId, data: formData })
+      createRecord.mutate({ teacherId, data })
     }
     setIsDialogOpen(false)
   }
 
-  const handleDelete = (historyId: string) => {
+  const handleDelete = (employmentHistoryId: string) => {
     if (confirm("Are you sure you want to delete this employment record?")) {
-      deleteRecord.mutate({ teacherId, historyId })
+      deleteRecord.mutate({ teacherId, employmentHistoryId })
     }
   }
 
@@ -92,23 +99,23 @@ export function TeacherEmploymentHistory() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Institution</TableHead>
-              <TableHead>Designation</TableHead>
+              <TableHead>Organization</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Duration</TableHead>
-              <TableHead>Responsibilities</TableHead>
+              <TableHead>Reason for Leaving</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {employmentHistory.map((record: EmploymentHistory) => (
+            {employmentHistory.map((record: TeacherEmploymentHistory) => (
               <TableRow key={record.id}>
-                <TableCell className="font-medium">{record.institutionName}</TableCell>
-                <TableCell>{record.designation}</TableCell>
+                <TableCell className="font-medium">{record.organizationName}</TableCell>
+                <TableCell>{record.role}</TableCell>
                 <TableCell>
-                  {format(new Date(record.startDate), "MMM yyyy")} -{" "}
+                  {record.startDate ? format(new Date(record.startDate), "MMM yyyy") : "—"} -{" "}
                   {record.endDate ? format(new Date(record.endDate), "MMM yyyy") : "Present"}
                 </TableCell>
-                <TableCell className="max-w-xs truncate">{record.responsibilities || "—"}</TableCell>
+                <TableCell className="max-w-xs truncate">{record.reasonForLeaving || "—"}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button type="button" variant="ghost" size="sm" onClick={() => handleEdit(record)}>
@@ -148,19 +155,19 @@ export function TeacherEmploymentHistory() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Institution Name *</Label>
+                <Label>Organization Name *</Label>
                 <Input
-                  value={formData.institutionName}
-                  onChange={(e) => setFormData({ ...formData, institutionName: e.target.value })}
+                  value={formData.organizationName}
+                  onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
                   placeholder="School/College name"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Designation *</Label>
+                <Label>Role *</Label>
                 <Input
-                  value={formData.designation}
-                  onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   placeholder="e.g., Math Teacher"
                 />
               </div>
@@ -189,11 +196,11 @@ export function TeacherEmploymentHistory() {
             </div>
 
             <div className="space-y-2">
-              <Label>Responsibilities</Label>
+              <Label>Reason for Leaving</Label>
               <Textarea
-                value={formData.responsibilities}
-                onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
-                placeholder="Describe key responsibilities and achievements"
+                value={formData.reasonForLeaving}
+                onChange={(e) => setFormData({ ...formData, reasonForLeaving: e.target.value })}
+                placeholder="Describe reason for leaving"
                 rows={4}
               />
             </div>
@@ -206,7 +213,7 @@ export function TeacherEmploymentHistory() {
             <Button
               type="button"
               onClick={handleSave}
-              disabled={!formData.institutionName || !formData.designation || !formData.startDate}
+              disabled={!formData.organizationName || !formData.role || !formData.startDate}
             >
               {editingRecord ? "Update" : "Add"}
             </Button>

@@ -159,8 +159,10 @@ export interface CellRendererProps<TData> {
 interface DynamicDataTableProps<TData> {
   /** Data rows from API */
   data: TData[]
-  /** Column definitions from API */
-  apiColumns: ApiColumn[]
+  /** Column definitions from API (auto-generates columns from API response) */
+  apiColumns?: ApiColumn[]
+  /** Custom column definitions (takes precedence over apiColumns when provided) */
+  columns?: ColumnDef<TData>[]
   /** Custom cell renderer for specific fields */
   renderCell?: (props: CellRendererProps<TData>) => React.ReactNode
   /** Actions column renderer */
@@ -179,9 +181,10 @@ interface DynamicDataTableProps<TData> {
   idField?: string
 }
 
-export function DynamicDataTable<TData extends Record<string, unknown>>({
+export function DynamicDataTable<TData>({
   data,
   apiColumns,
+  columns: customColumns,
   renderCell,
   renderActions,
   selectable = true,
@@ -210,8 +213,55 @@ export function DynamicDataTable<TData extends Record<string, unknown>>({
     return value
   }
 
-  // Build columns from API definition
+  // Use custom columns if provided, otherwise build from API definition
   const columns = React.useMemo<ColumnDef<TData>[]>(() => {
+    // If custom columns are provided, use them directly (prepend selection column)
+    if (customColumns && customColumns.length > 0) {
+      const cols: ColumnDef<TData>[] = []
+
+      // Add selection column if selectable
+      if (selectable) {
+        cols.push({
+          id: "select",
+          header: ({ table }) => (
+            <Checkbox
+              checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+              aria-label="Select all"
+              className="translate-y-[2px]"
+            />
+          ),
+          cell: ({ row }) => (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+              className="translate-y-[2px]"
+            />
+          ),
+          enableSorting: false,
+          enableHiding: false,
+          size: 40,
+        })
+      }
+
+      cols.push(...customColumns)
+
+      // Add actions column if renderer provided
+      if (renderActions) {
+        cols.push({
+          id: "actions",
+          header: () => <span className="sr-only">Actions</span>,
+          cell: ({ row }) => renderActions(row.original),
+          enableSorting: false,
+          enableHiding: false,
+          size: 50,
+        })
+      }
+
+      return cols
+    }
+
     const cols: ColumnDef<TData>[] = []
 
     // Add selection column if selectable
@@ -241,7 +291,7 @@ export function DynamicDataTable<TData extends Record<string, unknown>>({
     }
 
     // Add data columns from API
-    if (Array.isArray(apiColumns)) {
+    if (apiColumns && Array.isArray(apiColumns)) {
       for (const apiCol of apiColumns) {
       cols.push({
         id: apiCol.field,
@@ -301,7 +351,7 @@ export function DynamicDataTable<TData extends Record<string, unknown>>({
     }
 
     return cols
-  }, [apiColumns, selectable, renderCell, renderActions])
+  }, [apiColumns, customColumns, selectable, renderCell, renderActions])
 
   const table = useReactTable({
     data,
@@ -322,7 +372,7 @@ export function DynamicDataTable<TData extends Record<string, unknown>>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: "includesString",
-    getRowId: (row) => String(row[idField]),
+    getRowId: (row) => String((row as Record<string, unknown>)[idField]),
   })
 
   // Get selected rows data
@@ -367,7 +417,7 @@ export function DynamicDataTable<TData extends Record<string, unknown>>({
               .getAllColumns()
               .filter((column) => column.getCanHide())
               .map((column) => {
-                const apiCol = apiColumns.find((c) => c.field === column.id)
+                const apiCol = apiColumns?.find((c) => c.field === column.id)
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}

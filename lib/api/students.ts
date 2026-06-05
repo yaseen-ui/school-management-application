@@ -21,6 +21,7 @@ export interface Student {
   subCaste?: string
   religion?: string
   motherTongue?: string
+  bloodGroup?: string
   nationality?: string
   identificationMarks?: string
   fatherName?: string
@@ -86,6 +87,7 @@ export interface UpdateStudentRequest {
   subCaste?: string
   religion?: string
   motherTongue?: string
+  bloodGroup?: string
   nationality?: string
   identificationMarks?: string
   fatherName?: string

@@ -10,7 +10,10 @@ import type {
 export function useTeachers() {
   return useQuery({
     queryKey: ["teachers"],
-    queryFn: () => teachersApi.getAll(),
+    queryFn: async () => {
+      const response = await teachersApi.getAll()
+      return response.data.rows
+    },
   })
 }
 

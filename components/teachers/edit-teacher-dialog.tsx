@@ -21,9 +21,7 @@ interface EditTeacherDialogProps {
 
 export function EditTeacherDialog({ teacher, onClose }: EditTeacherDialogProps) {
   const [formData, setFormData] = useState({
-    firstName: teacher.firstName,
-    middleName: teacher.middleName || "",
-    lastName: teacher.lastName,
+    fullName: teacher.fullName,
     email: teacher.email,
     phone: teacher.phone,
     gender: teacher.gender,
@@ -52,27 +50,12 @@ export function EditTeacherDialog({ teacher, onClose }: EditTeacherDialogProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
-              <Label>First Name *</Label>
+              <Label>Full Name *</Label>
               <Input
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Middle Name</Label>
-              <Input
-                value={formData.middleName}
-                onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Last Name *</Label>
-              <Input
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
               />
             </div>
@@ -101,7 +84,7 @@ export function EditTeacherDialog({ teacher, onClose }: EditTeacherDialogProps) 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Gender *</Label>
-              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value as "Male" | "Female" | "Other" })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

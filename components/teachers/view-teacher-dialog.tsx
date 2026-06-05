@@ -22,11 +22,11 @@ export function ViewTeacherDialog({ teacher, onClose }: ViewTeacherDialogProps) 
 
         <div className="space-y-6">
           {/* Photo */}
-          {teacher.photoUrl && (
+          {teacher.profilePhotoUrl && (
             <div className="flex justify-center">
               <img
-                src={teacher.photoUrl || "/placeholder.svg"}
-                alt={`${teacher.firstName} ${teacher.lastName}`}
+                src={teacher.profilePhotoUrl || "/placeholder.svg"}
+                alt={teacher.fullName}
                 className="h-32 w-32 rounded-full object-cover border-4 border-border"
               />
             </div>
@@ -38,9 +38,7 @@ export function ViewTeacherDialog({ teacher, onClose }: ViewTeacherDialogProps) 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Name:</span>
-                <p className="font-medium">
-                  {teacher.firstName} {teacher.middleName} {teacher.lastName}
-                </p>
+                <p className="font-medium">{teacher.fullName}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Employee Code:</span>
@@ -84,14 +82,16 @@ export function ViewTeacherDialog({ teacher, onClose }: ViewTeacherDialogProps) 
                   <div key={qual.id} className="border rounded-lg p-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium">{qual.degreeName}</p>
+                        <p className="font-medium">{qual.qualificationName}</p>
                         <p className="text-sm text-muted-foreground">{qual.institution}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Year: {format(new Date(qual.yearOfCompletion), "yyyy")}
-                        </p>
+                        {qual.yearOfPassing && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Year: {qual.yearOfPassing}
+                          </p>
+                        )}
                       </div>
-                      {qual.certificateUrl && (
-                        <a href={qual.certificateUrl} target="_blank" rel="noopener noreferrer">
+                      {qual.documentUrl && (
+                        <a href={qual.documentUrl} target="_blank" rel="noopener noreferrer">
                           <Badge variant="outline" className="cursor-pointer">
                             <FileText className="h-3 w-3 mr-1" />
                             Certificate
@@ -116,14 +116,14 @@ export function ViewTeacherDialog({ teacher, onClose }: ViewTeacherDialogProps) 
               <div className="space-y-3">
                 {teacher.employmentHistory.map((history) => (
                   <div key={history.id} className="border rounded-lg p-3">
-                    <p className="font-medium">{history.designation}</p>
-                    <p className="text-sm text-muted-foreground">{history.institutionName}</p>
+                    <p className="font-medium">{history.role}</p>
+                    <p className="text-sm text-muted-foreground">{history.organizationName}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(history.startDate), "MMM yyyy")} -{" "}
+                      {history.startDate ? format(new Date(history.startDate), "MMM yyyy") : "—"} -{" "}
                       {history.endDate ? format(new Date(history.endDate), "MMM yyyy") : "Present"}
                     </p>
-                    {history.responsibilities && (
-                      <p className="text-sm mt-2 text-muted-foreground">{history.responsibilities}</p>
+                    {history.reasonForLeaving && (
+                      <p className="text-sm mt-2 text-muted-foreground">{history.reasonForLeaving}</p>
                     )}
                   </div>
                 ))}

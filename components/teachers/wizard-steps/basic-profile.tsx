@@ -20,7 +20,8 @@ export function TeacherBasicProfile() {
 
   const dateOfBirth = watch("dateOfBirth")
   const dateOfJoining = watch("dateOfJoining")
-  const photoUrl = watch("photoUrl")
+  const profilePhotoUrl = watch("profilePhotoUrl")
+  const gender = watch("gender")
   const teacherId = watch("id")
 
   const { data: users, isLoading: isLoadingUsers } = useUsers()
@@ -35,8 +36,8 @@ export function TeacherBasicProfile() {
             category="teachers"
             entityId={teacherId}
             documentType="profile_photo"
-            value={photoUrl}
-            onUploadComplete={(url) => setValue("photoUrl", url)}
+            value={profilePhotoUrl}
+            onUploadComplete={(url) => setValue("profilePhotoUrl", url)}
             accept="image/*"
             maxSize={2 * 1024 * 1024}
             compact
@@ -44,37 +45,18 @@ export function TeacherBasicProfile() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* First Name */}
+      <div className="grid grid-cols-1 gap-4">
+        {/* Full Name */}
         <div className="space-y-2">
-          <Label htmlFor="firstName">
-            First Name <span className="text-destructive">*</span>
+          <Label htmlFor="fullName">
+            Full Name <span className="text-destructive">*</span>
           </Label>
           <Input
-            id="firstName"
-            {...register("firstName", { required: "First name is required" })}
-            placeholder="Enter first name"
+            id="fullName"
+            {...register("fullName", { required: "Full name is required" })}
+            placeholder="Enter full name"
           />
-          {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message as string}</p>}
-        </div>
-
-        {/* Middle Name */}
-        <div className="space-y-2">
-          <Label htmlFor="middleName">Middle Name</Label>
-          <Input id="middleName" {...register("middleName")} placeholder="Enter middle name" />
-        </div>
-
-        {/* Last Name */}
-        <div className="space-y-2">
-          <Label htmlFor="lastName">
-            Last Name <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="lastName"
-            {...register("lastName", { required: "Last name is required" })}
-            placeholder="Enter last name"
-          />
-          {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message as string}</p>}
+          {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message as string}</p>}
         </div>
       </div>
 
@@ -116,7 +98,10 @@ export function TeacherBasicProfile() {
           <Label htmlFor="gender">
             Gender <span className="text-destructive">*</span>
           </Label>
-          <Select onValueChange={(value) => setValue("gender", value, { shouldValidate: true })}>
+          <Select
+            value={gender || undefined}
+            onValueChange={(value) => setValue("gender", value, { shouldValidate: true })}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
@@ -178,7 +163,11 @@ export function TeacherBasicProfile() {
         {/* User Linking */}
         <div className="space-y-2">
           <Label htmlFor="userId">Link to User Account (Optional)</Label>
-          <Select onValueChange={(value) => setValue("userId", value)} disabled={isLoadingUsers}>
+          <Select
+            value={watch("userId") || undefined}
+            onValueChange={(value) => setValue("userId", value === "none" ? undefined : value)}
+            disabled={isLoadingUsers}
+          >
             <SelectTrigger>
               <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select user"} />
             </SelectTrigger>

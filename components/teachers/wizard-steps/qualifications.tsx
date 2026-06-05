@@ -8,23 +8,22 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FileUpload } from "@/components/shared/file-upload"
-import { DatePickerInput } from "@/components/ui/date-picker"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useAddQualification, useUpdateQualification, useDeleteQualification } from "@/hooks/use-teachers"
-import type { Qualification } from "@/lib/api/teachers"
+import type { TeacherQualification } from "@/lib/api/teachers"
 
-export function TeacherQualifications() {
+export function TeacherQualifications({ teacherId: propTeacherId }: { teacherId: string }) {
   const { watch } = useFormContext()
-  const teacherId = watch("id")
+  const teacherId = propTeacherId || watch("id")
   const qualifications = watch("qualifications") || []
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingQual, setEditingQual] = useState<Qualification | null>(null)
+  const [editingQual, setEditingQual] = useState<TeacherQualification | null>(null)
   const [formData, setFormData] = useState({
-    degreeName: "",
+    qualificationName: "",
     institution: "",
-    yearOfCompletion: "",
-    certificateUrl: "",
+    yearOfPassing: "",
+    documentUrl: "",
   })
 
   const createQual = useAddQualification()
@@ -33,30 +32,36 @@ export function TeacherQualifications() {
 
   const handleAdd = () => {
     setEditingQual(null)
-    setFormData({ degreeName: "", institution: "", yearOfCompletion: "", certificateUrl: "" })
+    setFormData({ qualificationName: "", institution: "", yearOfPassing: "", documentUrl: "" })
     setIsDialogOpen(true)
   }
 
-  const handleEdit = (qual: Qualification) => {
+  const handleEdit = (qual: TeacherQualification) => {
     setEditingQual(qual)
     setFormData({
-      degreeName: qual.degreeName,
-      institution: qual.institution,
-      yearOfCompletion: qual.yearOfCompletion,
-      certificateUrl: qual.certificateUrl || "",
+      qualificationName: qual.qualificationName,
+      institution: qual.institution || "",
+      yearOfPassing: qual.yearOfPassing?.toString() || "",
+      documentUrl: qual.documentUrl || "",
     })
     setIsDialogOpen(true)
   }
 
   const handleSave = () => {
+    const data = {
+      qualificationName: formData.qualificationName,
+      institution: formData.institution || undefined,
+      yearOfPassing: formData.yearOfPassing ? parseInt(formData.yearOfPassing) : undefined,
+      documentUrl: formData.documentUrl || undefined,
+    }
     if (editingQual) {
       updateQual.mutate({
         teacherId,
         qualificationId: editingQual.id,
-        data: formData,
+        data,
       })
     } else {
-      createQual.mutate({ teacherId, data: formData })
+      createQual.mutate({ teacherId, data })
     }
     setIsDialogOpen(false)
   }
@@ -89,7 +94,7 @@ export function TeacherQualifications() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Degree</TableHead>
+              <TableHead>Qualification</TableHead>
               <TableHead>Institution</TableHead>
               <TableHead>Year</TableHead>
               <TableHead>Certificate</TableHead>
@@ -97,18 +102,18 @@ export function TeacherQualifications() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {qualifications.map((qual: Qualification) => (
+            {qualifications.map((qual: TeacherQualification) => (
               <TableRow key={qual.id}>
-                <TableCell className="font-medium">{qual.degreeName}</TableCell>
+                <TableCell className="font-medium">{qual.qualificationName}</TableCell>
                 <TableCell>{qual.institution}</TableCell>
-                <TableCell>{qual.yearOfCompletion}</TableCell>
+                <TableCell>{qual.yearOfPassing}</TableCell>
                 <TableCell>
-                  {qual.certificateUrl ? (
+                  {qual.documentUrl ? (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(qual.certificateUrl, "_blank")}
+                      onClick={() => window.open(qual.documentUrl, "_blank")}
                     >
                       <FileText className="h-4 w-4" />
                     </Button>
@@ -155,21 +160,21 @@ export function TeacherQualifications() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Degree Name *</Label>
+                <Label>Qualification Name *</Label>
                 <Input
-                  value={formData.degreeName}
-                  onChange={(e) => setFormData({ ...formData, degreeName: e.target.value })}
+                  value={formData.qualificationName}
+                  onChange={(e) => setFormData({ ...formData, qualificationName: e.target.value })}
                   placeholder="e.g., B.Ed, M.Sc"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Year of Completion *</Label>
-                <DatePickerInput
-                  value={formData.yearOfCompletion ? new Date(formData.yearOfCompletion) : undefined}
-                  onChange={(date) => setFormData({ ...formData, yearOfCompletion: date?.toISOString() || "" })}
-                  placeholder="Select year"
-                  maxDate={new Date()}
+                <Label>Year of Passing</Label>
+                <Input
+                  value={formData.yearOfPassing}
+                  onChange={(e) => setFormData({ ...formData, yearOfPassing: e.target.value })}
+                  placeholder="e.g., 2020"
+                  type="number"
                 />
               </div>
             </div>
@@ -189,8 +194,8 @@ export function TeacherQualifications() {
                 category="teachers"
                 entityId={teacherId}
                 documentType={`qualification_${editingQual?.id || "new"}`}
-                value={formData.certificateUrl}
-                onUploadComplete={(url) => setFormData({ ...formData, certificateUrl: url })}
+                value={formData.documentUrl}
+                onUploadComplete={(url) => setFormData({ ...formData, documentUrl: url })}
                 accept="application/pdf,image/*"
               />
             </div>
@@ -200,7 +205,7 @@ export function TeacherQualifications() {
             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSave} disabled={!formData.degreeName || !formData.institution}>
+            <Button type="button" onClick={handleSave} disabled={!formData.qualificationName || !formData.institution}>
               {editingQual ? "Update" : "Add"}
             </Button>
           </DialogFooter>

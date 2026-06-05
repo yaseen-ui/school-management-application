@@ -13,7 +13,7 @@ import { useCreateTeacher, useUpdateTeacher } from "@/hooks/use-teachers"
 import { TeacherBasicProfile } from "./wizard-steps/basic-profile"
 import { TeacherQualifications } from "./wizard-steps/qualifications"
 import { TeacherEmploymentHistory } from "./wizard-steps/employment-history"
-import type { Teacher } from "@/lib/api/teachers"
+import type { Teacher, CreateTeacherRequest } from "@/lib/api/teachers"
 
 interface CreateTeacherWizardProps {
   open: boolean
@@ -47,6 +47,8 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
         gender: teacherToEdit.gender,
         employeeCode: teacherToEdit.employeeCode,
         profilePhotoUrl: teacherToEdit.profilePhotoUrl,
+        dateOfBirth: teacherToEdit.dateOfBirth,
+        dateOfJoining: teacherToEdit.dateOfJoining,
         yearsOfExperience: teacherToEdit.yearsOfExperience,
         userId: teacherToEdit.userId,
       })
@@ -75,9 +77,11 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
           gender: formData.gender,
           employeeCode: formData.employeeCode,
           profilePhotoUrl: formData.profilePhotoUrl,
+          dateOfBirth: formData.dateOfBirth,
+          dateOfJoining: formData.dateOfJoining,
           yearsOfExperience: formData.yearsOfExperience,
           userId: formData.userId,
-        }),
+        }) as CreateTeacherRequest,
         {
           onSuccess: (response: any) => {
             const teacherId = response.data?.id || response.data?.data?.id
@@ -104,7 +108,7 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
       const formData = methods.getValues()
       updateTeacher.mutate(
         {
-          id: teacherId,
+          teacherId,
           data: filterNullValues({
             fullName: formData.fullName,
             email: formData.email,

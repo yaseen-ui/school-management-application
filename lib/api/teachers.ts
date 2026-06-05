@@ -11,6 +11,8 @@ export interface Teacher {
   gender?: "Male" | "Female" | "Other"
   employeeCode?: string
   profilePhotoUrl?: string
+  dateOfBirth?: string
+  dateOfJoining?: string
   yearsOfExperience?: number
   createdAt: string
   updatedAt: string
