@@ -86,6 +86,20 @@ enum SubscriptionPlan {
   enterprise
 }
 
+enum ExpertiseLevel {
+  beginner
+  intermediate
+  advanced
+  expert
+}
+
+enum SubjectScope {
+  all_courses_all_grades
+  course_all_grades
+  grade_all_courses
+  course_grade
+}
+
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
   id               String           @id @default(uuid())
@@ -124,6 +138,8 @@ model Tenant {
   teacherQualifications      TeacherQualification[]
   teacherEmploymentHistory   TeacherEmploymentHistory[]
   teacherAssignments         TeacherAssignment[]
+  teacherCapabilities        TeacherCapability[]
+  subjectOfferings           SubjectOffering[]
   timetablePeriods           TimetablePeriod[]
   timetableEntries           TimetableEntry[]
   attendanceSessions         AttendanceSession[]
@@ -225,6 +241,10 @@ model Course {
   grades   Grade[]
   subjects Subject[]
 
+  // teacher capabilities & subject offerings
+  teacherCapabilities TeacherCapability[]
+  subjectOfferings    SubjectOffering[]
+
   @@unique([id, tenantId], name: "course_tenant_identity")
   @@index([tenantId])
   @@map("courses")
@@ -244,6 +264,10 @@ model Grade {
   sections    Section[]
   students    Student[] // current snapshot
   enrollments StudentEnrollment[]
+
+  // teacher capabilities & subject offerings
+  teacherCapabilities TeacherCapability[]
+  subjectOfferings    SubjectOffering[]
 
   @@unique([id, tenantId], name: "grade_tenant_identity")
   @@index([tenantId])
@@ -286,6 +310,10 @@ model Subject {
 
   sectionSubjects SectionSubject[]
 
+  // teacher capabilities & subject offerings
+  teacherCapabilities TeacherCapability[]
+  subjectOfferings    SubjectOffering[]
+
   @@unique([id, tenantId], name: "subject_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, courseId])
@@ -301,9 +329,16 @@ model SectionSubject {
   // electives support using the same table
   isElective Boolean @default(false)
 
+  // Optional reference to SubjectOffering (canonical source for subject applicability).
+  // Kept optional for backward compatibility; new records should prefer this.
+  subjectOfferingId String?
+
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  // NoAction (not SetNull) preserves the required tenantId. Admin must
+  // clear subjectOfferingId from sectionSubjects before deleting a SubjectOffering.
+  subjectOffering SubjectOffering? @relation(fields: [subjectOfferingId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
 
   teacherAssignments TeacherAssignment[]
   timetableEntries   TimetableEntry[]
@@ -316,6 +351,7 @@ model SectionSubject {
   @@index([tenantId])
   @@index([tenantId, sectionId])
   @@index([tenantId, subjectId])
+  @@index([tenantId, subjectOfferingId])
   @@map("section_subjects")
 }
 
@@ -437,6 +473,7 @@ model Teacher {
   user   User?  @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   assignments       TeacherAssignment[]
+  capabilities      TeacherCapability[]
   qualifications    TeacherQualification[]
   employmentHistory TeacherEmploymentHistory[]
 
@@ -520,6 +557,83 @@ model TeacherAssignment {
   @@index([tenantId, teacherId])
   @@index([tenantId, sectionSubjectId])
   @@map("teacher_assignments")
+}
+
+// ---------------- Teacher Capabilities (what a teacher CAN teach) ----------------
+model TeacherCapability {
+  id        String         @id @default(uuid())
+  tenantId  String
+  teacherId String
+  subjectId String
+
+  // Optional scoping: null means "all courses" or "all grades"
+  courseId String?
+  gradeId  String?
+
+  expertiseLevel   ExpertiseLevel @default(intermediate)
+  isPrimary        Boolean        @default(false)
+  priorityScore    Int            @default(50)
+  canBeClassTeacher Boolean       @default(false)
+  remarks          String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  teacher Teacher @relation(fields: [teacherId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  course  Course? @relation(fields: [courseId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  grade   Grade?  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  // NOTE: No composite unique with nullable courseId/gradeId to avoid PostgreSQL null uniqueness issues.
+  // Duplicate prevention is handled in service logic.
+  @@unique([id, tenantId], name: "teacher_capability_tenant_identity")
+  @@index([tenantId, teacherId])
+  @@index([tenantId, subjectId])
+  @@index([tenantId, courseId])
+  @@index([tenantId, gradeId])
+  @@map("teacher_capabilities")
+}
+
+// ---------------- Subject Offerings (canonical source for subject applicability) ----------------
+// This is the canonical source for which subjects are available for which courses/grades.
+// Subject.isCommon is kept for backward compatibility but SubjectOffering should be used
+// for all new teacher assignment and curriculum logic.
+model SubjectOffering {
+  id        String       @id @default(uuid())
+  tenantId  String
+  subjectId String
+
+  // Optional scoping: null means "all courses" or "all grades"
+  courseId String?
+  gradeId  String?
+
+  scope         SubjectScope @default(course_all_grades)
+  isElective    Boolean      @default(false)
+  weeklyPeriods Int?
+  status        EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  course  Course? @relation(fields: [courseId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  grade   Grade?  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  sectionSubjects SectionSubject[]
+
+  @@unique([id, tenantId], name: "subject_offering_tenant_identity")
+  @@index([tenantId, subjectId])
+  @@index([tenantId, courseId])
+  @@index([tenantId, gradeId])
+  @@index([tenantId, scope])
+  @@index([tenantId, status])
+  @@map("subject_offerings")
 }
 
 // ---------------- Timetable ----------------

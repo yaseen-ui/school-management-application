@@ -19,6 +19,9 @@ import {
   Shield,
   Calendar,
   UserCheck,
+  BookMarked,
+  GitBranch,
+  UserCog,
 } from "lucide-react"
 import { config } from "@/lib/config"
 
@@ -63,6 +66,7 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Students", href: "/students", icon: GraduationCap },
       { title: "Courses", href: "/courses", icon: BookOpen },
       { title: "Subjects", href: "/subjects", icon: Layers },
+      { title: "Subject Offerings", href: "/subject-offerings", icon: BookMarked },
       { title: "Sections", href: "/sections", icon: ClipboardList },
       { title: "Grades", href: "/grades", icon: ClipboardList },
       { title: "Academic Years", href: "/academic-years", icon: Calendar },
@@ -73,6 +77,8 @@ const tenantNavGroups: NavGroup[] = [
     items: [
       { title: "Users", href: "/users", icon: Users },
       { title: "Teachers", href: "/teachers", icon: UserCheck },
+      { title: "Teacher Capabilities", href: "/teachers/capabilities", icon: GitBranch },
+      { title: "Teacher Assignments", href: "/teachers/assignments", icon: UserCog },
       { title: "Roles & Permissions", href: "/roles", icon: Shield },
       { title: "Inventory", href: "/inventory", icon: Package },
     ],
