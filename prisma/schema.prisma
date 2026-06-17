@@ -140,6 +140,7 @@ model Tenant {
   teacherAssignments         TeacherAssignment[]
   teacherCapabilities        TeacherCapability[]
   subjectOfferings           SubjectOffering[]
+  timetableStructures        TimetableStructure[]
   timetablePeriods           TimetablePeriod[]
   timetableEntries           TimetableEntry[]
   attendanceSessions         AttendanceSession[]
@@ -280,11 +281,13 @@ model Section {
   tenantId    String
   gradeId     String
   sectionName String
+  structureId String? // NEW: which timetable structure this section follows
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  grade  Grade  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  grade     Grade               @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  structure TimetableStructure? @relation(fields: [structureId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   sectionSubjects SectionSubject[]
   students        Student[] // current snapshot
@@ -293,6 +296,7 @@ model Section {
   @@unique([id, tenantId], name: "section_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, gradeId])
+  @@index([tenantId, structureId])
   @@map("sections")
 }
 
@@ -636,24 +640,46 @@ model SubjectOffering {
   @@map("subject_offerings")
 }
 
-// ---------------- Timetable ----------------
-model TimetablePeriod {
-  id        String   @id @default(uuid())
-  tenantId  String
-  name      String // "P1", "P2", "LAB-1", "FULL_DAY" (sentinel for daily-mark schools)
-  startTime Int // minutes from midnight, 0-1439; e.g. 09:00 = 540
-  endTime   Int // minutes from midnight, 0-1439; e.g. 09:45 = 585
-  sortOrder Int      @default(0)
+// ---------------- Timetable Structures & Periods ----------------
+model TimetableStructure {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String // "Primary", "Secondary", "Pre-Primary"
+  description String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  entries            TimetableEntry[]
+  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  periods TimetablePeriod[]
+  sections Section[]
+
+  @@unique([tenantId, name], name: "uniqueStructureNamePerTenant")
+  @@unique([id, tenantId], name: "timetable_structure_tenant_identity")
+  @@index([tenantId])
+  @@map("timetable_structures")
+}
+
+model TimetablePeriod {
+  id          String   @id @default(uuid())
+  tenantId    String
+  structureId String
+  name        String // "P1", "P2", "LAB-1", "FULL_DAY" (sentinel for daily-mark schools)
+  startTime   Int // minutes from midnight, 0-1439; e.g. 09:00 = 540
+  endTime     Int // minutes from midnight, 0-1439; e.g. 09:45 = 585
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  structure TimetableStructure  @relation(fields: [structureId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  entries   TimetableEntry[]
   attendanceSessions AttendanceSession[]
 
-  @@unique([tenantId, name], name: "uniquePeriodNamePerTenant")
+  @@unique([tenantId, structureId, name], name: "uniquePeriodNamePerStructure")
   @@unique([id, tenantId], name: "timetable_period_tenant_identity")
   @@index([tenantId])
+  @@index([tenantId, structureId])
   @@map("timetable_periods")
 }
 
