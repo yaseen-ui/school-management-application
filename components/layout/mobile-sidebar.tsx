@@ -12,22 +12,19 @@ import { config } from "@/lib/config"
 
 export function MobileSidebar() {
   const pathname = usePathname()
-  const { sidebarCollapsed, setSidebarCollapsed } = useUIStore()
-  const { tenantName } = useAuth()
+  const { mobileSidebarOpen, setMobileSidebarOpen } = useUIStore()
+  const { tenantInfo } = useAuth()
 
-  // On mobile, sidebarCollapsed=false means sidebar is OPEN
-  const isOpen = !sidebarCollapsed
+  const displayName = config.isCompanyHost ? "EduManage Ops" : tenantInfo?.schoolName || "EduManage"
 
-  const displayName = config.isCompanyHost ? "EduManage Ops" : tenantName || "EduManage"
-
-  // Close sidebar on route change
+  // Close mobile sidebar on route change
   useEffect(() => {
-    setSidebarCollapsed(true)
-  }, [pathname, setSidebarCollapsed])
+    setMobileSidebarOpen(false)
+  }, [pathname, setMobileSidebarOpen])
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {mobileSidebarOpen && (
         <>
           {/* Backdrop */}
           <motion.div
@@ -36,7 +33,7 @@ export function MobileSidebar() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarCollapsed(true)}
+            onClick={() => setMobileSidebarOpen(false)}
           />
 
           {/* Sidebar */}
@@ -59,7 +56,7 @@ export function MobileSidebar() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-sidebar-foreground/70"
-                onClick={() => setSidebarCollapsed(true)}
+                onClick={() => setMobileSidebarOpen(false)}
               >
                 <X className="h-4 w-4" />
               </Button>

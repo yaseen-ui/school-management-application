@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useMemo } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -8,10 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useCreateTeacherAssignment, useEligibleTeachers } from "@/hooks/use-teacher-assignments"
 import { useAcademicYears } from "@/hooks/use-academic-years"
+import { useCourses } from "@/hooks/use-courses"
+import { useGrades } from "@/hooks/use-grades"
 import { useSections } from "@/hooks/use-sections"
 import { useSubjects } from "@/hooks/use-subjects"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import type { Section } from "@/lib/api/sections"
 
 interface CreateTeacherAssignmentDialogProps {
   open: boolean
@@ -20,6 +23,8 @@ interface CreateTeacherAssignmentDialogProps {
 
 interface FormData {
   academicYearId: string
+  courseId: string
+  gradeId: string
   sectionId: string
   subjectId: string
   teacherId: string
@@ -43,31 +48,81 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
   })
   const createAssignment = useCreateTeacherAssignment()
   const { data: academicYearsData } = useAcademicYears()
-  const { data: sectionsData } = useSections()
+  const { data: coursesData } = useCourses()
   const { data: subjectsData } = useSubjects()
 
+  const selectedCourseId = watch("courseId")
+  const selectedGradeId = watch("gradeId")
   const selectedSectionId = watch("sectionId")
   const selectedSubjectId = watch("subjectId")
   const selectedRole = watch("role")
 
-  // Build sectionSubjectId from selected section + subject
-  const sectionSubjectId = selectedSectionId && selectedSubjectId ? `${selectedSectionId}_${selectedSubjectId}` : null
+  // Fetch grades filtered by selected course
+  const { data: gradesData } = useGrades(selectedCourseId)
+
+  // Fetch sections filtered by selected grade
+  const { data: sectionsData } = useSections(selectedGradeId)
+
+  const academicYears = academicYearsData?.data?.rows || []
+  const courses = coursesData?.data?.rows || []
+  const grades = gradesData?.rows || []
+  const sections: Section[] = sectionsData?.data?.rows || []
+  const subjects = subjectsData || []
+
+  // Find the selected section object to get its sectionSubjects
+  const selectedSection = useMemo(() => {
+    if (!selectedSectionId) return null
+    return sections.find((s) => s.id === selectedSectionId) || null
+  }, [sections, selectedSectionId])
+
+  // Find the actual SectionSubject ID from the selected section's sectionSubjects
+  const sectionSubjectId = useMemo(() => {
+    if (!selectedSection || !selectedSubjectId) return null
+    const sectionSubject = selectedSection.sectionSubjects?.find(
+      (ss) => ss.subjectId === selectedSubjectId
+    )
+    return sectionSubject?.id || null
+  }, [selectedSection, selectedSubjectId])
 
   const { data: eligibleTeachers, isLoading: loadingEligible } = useEligibleTeachers(
     sectionSubjectId,
     selectedRole,
   )
 
-  const academicYears = academicYearsData?.data?.rows || []
-  const sections = sectionsData?.data?.rows || []
-  const subjects = subjectsData || []
+  // Reset dependent fields when parent selection changes
+  const handleCourseChange = (value: string) => {
+    setValue("courseId", value)
+    setValue("gradeId", "")
+    setValue("sectionId", "")
+    setValue("subjectId", "")
+    setValue("teacherId", "")
+  }
+
+  const handleGradeChange = (value: string) => {
+    setValue("gradeId", value)
+    setValue("sectionId", "")
+    setValue("subjectId", "")
+    setValue("teacherId", "")
+  }
+
+  const handleSectionChange = (value: string) => {
+    setValue("sectionId", value)
+    setValue("subjectId", "")
+    setValue("teacherId", "")
+  }
+
+  const handleSubjectChange = (value: string) => {
+    setValue("subjectId", value)
+    setValue("teacherId", "")
+  }
 
   const onSubmit = async (data: FormData) => {
+    if (!sectionSubjectId) return
     await createAssignment.mutateAsync({
       data: {
         academicYearId: data.academicYearId,
         teacherId: data.teacherId,
-        sectionSubjectId: sectionSubjectId || "",
+        sectionSubjectId: sectionSubjectId,
         role: data.role as any,
       },
       overrideCapabilityCheck: data.overrideCapabilityCheck,
@@ -78,13 +133,14 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Add Teacher Assignment</DialogTitle>
           <DialogDescription>Assign a teacher to a subject and section for an academic year</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Academic Year */}
           <div className="space-y-2">
             <Label htmlFor="academicYearId">Academic Year *</Label>
             <Controller
@@ -109,6 +165,58 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
             {errors.academicYearId && <p className="text-sm text-destructive">{errors.academicYearId.message}</p>}
           </div>
 
+          {/* Course & Grade row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="courseId">Course *</Label>
+              <Controller
+                name="courseId"
+                control={control}
+                rules={{ required: "Course is required" }}
+                render={({ field }) => (
+                  <Select onValueChange={handleCourseChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course: any) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.courseName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.courseId && <p className="text-sm text-destructive">{errors.courseId.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gradeId">Grade *</Label>
+              <Controller
+                name="gradeId"
+                control={control}
+                rules={{ required: "Grade is required" }}
+                render={({ field }) => (
+                  <Select onValueChange={handleGradeChange} value={field.value} disabled={!selectedCourseId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={selectedCourseId ? "Select grade" : "Select course first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grades.map((grade: any) => (
+                        <SelectItem key={grade.id} value={grade.id}>
+                          {grade.gradeName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.gradeId && <p className="text-sm text-destructive">{errors.gradeId.message}</p>}
+            </div>
+          </div>
+
+          {/* Section & Subject row */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sectionId">Section *</Label>
@@ -117,9 +225,9 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
                 control={control}
                 rules={{ required: "Section is required" }}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={handleSectionChange} value={field.value} disabled={!selectedGradeId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select section" />
+                      <SelectValue placeholder={selectedGradeId ? "Select section" : "Select grade first"} />
                     </SelectTrigger>
                     <SelectContent>
                       {sections.map((section: any) => (
@@ -141,7 +249,7 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
                 control={control}
                 rules={{ required: "Subject is required" }}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={handleSubjectChange} value={field.value}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
@@ -159,6 +267,7 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
             </div>
           </div>
 
+          {/* Role */}
           <div className="space-y-2">
             <Label htmlFor="role">Role *</Label>
             <Controller
@@ -181,6 +290,7 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
             />
           </div>
 
+          {/* Eligible Teachers */}
           {sectionSubjectId && (
             <div className="space-y-2">
               <Label>Eligible Teachers</Label>
@@ -217,6 +327,7 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
             </div>
           )}
 
+          {/* Override capability check */}
           <div className="flex items-center space-x-2">
             <Controller
               name="overrideCapabilityCheck"
@@ -235,7 +346,7 @@ export function CreateTeacherAssignmentDialog({ open, onOpenChange }: CreateTeac
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createAssignment.isPending}>
+            <Button type="submit" disabled={createAssignment.isPending || !sectionSubjectId}>
               {createAssignment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Assignment
             </Button>

@@ -18,7 +18,7 @@ import { useUIStore } from "@/stores/ui-store"
 
 export function Header() {
   const { user, logout } = useAuth()
-  const { sidebarCollapsed, toggleSidebar } = useUIStore()
+  const { toggleMobileSidebar } = useUIStore()
 
   const initials =
     user?.firstName && user?.lastName
@@ -39,7 +39,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
       {/* Mobile menu button */}
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={toggleSidebar}>
+      <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={toggleMobileSidebar}>
         <Menu className="h-5 w-5" />
       </Button>
 
@@ -52,7 +52,7 @@ export function Header() {
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         <ThemeToggle />
 
         {/* Notifications */}
