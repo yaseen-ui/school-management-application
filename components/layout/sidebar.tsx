@@ -21,7 +21,7 @@ export function Sidebar() {
       animate={{ width: sidebarCollapsed ? 72 : 260 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
       className={cn(
-        "fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-sidebar-border bg-sidebar",
+        "fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-sidebar-border bg-sidebar shadow-[1px_0_4px_rgba(0,0,0,0.04),2px_0_8px_rgba(0,0,0,0.04)]",
         "hidden lg:flex",
       )}
     >

@@ -20,7 +20,12 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-background">
         <Sidebar />
         <MobileSidebar />
-        <div className={cn("transition-all duration-200", sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]")}>
+        <div
+          className={cn(
+            "transition-all duration-200 min-h-screen",
+            sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]",
+          )}
+        >
           <Header />
           <main className="p-6">{children}</main>
         </div>

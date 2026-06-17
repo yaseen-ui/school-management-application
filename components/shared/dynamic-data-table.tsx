@@ -466,15 +466,15 @@ export function DynamicDataTable<TData>({
       </AnimatePresence>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-border/50 bg-card shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04)]">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-border/50 bg-muted/30 hover:bg-muted/30">
+              <TableRow key={headerGroup.id} className="border-b border-border/80 bg-muted/30 hover:bg-muted/30">
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="text-muted-foreground font-semibold whitespace-nowrap"
+                    className="text-muted-foreground/80 text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap"
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}

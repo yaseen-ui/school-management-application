@@ -37,7 +37,8 @@ export function Header() {
       : user?.fullName || user?.email || "User"
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] px-6">
+
       {/* Mobile menu button */}
       <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={toggleMobileSidebar}>
         <Menu className="h-5 w-5" />

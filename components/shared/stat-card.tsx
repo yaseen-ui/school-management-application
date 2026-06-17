@@ -16,14 +16,26 @@ interface StatCardProps {
   }
   className?: string
   iconClassName?: string
+  /** Theme color for the icon container: 'primary' | 'emerald' | 'amber' | 'violet' | 'sky' */
+  iconTheme?: 'primary' | 'emerald' | 'amber' | 'violet' | 'sky'
 }
 
-export function StatCard({ title, value, description, icon: Icon, trend, className, iconClassName }: StatCardProps) {
+const iconThemeStyles: Record<string, { container: string; icon: string }> = {
+  primary: { container: 'bg-primary/10', icon: 'text-primary' },
+  emerald: { container: 'bg-emerald-50 dark:bg-emerald-500/10', icon: 'text-emerald-600 dark:text-emerald-400' },
+  amber: { container: 'bg-amber-50 dark:bg-amber-500/10', icon: 'text-amber-600 dark:text-amber-400' },
+  violet: { container: 'bg-violet-50 dark:bg-violet-500/10', icon: 'text-violet-600 dark:text-violet-400' },
+  sky: { container: 'bg-sky-50 dark:bg-sky-500/10', icon: 'text-sky-600 dark:text-sky-400' },
+}
+
+export function StatCard({ title, value, description, icon: Icon, trend, className, iconClassName, iconTheme = 'primary' }: StatCardProps) {
+  const theme = iconThemeStyles[iconTheme] || iconThemeStyles.primary
+
   return (
     <motion.div whileHover={{ scale: 1.02, y: -2 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
       <Card
         className={cn(
-          "relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-shadow hover:shadow-lg",
+          "relative overflow-hidden border-border/60 bg-card transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)]",
           className,
         )}
       >
@@ -45,8 +57,8 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
                 </p>
               )}
             </div>
-            <div className={cn("rounded-xl p-3 bg-primary/10", iconClassName)}>
-              <Icon className="h-5 w-5 text-primary" />
+            <div className={cn("rounded-xl p-3", theme.container, iconClassName)}>
+              <Icon className={cn("h-5 w-5", theme.icon)} />
             </div>
           </div>
         </CardContent>

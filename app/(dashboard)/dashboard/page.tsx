@@ -10,17 +10,17 @@ import { config } from "@/lib/config"
 import { useAuth } from "@/hooks/use-auth"
 
 const companyStats = [
-  { title: "Total Tenants", value: "48", icon: Building2, trend: { value: 12, isPositive: true } },
-  { title: "Active Users", value: "2,847", icon: Users, trend: { value: 8, isPositive: true } },
-  { title: "Total Students", value: "45,231", icon: GraduationCap, trend: { value: 15, isPositive: true } },
-  { title: "Monthly Revenue", value: "$124,500", icon: DollarSign, trend: { value: 5, isPositive: true } },
+  { title: "Total Tenants", value: "48", icon: Building2, trend: { value: 12, isPositive: true }, iconTheme: "primary" as const },
+  { title: "Active Users", value: "2,847", icon: Users, trend: { value: 8, isPositive: true }, iconTheme: "emerald" as const },
+  { title: "Total Students", value: "45,231", icon: GraduationCap, trend: { value: 15, isPositive: true }, iconTheme: "violet" as const },
+  { title: "Monthly Revenue", value: "$124,500", icon: DollarSign, trend: { value: 5, isPositive: true }, iconTheme: "amber" as const },
 ]
 
 const tenantStats = [
-  { title: "Total Students", value: "1,234", icon: GraduationCap, trend: { value: 5, isPositive: true } },
-  { title: "Staff Members", value: "89", icon: Users, trend: { value: 2, isPositive: true } },
-  { title: "Active Courses", value: "24", icon: BookOpen, trend: { value: 3, isPositive: true } },
-  { title: "Attendance Rate", value: "94.5%", icon: Activity, trend: { value: 1.2, isPositive: true } },
+  { title: "Total Students", value: "1,234", icon: GraduationCap, trend: { value: 5, isPositive: true }, iconTheme: "primary" as const },
+  { title: "Staff Members", value: "89", icon: Users, trend: { value: 2, isPositive: true }, iconTheme: "emerald" as const },
+  { title: "Active Courses", value: "24", icon: BookOpen, trend: { value: 3, isPositive: true }, iconTheme: "violet" as const },
+  { title: "Attendance Rate", value: "94.5%", icon: Activity, trend: { value: 1.2, isPositive: true }, iconTheme: "sky" as const },
 ]
 
 const containerVariants = {
