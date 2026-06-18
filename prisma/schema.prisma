@@ -100,6 +100,16 @@ enum SubjectScope {
   course_grade
 }
 
+enum PeriodType {
+  class
+  break
+  lunch
+  sports
+  leisure
+  study_hour
+}
+
+
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
   id               String           @id @default(uuid())
@@ -661,15 +671,17 @@ model TimetableStructure {
 }
 
 model TimetablePeriod {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   tenantId    String
   structureId String
   name        String // "P1", "P2", "LAB-1", "FULL_DAY" (sentinel for daily-mark schools)
+  type        PeriodType @default(class)
   startTime   Int // minutes from midnight, 0-1439; e.g. 09:00 = 540
   endTime     Int // minutes from midnight, 0-1439; e.g. 09:45 = 585
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
 
   tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   structure TimetableStructure  @relation(fields: [structureId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)

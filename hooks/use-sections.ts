@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { sectionsApi } from "@/lib/api/sections"
 import { toast } from "@/components/ui/sonner"
 
-export function useSections(gradeId?: string) {
+export function useSections(gradeId?: string, courseId?: string) {
   return useQuery({
-    queryKey: ["sections", gradeId], // Include gradeId in query key for proper caching and refetching
-    queryFn: () => sectionsApi.list(gradeId),
+    queryKey: ["sections", gradeId, courseId], // Include gradeId and courseId in query key for proper caching and refetching
+    queryFn: () => sectionsApi.list(gradeId, courseId),
   })
 }
 

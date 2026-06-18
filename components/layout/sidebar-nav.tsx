@@ -20,8 +20,9 @@ import {
   Calendar,
   BookHeart,
   CalendarClock,
-  Clock,
 } from "lucide-react"
+
+
 
 import { config } from "@/lib/config"
 
@@ -83,11 +84,10 @@ const tenantNavGroups: NavGroup[] = [
   {
     title: "Timetable",
     items: [
-      { title: "Timetable Grid", href: "/timetable", icon: CalendarClock },
-      { title: "Structures", href: "/timetable-structures", icon: Layers },
-      { title: "Periods", href: "/timetable-periods", icon: Clock },
+      { title: "Timetable", href: "/timetable", icon: CalendarClock },
     ],
   },
+
 
   {
     title: "System",

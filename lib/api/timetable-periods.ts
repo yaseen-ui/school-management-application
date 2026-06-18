@@ -1,11 +1,32 @@
 import { apiClient } from "./client"
 import type { ApiResponse } from "./types"
 
+export type PeriodType = "class" | "break" | "lunch" | "sports" | "leisure" | "study_hour"
+
+export const PERIOD_TYPE_LABELS: Record<PeriodType, string> = {
+  class: "Class",
+  break: "Break",
+  lunch: "Lunch",
+  sports: "Sports",
+  leisure: "Leisure",
+  study_hour: "Study Hour",
+}
+
+export const PERIOD_TYPE_VARIANTS: Record<PeriodType, string> = {
+  class: "default",
+  break: "secondary",
+  lunch: "warning",
+  sports: "success",
+  leisure: "outline",
+  study_hour: "info",
+}
+
 export interface TimetablePeriod {
   id: string
   tenantId: string
   structureId: string
   name: string
+  type: PeriodType
   startTime: number
   endTime: number
   sortOrder: number
@@ -20,10 +41,12 @@ export interface TimetablePeriod {
 export interface CreateTimetablePeriodRequest {
   structureId: string
   name: string
+  type?: PeriodType
   startTime: number
   endTime: number
   sortOrder?: number
 }
+
 
 export const timetablePeriodsApi = {
   getAll: (filters?: Record<string, string>) => {

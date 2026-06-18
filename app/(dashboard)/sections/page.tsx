@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
@@ -8,6 +8,8 @@ import { DynamicDataTable, type ApiColumn } from "@/components/shared/dynamic-da
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSections } from "@/hooks/use-sections"
+import { useCourses } from "@/hooks/use-courses"
+import { useGrades } from "@/hooks/use-grades"
 import { toast } from "@/components/ui/sonner"
 import { CreateSectionDialog } from "@/components/sections/create-section-dialog"
 import { ViewSectionDialog } from "@/components/sections/view-section-dialog"
@@ -24,7 +28,14 @@ import { DeleteSectionDialog } from "@/components/sections/delete-section-dialog
 import type { Section } from "@/lib/api/sections"
 
 export default function SectionsPage() {
-  const { data, isLoading } = useSections()
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("")
+  const [selectedGradeId, setSelectedGradeId] = useState<string>("")
+
+  const { data: coursesData } = useCourses()
+  const { data: gradesData } = useGrades(selectedCourseId || undefined)
+  const effectiveGradeId = selectedGradeId || undefined
+  const effectiveCourseId = selectedCourseId || undefined
+  const { data, isLoading } = useSections(effectiveGradeId, effectiveCourseId)
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
@@ -32,7 +43,22 @@ export default function SectionsPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedSection, setSelectedSection] = useState<Section | null>(null)
 
+  const courses: any[] = (coursesData as any)?.data?.rows || (coursesData as any)?.data || []
+  const grades: any[] = (gradesData as any)?.rows || (gradesData as any)?.data?.rows || []
   const sections = (data?.data?.rows || []) as Section[]
+
+  // Auto-select first course
+  useEffect(() => {
+    if (!selectedCourseId && courses.length > 0) {
+      setSelectedCourseId(courses[0].id)
+    }
+  }, [courses, selectedCourseId])
+
+  // Reset grade when course changes
+  useEffect(() => {
+    setSelectedGradeId("")
+  }, [selectedCourseId])
+
   const apiColumns: ApiColumn[] = data?.data?.columns || [
     { field: "sectionName", headerName: "Section Name" },
     { field: "grade.gradeName", headerName: "Grade" },
@@ -151,6 +177,46 @@ export default function SectionsPage() {
           Add Section
         </Button>
       </PageHeader>
+
+      {/* Course & Grade Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Course</label>
+              <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course: any) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.courseName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Grade</label>
+              <Select value={selectedGradeId || "all"} onValueChange={(v) => setSelectedGradeId(v === "all" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All grades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All grades</SelectItem>
+                  {grades.map((grade: any) => (
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.gradeName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {!isLoading && sections.length === 0 ? (
         <EmptyState

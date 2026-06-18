@@ -7,7 +7,10 @@ import { PageHeader } from "@/components/shared/page-header"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
 import { useGrades, useDeleteGrade } from "@/hooks/use-grades"
+import { useCourses } from "@/hooks/use-courses"
 import { CreateGradeDialog } from "@/components/grades/create-grade-dialog"
 import { ViewGradeDialog } from "@/components/grades/view-grade-dialog"
 import { EditGradeDialog } from "@/components/grades/edit-grade-dialog"
@@ -15,6 +18,7 @@ import { DeleteGradeDialog } from "@/components/grades/delete-grade-dialog"
 import { format } from "date-fns"
 import { MoreVertical } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+
 
 interface GradeData {
   id: string
@@ -29,7 +33,9 @@ interface GradeData {
 }
 
 export default function GradesPage() {
-  const { data, isLoading } = useGrades()
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("")
+  const { data: coursesData } = useCourses()
+  const { data, isLoading } = useGrades(selectedCourseId || undefined)
   const deleteGrade = useDeleteGrade()
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -37,6 +43,15 @@ export default function GradesPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedGrade, setSelectedGrade] = useState<GradeData | null>(null)
+
+  const courses: any[] = (coursesData as any)?.data?.rows || (coursesData as any)?.data || []
+
+  // Auto-select first course
+  useEffect(() => {
+    if (!selectedCourseId && courses.length > 0) {
+      setSelectedCourseId(courses[0].id)
+    }
+  }, [courses, selectedCourseId])
 
   const handleView = (grade: GradeData) => {
     setSelectedGrade(grade)
@@ -53,14 +68,15 @@ export default function GradesPage() {
     setDeleteDialogOpen(true)
   }
 
-  const handleBulkDelete = async (selectedIds: string[]) => {
+  const handleBulkDelete = async (selectedRows: GradeData[]) => {
     try {
-      await Promise.all(selectedIds.map((id) => deleteGrade.mutateAsync(id)))
-      toast.success(`Successfully deleted ${selectedIds.length} grade(s)`)
+      await Promise.all(selectedRows.map((row) => deleteGrade.mutateAsync(row.id)))
+      toast.success(`Successfully deleted ${selectedRows.length} grade(s)`)
     } catch (error) {
       toast.error("Failed to delete some grades")
     }
   }
+
 
   // Default columns if API doesn't provide them
   const defaultColumns = [
@@ -70,13 +86,10 @@ export default function GradesPage() {
     { field: "updatedAt", headerName: "Updated At" },
   ]
 
-  useEffect(() => {
-    console.log("[v0] Grades data:", data)
-  }, [data])
-
   const columns = data?.columns || defaultColumns
 
   return (
+
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader title="Grades" description="Manage grade levels and academic standards">
@@ -85,6 +98,27 @@ export default function GradesPage() {
             Add Grade
           </Button>
         </PageHeader>
+
+        {/* Course Filter */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="max-w-xs">
+              <label className="text-sm font-medium mb-2 block">Filter by Course</label>
+              <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course: any) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.courseName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         <DynamicDataTable
           data={data?.rows || []}

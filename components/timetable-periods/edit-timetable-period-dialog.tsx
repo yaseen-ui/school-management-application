@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useUpdateTimetablePeriod } from "@/hooks/use-timetable-periods"
 import { Loader2 } from "lucide-react"
-import type { TimetablePeriod } from "@/lib/api/timetable-periods"
+import type { TimetablePeriod, PeriodType } from "@/lib/api/timetable-periods"
+import { PERIOD_TYPE_LABELS } from "@/lib/api/timetable-periods"
 
 interface EditTimetablePeriodDialogProps {
   open: boolean
@@ -17,12 +18,14 @@ interface EditTimetablePeriodDialogProps {
 
 interface FormData {
   name: string
+  type: PeriodType
   startHour: string
   startMinute: string
   endHour: string
   endMinute: string
   sortOrder: string
 }
+
 
 function minutesToHourMinute(minutes: number) {
   return {
@@ -43,12 +46,14 @@ export function EditTimetablePeriodDialog({ open, onOpenChange, period }: EditTi
   } = useForm<FormData>({
     defaultValues: {
       name: period?.name || "",
+      type: period?.type || "class",
       startHour: start.hour,
       startMinute: start.minute,
       endHour: end.hour,
       endMinute: end.minute,
       sortOrder: String(period?.sortOrder || 0),
     },
+
   })
   const updatePeriod = useUpdateTimetablePeriod()
 
@@ -61,11 +66,13 @@ export function EditTimetablePeriodDialog({ open, onOpenChange, period }: EditTi
       id: period.id,
       data: {
         name: data.name,
+        type: data.type,
         startTime,
         endTime,
         sortOrder: parseInt(data.sortOrder) || 0,
       },
     })
+
     onOpenChange(false)
   }
 
@@ -103,7 +110,30 @@ export function EditTimetablePeriodDialog({ open, onOpenChange, period }: EditTi
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="type">Period Type *</Label>
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: "Period type is required" }}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select period type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(PERIOD_TYPE_LABELS) as [PeriodType, string][]).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
+
             <div className="space-y-2">
               <Label>Start Time *</Label>
               <div className="grid grid-cols-2 gap-2">

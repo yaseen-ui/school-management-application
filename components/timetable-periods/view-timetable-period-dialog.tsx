@@ -3,8 +3,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
-import { minutesToTime } from "@/lib/api/timetable-periods"
+import { minutesToTime, PERIOD_TYPE_LABELS } from "@/lib/api/timetable-periods"
 import type { TimetablePeriod } from "@/lib/api/timetable-periods"
+
 
 interface ViewTimetablePeriodDialogProps {
   open: boolean
@@ -30,9 +31,14 @@ export function ViewTimetablePeriodDialog({ open, onOpenChange, period }: ViewTi
               <p className="text-sm font-medium">{period.name}</p>
             </div>
             <div>
+              <p className="text-sm font-medium text-muted-foreground">Type</p>
+              <Badge>{PERIOD_TYPE_LABELS[period.type] || period.type}</Badge>
+            </div>
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Structure</p>
               <Badge variant="outline">{period.structure?.name || "N/A"}</Badge>
             </div>
+
             <div>
               <p className="text-sm font-medium text-muted-foreground">Start Time</p>
               <p className="text-sm">{minutesToTime(period.startTime)}</p>

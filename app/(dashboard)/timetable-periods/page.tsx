@@ -17,8 +17,9 @@ import { EditTimetablePeriodDialog } from "@/components/timetable-periods/edit-t
 import { DeleteTimetablePeriodDialog } from "@/components/timetable-periods/delete-timetable-period-dialog"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/sonner"
-import { minutesToTime } from "@/lib/api/timetable-periods"
+import { minutesToTime, PERIOD_TYPE_LABELS } from "@/lib/api/timetable-periods"
 import type { TimetablePeriod } from "@/lib/api/timetable-periods"
+
 
 export default function TimetablePeriodsPage() {
   const [structureFilter, setStructureFilter] = useState<string>("all")
@@ -73,12 +74,14 @@ export default function TimetablePeriodsPage() {
 
   const defaultColumns = [
     { field: "name", headerName: "Period Name" },
+    { field: "type", headerName: "Type" },
     { field: "structure", headerName: "Structure" },
     { field: "startTime", headerName: "Start Time" },
     { field: "endTime", headerName: "End Time" },
     { field: "sortOrder", headerName: "Sort Order" },
     { field: "createdAt", headerName: "Created At" },
   ]
+
 
   const periods = periodsData || []
 
@@ -126,7 +129,12 @@ export default function TimetablePeriodsPage() {
               )
             }
 
+            if (field === "type") {
+              return <Badge>{PERIOD_TYPE_LABELS[row.type] || row.type}</Badge>
+            }
+
             if (field === "structure") {
+
               return <Badge variant="outline">{row.structure?.name || "N/A"}</Badge>
             }
 

@@ -53,8 +53,12 @@ export interface SectionListData {
 }
 
 export const sectionsApi = {
-  list: (gradeId?: string) => {
-    const url = gradeId ? `/sections?gradeId=${gradeId}` : "/sections"
+  list: (gradeId?: string, courseId?: string) => {
+    const params = new URLSearchParams()
+    if (gradeId) params.set("gradeId", gradeId)
+    else if (courseId) params.set("courseId", courseId)
+    const queryString = params.toString()
+    const url = queryString ? `/sections?${queryString}` : "/sections"
     return apiClient.get<ApiResponse<SectionListData>>(url)
   },
 

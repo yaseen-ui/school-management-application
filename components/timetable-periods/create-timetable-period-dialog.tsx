@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateTimetablePeriod } from "@/hooks/use-timetable-periods"
 import { useTimetableStructures } from "@/hooks/use-timetable-structures"
 import { Loader2 } from "lucide-react"
+import { PERIOD_TYPE_LABELS } from "@/lib/api/timetable-periods"
+import type { PeriodType } from "@/lib/api/timetable-periods"
 
 interface CreateTimetablePeriodDialogProps {
   open: boolean
@@ -18,12 +20,14 @@ interface CreateTimetablePeriodDialogProps {
 interface FormData {
   structureId: string
   name: string
+  type: PeriodType
   startHour: string
   startMinute: string
   endHour: string
   endMinute: string
   sortOrder: string
 }
+
 
 export function CreateTimetablePeriodDialog({ open, onOpenChange, preselectedStructureId }: CreateTimetablePeriodDialogProps) {
   const {
@@ -115,7 +119,30 @@ export function CreateTimetablePeriodDialog({ open, onOpenChange, preselectedStr
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="type">Period Type *</Label>
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: "Period type is required" }}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select period type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(PERIOD_TYPE_LABELS) as [PeriodType, string][]).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
+
             <div className="space-y-2">
               <Label>Start Time *</Label>
               <div className="grid grid-cols-2 gap-2">
