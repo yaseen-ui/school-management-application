@@ -28,6 +28,7 @@ export function useCreateTimetableEntry() {
     mutationFn: (data: CreateTimetableEntryRequest) => timetableEntriesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timetable-entries"] })
+      queryClient.invalidateQueries({ queryKey: ["timetable-grid"] })
       toast.success("Timetable entry created successfully")
     },
     onError: (error: any) => {
@@ -44,6 +45,7 @@ export function useUpdateTimetableEntry() {
       timetableEntriesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timetable-entries"] })
+      queryClient.invalidateQueries({ queryKey: ["timetable-grid"] })
       toast.success("Timetable entry updated successfully")
     },
     onError: (error: any) => {
@@ -59,6 +61,7 @@ export function useDeleteTimetableEntry() {
     mutationFn: (id: string) => timetableEntriesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timetable-entries"] })
+      queryClient.invalidateQueries({ queryKey: ["timetable-grid"] })
       toast.success("Timetable entry deleted successfully")
     },
     onError: (error: any) => {

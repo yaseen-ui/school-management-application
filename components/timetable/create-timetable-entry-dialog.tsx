@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useSubjectOfferings } from "@/hooks/use-subject-offerings"
+import { useSection } from "@/hooks/use-sections"
 import { useTeacherAssignments } from "@/hooks/use-teacher-assignments"
 import { useTimetablePeriods } from "@/hooks/use-timetable-periods"
 import { useCreateTimetableEntry, useUpdateTimetableEntry } from "@/hooks/use-timetable-entries"
@@ -49,11 +49,18 @@ export function CreateTimetableEntryDialog({
   const createEntry = useCreateTimetableEntry()
   const updateEntry = useUpdateTimetableEntry()
 
-  const { data: subjectOfferingsData } = useSubjectOfferings()
+  // Fetch the section data to get its sectionSubjects
+  const { data: sectionData } = useSection(defaultSectionId || "")
   const { data: teacherAssignmentsData } = useTeacherAssignments()
   const { data: periodsData } = useTimetablePeriods()
 
-  const subjectOfferings: any[] = (subjectOfferingsData as any[]) || []
+  // Extract sectionSubjects from the section data
+  const sectionSubjects: any[] = useMemo(() => {
+    if (!sectionData) return []
+    const data = sectionData as any
+    return data?.data?.sectionSubjects || data?.sectionSubjects || []
+  }, [sectionData])
+
   const teacherAssignments: any[] = (teacherAssignmentsData as any[]) || []
   const periods: any[] = (periodsData as any[]) || []
 
@@ -102,14 +109,6 @@ export function CreateTimetableEntryDialog({
     }
   }, [entry, form, open])
 
-  // Filter subject offerings by selected section
-  const filteredSubjectOfferings = defaultSectionId
-    ? subjectOfferings.filter((so: any) =>
-        so.sectionId === defaultSectionId ||
-        so.grade?.sections?.some((s: any) => s.id === defaultSectionId)
-      )
-    : subjectOfferings
-
   // Filter teacher assignments by selected section and subject
   const filteredTeacherAssignments = defaultSectionId && selectedSubjectId
     ? teacherAssignments.filter((ta: any) =>
@@ -138,15 +137,15 @@ export function CreateTimetableEntryDialog({
         room: data.room || null,
       }
 
-      // Find the sectionSubjectId from subject offerings
-      const offering = subjectOfferings.find(
-        (so: any) =>
-          (so.sectionId === defaultSectionId || so.grade?.sections?.some((s: any) => s.id === defaultSectionId)) &&
-          so.subjectId === data.subjectId
+      // Find the sectionSubjectId from the section's sectionSubjects
+      const sectionSubject = sectionSubjects.find(
+        (ss: any) => ss.subject?.id === data.subjectId || ss.subjectId === data.subjectId
       )
 
-      if (!offering) {
-        // Try to find from teacher assignments
+      if (sectionSubject) {
+        payload.sectionSubjectId = sectionSubject.id
+      } else {
+        // Fallback: try to find from teacher assignments
         const assignment = teacherAssignments.find(
           (ta: any) =>
             ta.sectionSubject?.section?.id === defaultSectionId &&
@@ -158,8 +157,6 @@ export function CreateTimetableEntryDialog({
           toast.error("No section-subject mapping found for this section and subject combination")
           return
         }
-      } else {
-        payload.sectionSubjectId = offering.id
       }
 
       if (isEditing && entry) {
@@ -220,11 +217,17 @@ export function CreateTimetableEntryDialog({
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredSubjectOfferings.map((so: any) => (
-                      <SelectItem key={so.id} value={so.subjectId || so.subject?.id}>
-                        {so.subject?.subjectName || so.subjectName || "Unknown Subject"}
+                    {sectionSubjects.length === 0 ? (
+                      <SelectItem value="__no_subjects__" disabled>
+                        No subjects assigned to this section
                       </SelectItem>
-                    ))}
+                    ) : (
+                      sectionSubjects.map((ss: any) => (
+                        <SelectItem key={ss.id} value={ss.subject?.id || ss.subjectId}>
+                          {ss.subject?.subjectName || "Unknown Subject"}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {form.formState.errors.subjectId && (

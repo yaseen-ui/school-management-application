@@ -143,8 +143,8 @@ export default function TimetableGridPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+        <div className="flex items-start gap-4">
+          <Button variant="ghost" size="icon" asChild className="mt-1 shrink-0">
             <Link href="/timetable">
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -152,6 +152,7 @@ export default function TimetableGridPage() {
           <PageHeader
             title="Timetable Grid"
             description="Visual timetable grid — assign subjects and teachers to periods for each day of the week"
+            className="flex-1"
           >
             <Button onClick={handleCreateEntry} disabled={!selectedSectionId || !selectedAcademicYearId}>
               <Plus className="mr-2 h-4 w-4" />
