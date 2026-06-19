@@ -36,10 +36,10 @@ const modules = [
     iconColor: "text-violet-600 dark:text-violet-400",
   },
   {
-    title: "Subject Offerings",
-    description: "Configure which subjects are offered for each course and grade level across academic years.",
+    title: "Section Subjects",
+    description: "Assign subjects to sections. Define which subjects each section studies and mark subjects as elective.",
     icon: BookMarked,
-    href: "/subject-offerings",
+    href: "/section-subjects",
     color: "from-amber-500 to-amber-600",
     lightColor: "bg-amber-50 dark:bg-amber-950/30",
     iconColor: "text-amber-600 dark:text-amber-400",
@@ -74,7 +74,7 @@ export default function StaffCurriculumPage() {
     <div className="space-y-6">
       <PageHeader
         title="Staff & Curriculum"
-        description="Manage teachers, their capabilities, assignments, and subject offerings"
+        description="Manage teachers, their capabilities, assignments, and section-subject mappings"
       />
 
       <motion.div

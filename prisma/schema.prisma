@@ -93,13 +93,6 @@ enum ExpertiseLevel {
   expert
 }
 
-enum SubjectScope {
-  all_courses_all_grades
-  course_all_grades
-  grade_all_courses
-  course_grade
-}
-
 enum PeriodType {
   class
   break
@@ -149,7 +142,6 @@ model Tenant {
   teacherEmploymentHistory   TeacherEmploymentHistory[]
   teacherAssignments         TeacherAssignment[]
   teacherCapabilities        TeacherCapability[]
-  subjectOfferings           SubjectOffering[]
   timetableStructures        TimetableStructure[]
   timetablePeriods           TimetablePeriod[]
   timetableEntries           TimetableEntry[]
@@ -252,9 +244,8 @@ model Course {
   grades   Grade[]
   subjects Subject[]
 
-  // teacher capabilities & subject offerings
+  // teacher capabilities
   teacherCapabilities TeacherCapability[]
-  subjectOfferings    SubjectOffering[]
 
   @@unique([id, tenantId], name: "course_tenant_identity")
   @@index([tenantId])
@@ -276,9 +267,8 @@ model Grade {
   students    Student[] // current snapshot
   enrollments StudentEnrollment[]
 
-  // teacher capabilities & subject offerings
+  // teacher capabilities
   teacherCapabilities TeacherCapability[]
-  subjectOfferings    SubjectOffering[]
 
   @@unique([id, tenantId], name: "grade_tenant_identity")
   @@index([tenantId])
@@ -291,7 +281,7 @@ model Section {
   tenantId    String
   gradeId     String
   sectionName String
-  structureId String? // NEW: which timetable structure this section follows
+  structureId String? // which timetable structure this section follows
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -324,9 +314,8 @@ model Subject {
 
   sectionSubjects SectionSubject[]
 
-  // teacher capabilities & subject offerings
+  // teacher capabilities
   teacherCapabilities TeacherCapability[]
-  subjectOfferings    SubjectOffering[]
 
   @@unique([id, tenantId], name: "subject_tenant_identity")
   @@index([tenantId])
@@ -335,24 +324,15 @@ model Subject {
 }
 
 model SectionSubject {
-  id        String @id @default(uuid())
-  tenantId  String
-  sectionId String
-  subjectId String
-
-  // electives support using the same table
+  id         String  @id @default(uuid())
+  tenantId   String
+  sectionId  String
+  subjectId  String
   isElective Boolean @default(false)
-
-  // Optional reference to SubjectOffering (canonical source for subject applicability).
-  // Kept optional for backward compatibility; new records should prefer this.
-  subjectOfferingId String?
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  // NoAction (not SetNull) preserves the required tenantId. Admin must
-  // clear subjectOfferingId from sectionSubjects before deleting a SubjectOffering.
-  subjectOffering SubjectOffering? @relation(fields: [subjectOfferingId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
 
   teacherAssignments TeacherAssignment[]
   timetableEntries   TimetableEntry[]
@@ -365,7 +345,6 @@ model SectionSubject {
   @@index([tenantId])
   @@index([tenantId, sectionId])
   @@index([tenantId, subjectId])
-  @@index([tenantId, subjectOfferingId])
   @@map("section_subjects")
 }
 
@@ -609,45 +588,6 @@ model TeacherCapability {
   @@index([tenantId, courseId])
   @@index([tenantId, gradeId])
   @@map("teacher_capabilities")
-}
-
-// ---------------- Subject Offerings (canonical source for subject applicability) ----------------
-// This is the canonical source for which subjects are available for which courses/grades.
-// Subject.isCommon is kept for backward compatibility but SubjectOffering should be used
-// for all new teacher assignment and curriculum logic.
-model SubjectOffering {
-  id        String       @id @default(uuid())
-  tenantId  String
-  subjectId String
-
-  // Optional scoping: null means "all courses" or "all grades"
-  courseId String?
-  gradeId  String?
-
-  scope         SubjectScope @default(course_all_grades)
-  isElective    Boolean      @default(false)
-  weeklyPeriods Int?
-  status        EntityStatus @default(active)
-
-  createdById String?
-  updatedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  course  Course? @relation(fields: [courseId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  grade   Grade?  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
-  sectionSubjects SectionSubject[]
-
-  @@unique([id, tenantId], name: "subject_offering_tenant_identity")
-  @@index([tenantId, subjectId])
-  @@index([tenantId, courseId])
-  @@index([tenantId, gradeId])
-  @@index([tenantId, scope])
-  @@index([tenantId, status])
-  @@map("subject_offerings")
 }
 
 // ---------------- Timetable Structures & Periods ----------------
@@ -998,177 +938,26 @@ model Holiday {
 
 // ---------------- Students ----------------
 model Student {
-  id       String @id @default(uuid())
-  tenantId String
+  id        String   @id @default(uuid())
+  tenantId  String
+  firstName String
+  lastName  String
+  dateOfBirth DateTime?
+  gender    Gender?
+  address   String?
+  phone     String?
+  email     String?
+  bloodGroup String?
+  aadhaarNumber String?
+  admissionNumber String?
+  rollNumber String?
 
-  admissionNumber String? // school's internal admission/roll identifier
-
-  firstName   String
-  middleName  String?
-  lastName    String
-  dateOfBirth DateTime
-  gender      Gender
-
-  aadhaarNumber       String?
-  casteCategory       String?
-  subCaste            String?
-  religion            String?
-  motherTongue        String?
-  bloodGroup          String?
-  nationality         String  @default("Indian")
-  identificationMarks String?
-
-  // Parent / family details (flat fields for quick read; canonical parent records live in Parent model)
-  fatherName          String?
-  fatherOccupation    String?
-  fatherPhone         String?
-  fatherAadhaar       String?
-  motherName          String?
-  motherOccupation    String?
-  motherPhone         String?
-  motherAadhaar       String?
-  guardianName        String?
-  guardianRelation    String?
-  guardianContact     String?
-  guardianOccupation  String?
-  guardianAadhaar     String?
-
-  classApplyingFor      String?
-  mediumOfInstruction   String?
-  previousSchoolName    String?
-  previousClassAttended String?
-  transferCertificateNo String?
-  dateOfIssueTC         DateTime?
-  modeOfTransport       String?
-
-  permanentAddress String?
-  state            String?
-  pincode          String?
-
-  feePaymentMode        String?
-  bankAccountDetails    String?
-  midDayMealEligibility Boolean @default(false)
-
-  // CURRENT SNAPSHOT (keep for fast read; canonical source is active StudentEnrollment)
-  gradeId   String
-  sectionId String
+  // Current snapshot (denormalized for quick access)
+  currentGradeId   String?
+  currentSectionId String?
 
   status    EntityStatus @default(active)
   deletedAt DateTime?
 
   createdById String?
   updatedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  grade   Grade   @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
-  enrollments StudentEnrollment[]
-  parents     StudentParent[] // canonical parent links live here; documents live in Upload
-
-  @@unique([tenantId, aadhaarNumber], name: "student_aadhaar_per_tenant")
-  @@unique([tenantId, admissionNumber], name: "student_admission_per_tenant")
-  @@unique([id, tenantId], name: "student_tenant_identity")
-  @@index([tenantId])
-  @@index([tenantId, gradeId])
-  @@index([tenantId, sectionId])
-  @@index([tenantId, status])
-  @@map("students")
-}
-
-// ---------------- Inventory ----------------
-model InventoryCategory {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  inventoryCategoryName String
-  description           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  items  InventoryItem[]
-
-  @@unique([id, tenantId], name: "inventory_category_tenant_identity")
-  @@index([tenantId])
-  @@map("inventory_categories")
-}
-
-model InventoryItem {
-  id                String   @id @default(uuid())
-  tenantId          String
-  inventoryItemName String
-  description       String?
-  categoryId        String?
-  stockAvailable    Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  // NoAction (not SetNull) preserves the required tenantId. Admin must
-  // clear categoryId from items before deleting an InventoryCategory.
-  category    InventoryCategory? @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
-  adjustments StockAdjustment[]
-
-  @@unique([id, tenantId], name: "inventory_item_tenant_identity")
-  @@index([tenantId])
-  @@index([tenantId, categoryId])
-  @@map("inventory_items")
-}
-
-model StockAdjustment {
-  id               String  @id @default(uuid())
-  tenantId         String
-  itemId           String?
-  adjustmentAmount Int
-  reason           String?
-  borrowerName     String?
-  borrowerId       String?
-
-  createdById String?
-  updatedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  item   InventoryItem? @relation(fields: [itemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
-  @@index([tenantId])
-  @@index([tenantId, itemId])
-  @@map("stock_adjustments")
-}
-
-// ---------------- Auth utils & uploads ----------------
-model TokenBlacklist {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  expiredAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("token_blacklist")
-}
-
-model Upload {
-  id           String @id @default(uuid())
-  tenantId     String
-  entityType   String // canonical values: 'student' | 'teacher' | 'parent' | 'user' | 'tenant' | 'exam'
-  entityId     String
-  documentType String // e.g. 'aadhaar', 'photo', 'tc', 'birth_certificate', 'caste_certificate', 'marksheet', 'income_certificate'
-  fileUrl      String
-
-  createdById String?
-  uploadedAt  DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  @@index([tenantId])
-  @@index([tenantId, entityType])
-  @@index([tenantId, entityId])
-  @@index([tenantId, entityType, entityId])
-  @@map("uploads")
-}
