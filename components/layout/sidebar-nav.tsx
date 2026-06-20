@@ -68,7 +68,6 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Courses", href: "/courses", icon: BookOpen },
       { title: "Subjects", href: "/subjects", icon: Layers },
       { title: "Sections", href: "/sections", icon: ClipboardList },
-      { title: "Section Subjects", href: "/section-subjects", icon: BookOpen },
       { title: "Grades", href: "/grades", icon: ClipboardList },
       { title: "Academic Years", href: "/academic-years", icon: Calendar },
     ],

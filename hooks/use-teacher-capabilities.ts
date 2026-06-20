@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { teacherCapabilitiesApi } from "@/lib/api/teacher-capabilities"
 import { toast } from "@/components/ui/sonner"
-import type { CreateTeacherCapabilityRequest } from "@/lib/api/teacher-capabilities"
+import type { CreateTeacherCapabilityRequest, CreateBulkTeacherCapabilityRequest } from "@/lib/api/teacher-capabilities"
 
 export function useTeacherCapabilities(filters?: Record<string, string>) {
   return useQuery({
@@ -32,6 +32,21 @@ export function useCreateTeacherCapability() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create teacher capability")
+    },
+  })
+}
+
+export function useCreateBulkTeacherCapabilities() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateBulkTeacherCapabilityRequest) => teacherCapabilitiesApi.createBulk(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-capabilities"] })
+      toast.success("Teacher capabilities created successfully")
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create teacher capabilities")
     },
   })
 }

@@ -23,7 +23,6 @@ interface CreateSectionDialogProps {
 interface FormData {
   sectionName: string
   gradeId: string
-  subjectIds: string[]
 }
 
 export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogProps) {
@@ -31,7 +30,6 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
     defaultValues: {
       sectionName: "",
       gradeId: "",
-      subjectIds: [],
     },
   })
 
@@ -83,16 +81,14 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
 
               <div className="space-y-2">
                 <HierarchicalFilter
-                  filters={["courses", "grades", "subjects"]}
-                  required={{ courseId: false, gradeId: true, subjectIds: true }}
+                  filters={["courses", "grades"]}
+                  required={{ gradeId: true }}
                   labels={{
                     courseId: "Course (Optional)",
                     gradeId: "Grade",
-                    subjectIds: "Subjects",
                   }}
                 />
                 {errors.gradeId && <p className="text-sm text-destructive">{errors.gradeId.message}</p>}
-                {errors.subjectIds && <p className="text-sm text-destructive">At least one subject is required</p>}
               </div>
             </div>
 

@@ -25,7 +25,7 @@ export interface SectionSubject {
 
 export interface CreateSectionSubjectRequest {
   sectionId: string
-  subjectId: string
+  subjectIds: string[]
   isElective?: boolean
 }
 
@@ -40,7 +40,7 @@ export const sectionSubjectsApi = {
   getById: (id: string) => apiClient.get<ApiResponse<SectionSubject>>(`/section-subjects/${id}`),
 
   create: (data: CreateSectionSubjectRequest) =>
-    apiClient.post<ApiResponse<SectionSubject>>("/section-subjects", data),
+    apiClient.post<ApiResponse<SectionSubject[]>>("/section-subjects", data),
 
   update: (id: string, data: Partial<CreateSectionSubjectRequest>) =>
     apiClient.put<ApiResponse<SectionSubject>>(`/section-subjects/${id}`, data),

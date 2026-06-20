@@ -31,6 +31,12 @@ CREATE TYPE "HolidayType" AS ENUM ('public', 'school', 'optional', 'vacation');
 -- CreateEnum
 CREATE TYPE "SubscriptionPlan" AS ENUM ('free', 'starter', 'growth', 'enterprise');
 
+-- CreateEnum
+CREATE TYPE "ExpertiseLevel" AS ENUM ('beginner', 'intermediate', 'advanced', 'expert');
+
+-- CreateEnum
+CREATE TYPE "PeriodType" AS ENUM ('class', 'break', 'lunch', 'sports', 'leisure', 'study_hour');
+
 -- CreateTable
 CREATE TABLE "tenants" (
     "id" TEXT NOT NULL,
@@ -119,6 +125,7 @@ CREATE TABLE "sections" (
     "tenantId" TEXT NOT NULL,
     "gradeId" TEXT NOT NULL,
     "sectionName" TEXT NOT NULL,
+    "structureId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -145,6 +152,8 @@ CREATE TABLE "section_subjects" (
     "sectionId" TEXT NOT NULL,
     "subjectId" TEXT NOT NULL,
     "isElective" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "section_subjects_pkey" PRIMARY KEY ("id")
 );
@@ -207,6 +216,8 @@ CREATE TABLE "teachers" (
     "gender" "Gender",
     "employeeCode" TEXT,
     "profilePhotoUrl" TEXT,
+    "dateOfBirth" TIMESTAMP(3),
+    "dateOfJoining" TIMESTAMP(3),
     "yearsOfExperience" DOUBLE PRECISION,
     "status" "EntityStatus" NOT NULL DEFAULT 'active',
     "deletedAt" TIMESTAMP(3),
@@ -269,10 +280,45 @@ CREATE TABLE "teacher_assignments" (
 );
 
 -- CreateTable
-CREATE TABLE "timetable_periods" (
+CREATE TABLE "teacher_capabilities" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "teacherId" TEXT NOT NULL,
+    "subjectId" TEXT NOT NULL,
+    "courseId" TEXT,
+    "gradeId" TEXT,
+    "expertiseLevel" "ExpertiseLevel" NOT NULL DEFAULT 'intermediate',
+    "isPrimary" BOOLEAN NOT NULL DEFAULT false,
+    "priorityScore" INTEGER NOT NULL DEFAULT 50,
+    "canBeClassTeacher" BOOLEAN NOT NULL DEFAULT false,
+    "remarks" TEXT,
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "teacher_capabilities_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "timetable_structures" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "timetable_structures_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "timetable_periods" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "structureId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "type" "PeriodType" NOT NULL DEFAULT 'class',
     "startTime" INTEGER NOT NULL,
     "endTime" INTEGER NOT NULL,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
@@ -488,6 +534,19 @@ CREATE TABLE "students" (
     "bloodGroup" TEXT,
     "nationality" TEXT NOT NULL DEFAULT 'Indian',
     "identificationMarks" TEXT,
+    "fatherName" TEXT,
+    "fatherOccupation" TEXT,
+    "fatherPhone" TEXT,
+    "fatherAadhaar" TEXT,
+    "motherName" TEXT,
+    "motherOccupation" TEXT,
+    "motherPhone" TEXT,
+    "motherAadhaar" TEXT,
+    "guardianName" TEXT,
+    "guardianRelation" TEXT,
+    "guardianContact" TEXT,
+    "guardianOccupation" TEXT,
+    "guardianAadhaar" TEXT,
     "classApplyingFor" TEXT,
     "mediumOfInstruction" TEXT,
     "previousSchoolName" TEXT,
@@ -595,6 +654,9 @@ CREATE INDEX "users_tenantId_status_idx" ON "users"("tenantId", "status");
 CREATE UNIQUE INDEX "users_tenantId_email_key" ON "users"("tenantId", "email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "users_id_tenantId_key" ON "users"("id", "tenantId");
+
+-- CreateIndex
 CREATE INDEX "roles_tenantId_idx" ON "roles"("tenantId");
 
 -- CreateIndex
@@ -623,6 +685,9 @@ CREATE INDEX "sections_tenantId_idx" ON "sections"("tenantId");
 
 -- CreateIndex
 CREATE INDEX "sections_tenantId_gradeId_idx" ON "sections"("tenantId", "gradeId");
+
+-- CreateIndex
+CREATE INDEX "sections_tenantId_structureId_idx" ON "sections"("tenantId", "structureId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sections_id_tenantId_key" ON "sections"("id", "tenantId");
@@ -694,6 +759,9 @@ CREATE INDEX "teachers_tenantId_idx" ON "teachers"("tenantId");
 CREATE INDEX "teachers_tenantId_status_idx" ON "teachers"("tenantId", "status");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "teachers_userId_tenantId_key" ON "teachers"("userId", "tenantId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "teachers_tenantId_employeeCode_key" ON "teachers"("tenantId", "employeeCode");
 
 -- CreateIndex
@@ -733,10 +801,37 @@ CREATE UNIQUE INDEX "teacher_assignments_tenantId_academicYearId_teacherId_secti
 CREATE UNIQUE INDEX "teacher_assignments_id_tenantId_key" ON "teacher_assignments"("id", "tenantId");
 
 -- CreateIndex
+CREATE INDEX "teacher_capabilities_tenantId_teacherId_idx" ON "teacher_capabilities"("tenantId", "teacherId");
+
+-- CreateIndex
+CREATE INDEX "teacher_capabilities_tenantId_subjectId_idx" ON "teacher_capabilities"("tenantId", "subjectId");
+
+-- CreateIndex
+CREATE INDEX "teacher_capabilities_tenantId_courseId_idx" ON "teacher_capabilities"("tenantId", "courseId");
+
+-- CreateIndex
+CREATE INDEX "teacher_capabilities_tenantId_gradeId_idx" ON "teacher_capabilities"("tenantId", "gradeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "teacher_capabilities_id_tenantId_key" ON "teacher_capabilities"("id", "tenantId");
+
+-- CreateIndex
+CREATE INDEX "timetable_structures_tenantId_idx" ON "timetable_structures"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "timetable_structures_tenantId_name_key" ON "timetable_structures"("tenantId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "timetable_structures_id_tenantId_key" ON "timetable_structures"("id", "tenantId");
+
+-- CreateIndex
 CREATE INDEX "timetable_periods_tenantId_idx" ON "timetable_periods"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "timetable_periods_tenantId_name_key" ON "timetable_periods"("tenantId", "name");
+CREATE INDEX "timetable_periods_tenantId_structureId_idx" ON "timetable_periods"("tenantId", "structureId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "timetable_periods_tenantId_structureId_name_key" ON "timetable_periods"("tenantId", "structureId", "name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "timetable_periods_id_tenantId_key" ON "timetable_periods"("id", "tenantId");
@@ -785,6 +880,9 @@ CREATE INDEX "parents_tenantId_email_idx" ON "parents"("tenantId", "email");
 
 -- CreateIndex
 CREATE INDEX "parents_tenantId_status_idx" ON "parents"("tenantId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "parents_userId_tenantId_key" ON "parents"("userId", "tenantId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "parents_id_tenantId_key" ON "parents"("id", "tenantId");
@@ -937,6 +1035,9 @@ ALTER TABLE "sections" ADD CONSTRAINT "sections_tenantId_fkey" FOREIGN KEY ("ten
 ALTER TABLE "sections" ADD CONSTRAINT "sections_gradeId_tenantId_fkey" FOREIGN KEY ("gradeId", "tenantId") REFERENCES "grades"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "sections" ADD CONSTRAINT "sections_structureId_tenantId_fkey" FOREIGN KEY ("structureId", "tenantId") REFERENCES "timetable_structures"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -982,7 +1083,7 @@ ALTER TABLE "student_enrollment_electives" ADD CONSTRAINT "student_enrollment_el
 ALTER TABLE "teachers" ADD CONSTRAINT "teachers_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "teachers" ADD CONSTRAINT "teachers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "teachers" ADD CONSTRAINT "teachers_userId_tenantId_fkey" FOREIGN KEY ("userId", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "teacher_qualifications" ADD CONSTRAINT "teacher_qualifications_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1009,7 +1110,28 @@ ALTER TABLE "teacher_assignments" ADD CONSTRAINT "teacher_assignments_teacherId_
 ALTER TABLE "teacher_assignments" ADD CONSTRAINT "teacher_assignments_sectionSubjectId_tenantId_fkey" FOREIGN KEY ("sectionSubjectId", "tenantId") REFERENCES "section_subjects"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "teacher_capabilities" ADD CONSTRAINT "teacher_capabilities_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "teacher_capabilities" ADD CONSTRAINT "teacher_capabilities_teacherId_tenantId_fkey" FOREIGN KEY ("teacherId", "tenantId") REFERENCES "teachers"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "teacher_capabilities" ADD CONSTRAINT "teacher_capabilities_subjectId_tenantId_fkey" FOREIGN KEY ("subjectId", "tenantId") REFERENCES "subjects"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "teacher_capabilities" ADD CONSTRAINT "teacher_capabilities_courseId_tenantId_fkey" FOREIGN KEY ("courseId", "tenantId") REFERENCES "courses"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "teacher_capabilities" ADD CONSTRAINT "teacher_capabilities_gradeId_tenantId_fkey" FOREIGN KEY ("gradeId", "tenantId") REFERENCES "grades"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "timetable_structures" ADD CONSTRAINT "timetable_structures_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "timetable_periods" ADD CONSTRAINT "timetable_periods_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "timetable_periods" ADD CONSTRAINT "timetable_periods_structureId_tenantId_fkey" FOREIGN KEY ("structureId", "tenantId") REFERENCES "timetable_structures"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "timetable_entries" ADD CONSTRAINT "timetable_entries_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1054,7 +1176,7 @@ ALTER TABLE "attendance_marks" ADD CONSTRAINT "attendance_marks_enrollmentId_ten
 ALTER TABLE "parents" ADD CONSTRAINT "parents_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "parents" ADD CONSTRAINT "parents_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "parents" ADD CONSTRAINT "parents_userId_tenantId_fkey" FOREIGN KEY ("userId", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "student_parents" ADD CONSTRAINT "student_parents_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;

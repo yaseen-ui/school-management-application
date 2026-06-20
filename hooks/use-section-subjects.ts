@@ -26,9 +26,10 @@ export function useCreateSectionSubject() {
 
   return useMutation({
     mutationFn: (data: CreateSectionSubjectRequest) => sectionSubjectsApi.create(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["section-subjects"] })
-      toast.success("Section subject created successfully")
+      const count = response?.data?.length || 1
+      toast.success(`${count} subject(s) assigned successfully`)
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create section subject")

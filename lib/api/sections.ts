@@ -34,14 +34,14 @@ export interface Section {
 export interface CreateSectionRequest {
   sectionName: string
   gradeId: string
-  subjectIds: string[]
+  subjectIds?: string[]
 }
 
 export interface UpdateSectionRequest {
   sectionId: string
   sectionName: string
   gradeId: string
-  subjectIds: string[]
+  subjectIds?: string[]
 }
 
 export interface SectionListData {

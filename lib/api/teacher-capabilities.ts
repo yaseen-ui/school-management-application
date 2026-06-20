@@ -46,6 +46,22 @@ export interface CreateTeacherCapabilityRequest {
   remarks?: string | null
 }
 
+export interface SubjectCapabilityConfig {
+  subjectId: string
+  expertiseLevel?: "beginner" | "intermediate" | "advanced" | "expert"
+  isPrimary?: boolean
+  priorityScore?: number
+  canBeClassTeacher?: boolean
+  remarks?: string | null
+}
+
+export interface CreateBulkTeacherCapabilityRequest {
+  teacherId: string
+  courseId?: string | null
+  gradeIds?: string[]
+  subjects: SubjectCapabilityConfig[]
+}
+
 export const teacherCapabilitiesApi = {
   getAll: (filters?: Record<string, string>) => {
     const params = filters ? new URLSearchParams(filters).toString() : ""
@@ -58,6 +74,9 @@ export const teacherCapabilitiesApi = {
 
   create: (data: CreateTeacherCapabilityRequest) =>
     apiClient.post<ApiResponse<TeacherCapability>>("/teacher-capabilities", data),
+
+  createBulk: (data: CreateBulkTeacherCapabilityRequest) =>
+    apiClient.post<ApiResponse<TeacherCapability[]>>("/teacher-capabilities/bulk", data),
 
   update: (id: string, data: Partial<CreateTeacherCapabilityRequest>) =>
     apiClient.put<ApiResponse<TeacherCapability>>(`/teacher-capabilities/${id}`, data),

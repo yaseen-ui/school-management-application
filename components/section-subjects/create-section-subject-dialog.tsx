@@ -13,10 +13,12 @@ import { useSections } from "@/hooks/use-sections"
 import { useSubjects } from "@/hooks/use-subjects"
 import { useCourses } from "@/hooks/use-courses"
 import { useGrades } from "@/hooks/use-grades"
+import { MultiSelect } from "@/components/ui/multi-select"
+import type { MultiSelectOption } from "@/components/ui/multi-select"
 
 interface FormData {
   sectionId: string
-  subjectId: string
+  subjectIds: string[]
   isElective: boolean
 }
 
@@ -41,13 +43,17 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
     formState: { errors },
     reset,
     control,
+    setValue,
+    watch,
   } = useForm<FormData>({
     defaultValues: {
       sectionId: "",
-      subjectId: "",
+      subjectIds: [],
       isElective: false,
     },
   })
+
+  const selectedSubjectIds = watch("subjectIds")
 
   const courses: any[] = (coursesData as any)?.data?.rows || (coursesData as any)?.data || []
   const grades: any[] = (gradesData as any)?.rows || (gradesData as any)?.data?.rows || []
@@ -75,10 +81,17 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
     setSelectedGradeId("")
   }, [selectedCourseId])
 
+  const subjectOptions: MultiSelectOption[] = subjects.map((subject: any) => ({
+    value: subject.id,
+    label: subject.subjectName,
+  }))
+
   const onSubmit = async (data: FormData) => {
+    if (data.subjectIds.length === 0) return
+
     await createMutation.mutateAsync({
       sectionId: data.sectionId,
-      subjectId: data.subjectId,
+      subjectIds: data.subjectIds,
       isElective: data.isElective,
     })
     reset()
@@ -89,9 +102,9 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Assign Subject to Section</DialogTitle>
+          <DialogTitle>Assign Subjects to Section</DialogTitle>
           <DialogDescription>
-            Select a section and assign a subject to it. Optionally mark it as an elective.
+            Select a course, grade, and section, then choose one or more subjects to assign.
           </DialogDescription>
         </DialogHeader>
 
@@ -131,6 +144,7 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
             </Select>
           </div>
 
+          {/* Section */}
           <div className="space-y-2">
             <Label htmlFor="sectionId">Section *</Label>
             <Controller
@@ -155,30 +169,27 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
             {errors.sectionId && <p className="text-sm text-destructive">{errors.sectionId.message}</p>}
           </div>
 
+          {/* Subjects Multi-Select */}
           <div className="space-y-2">
-            <Label htmlFor="subjectId">Subject *</Label>
+            <Label htmlFor="subjectIds">Subjects *</Label>
             <Controller
-              name="subjectId"
+              name="subjectIds"
               control={control}
-              rules={{ required: "Subject is required" }}
+              rules={{ validate: (v) => v.length > 0 || "At least one subject is required" }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((subject: any) => (
-                      <SelectItem key={subject.id} value={subject.id}>
-                        {subject.subjectName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={subjectOptions}
+                  selected={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select subjects..."
+                  emptyText="No subjects found for this course."
+                />
               )}
             />
-            {errors.subjectId && <p className="text-sm text-destructive">{errors.subjectId.message}</p>}
+            {errors.subjectIds && <p className="text-sm text-destructive">{errors.subjectIds.message}</p>}
           </div>
 
+          {/* Elective Checkbox */}
           <div className="flex items-center space-x-2">
             <Controller
               name="isElective"
@@ -186,7 +197,7 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
               render={({ field }) => <Checkbox id="isElective" checked={field.value} onCheckedChange={field.onChange} />}
             />
             <Label htmlFor="isElective" className="text-sm font-normal cursor-pointer">
-              Elective subject for this section
+              Mark as elective subjects for this section
             </Label>
           </div>
 
@@ -196,7 +207,7 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Assign Subject
+              Assign Subjects
             </Button>
           </DialogFooter>
         </form>

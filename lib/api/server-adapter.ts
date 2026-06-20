@@ -94,6 +94,8 @@ export const invokeBackendController = async (
     const ctrl = typeof controller === 'function' && controller.prototype ? new controller() : controller
     await (ctrl[method] || controller[method])(mockReq, mockRes)
     const result = await responsePromise
+    // The responseHandler already wraps data in { status, data, message } format.
+    // Return the full response body so the frontend ApiResponse<T> contract is preserved.
     return NextResponse.json(result.data, { status: result.status })
   } catch (error) {
     return NextResponse.json({ status: 'fail', message: (error as Error).message }, { status: 500 })
