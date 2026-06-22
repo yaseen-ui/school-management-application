@@ -78,6 +78,7 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Users", href: "/users", icon: Users },
       { title: "Staff & Curriculum", href: "/staff-curriculum", icon: BookHeart },
       { title: "Roles & Permissions", href: "/roles", icon: Shield },
+      { title: "Infrastructure", href: "/infrastructure", icon: Building2 },
       { title: "Inventory", href: "/inventory", icon: Package },
     ],
   },
@@ -85,6 +86,7 @@ const tenantNavGroups: NavGroup[] = [
     title: "Timetable",
     items: [
       { title: "Timetable", href: "/timetable", icon: CalendarClock },
+      { title: "Structures", href: "/timetable-structures", icon: CalendarClock },
     ],
   },
 

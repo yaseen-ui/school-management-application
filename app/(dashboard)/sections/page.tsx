@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar, DoorOpen } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DynamicDataTable, type ApiColumn } from "@/components/shared/dynamic-data-table"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -21,13 +22,12 @@ import { useSections } from "@/hooks/use-sections"
 import { useCourses } from "@/hooks/use-courses"
 import { useGrades } from "@/hooks/use-grades"
 import { toast } from "@/components/ui/sonner"
-import { CreateSectionDialog } from "@/components/sections/create-section-dialog"
 import { ViewSectionDialog } from "@/components/sections/view-section-dialog"
-import { EditSectionDialog } from "@/components/sections/edit-section-dialog"
 import { DeleteSectionDialog } from "@/components/sections/delete-section-dialog"
 import type { Section } from "@/lib/api/sections"
 
 export default function SectionsPage() {
+  const router = useRouter()
   const [selectedCourseId, setSelectedCourseId] = useState<string>("")
   const [selectedGradeId, setSelectedGradeId] = useState<string>("")
 
@@ -37,9 +37,7 @@ export default function SectionsPage() {
   const effectiveCourseId = selectedCourseId || undefined
   const { data, isLoading } = useSections(effectiveGradeId, effectiveCourseId)
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
-  const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedSection, setSelectedSection] = useState<Section | null>(null)
 
@@ -71,8 +69,7 @@ export default function SectionsPage() {
   }
 
   const handleEdit = (section: Section) => {
-    setSelectedSection(section)
-    setIsEditOpen(true)
+    router.push(`/sections/${section.id}/edit`)
   }
 
   const handleDelete = (section: Section) => {
@@ -104,6 +101,21 @@ export default function SectionsPage() {
 
       case "grade.gradeName":
         return <Badge variant="secondary">{row.grade?.gradeName || "N/A"}</Badge>
+
+      case "room.roomNumber":
+      case "room":
+        if (!row.room) return <span className="text-sm text-muted-foreground">—</span>
+        return (
+          <div className="flex items-center gap-2">
+            <DoorOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium">{row.room.roomNumber}</p>
+              <p className="text-xs text-muted-foreground">
+                {row.room.floor.building.name} / {row.room.floor.name ?? `Floor ${row.room.floor.floorNumber}`}
+              </p>
+            </div>
+          </div>
+        )
 
       case "createdAt":
         return (
@@ -172,7 +184,7 @@ export default function SectionsPage() {
       className="space-y-6"
     >
       <PageHeader title="Sections" description="Manage sections and class divisions in your institute">
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button onClick={() => router.push("/sections/create")}>
           <Plus className="mr-2 h-4 w-4" />
           Add Section
         </Button>
@@ -225,7 +237,7 @@ export default function SectionsPage() {
           description="Get started by creating your first section for students."
           action={{
             label: "Add Section",
-            onClick: () => setIsCreateOpen(true),
+            onClick: () => router.push("/sections/create"),
           }}
         />
       ) : (
@@ -241,9 +253,7 @@ export default function SectionsPage() {
         />
       )}
 
-      <CreateSectionDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
       <ViewSectionDialog open={isViewOpen} onOpenChange={setIsViewOpen} section={selectedSection} />
-      <EditSectionDialog open={isEditOpen} onOpenChange={setIsEditOpen} section={selectedSection} />
       <DeleteSectionDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} section={selectedSection} />
     </motion.div>
   )

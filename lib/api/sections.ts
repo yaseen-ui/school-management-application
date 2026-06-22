@@ -23,17 +23,39 @@ export interface Section {
   tenantId: string
   gradeId: string
   sectionName: string
+  roomId?: string | null
   createdAt: string
   updatedAt: string
   grade?: {
+    id: string
     gradeName: string
+    courseId: string
   }
+  room?: {
+    id: string
+    roomNumber: string
+    roomName?: string | null
+    roomType: string
+    roomCategory?: string | null
+    capacity: number
+    floor: {
+      id: string
+      floorNumber: number
+      name?: string | null
+      building: {
+        id: string
+        name: string
+        code?: string | null
+      }
+    }
+  } | null
   sectionSubjects?: SectionSubjectRow[]
 }
 
 export interface CreateSectionRequest {
   sectionName: string
   gradeId: string
+  roomId?: string
   subjectIds?: string[]
 }
 
@@ -41,6 +63,7 @@ export interface UpdateSectionRequest {
   sectionId: string
   sectionName: string
   gradeId: string
+  roomId?: string
   subjectIds?: string[]
 }
 

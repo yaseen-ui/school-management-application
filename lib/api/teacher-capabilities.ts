@@ -8,6 +8,7 @@ export interface TeacherCapability {
   subjectId: string
   courseId?: string | null
   gradeId?: string | null
+  sectionId?: string | null
   expertiseLevel: "beginner" | "intermediate" | "advanced" | "expert"
   isPrimary: boolean
   priorityScore: number
@@ -32,6 +33,10 @@ export interface TeacherCapability {
     id: string
     gradeName: string
   } | null
+  section?: {
+    id: string
+    sectionName: string
+  } | null
 }
 
 export interface CreateTeacherCapabilityRequest {
@@ -39,6 +44,7 @@ export interface CreateTeacherCapabilityRequest {
   subjectId: string
   courseId?: string | null
   gradeId?: string | null
+  sectionId?: string | null
   expertiseLevel?: "beginner" | "intermediate" | "advanced" | "expert"
   isPrimary?: boolean
   priorityScore?: number
@@ -55,11 +61,24 @@ export interface SubjectCapabilityConfig {
   remarks?: string | null
 }
 
+export interface SectionSubjectConfig {
+  sectionId: string
+  subjects: SubjectCapabilityConfig[]
+}
+
+export interface GradeCapabilityConfig {
+  gradeId: string
+  sections: SectionSubjectConfig[]
+}
+
+export interface CourseCapabilityConfig {
+  courseId: string
+  grades: GradeCapabilityConfig[]
+}
+
 export interface CreateBulkTeacherCapabilityRequest {
   teacherId: string
-  courseId?: string | null
-  gradeIds?: string[]
-  subjects: SubjectCapabilityConfig[]
+  courses: CourseCapabilityConfig[]
 }
 
 export const teacherCapabilitiesApi = {

@@ -102,6 +102,30 @@ enum PeriodType {
   study_hour
 }
 
+enum RoomCategory {
+  ac
+  non_ac
+  deluxe
+}
+
+enum RoomType {
+  classroom
+  laboratory
+  library
+  auditorium
+  office
+  staff_room
+  computer_lab
+  science_lab
+  language_lab
+  sports_hall
+  art_room
+  music_room
+  seminar_hall
+  conference_room
+  other
+}
+
 
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
@@ -162,6 +186,14 @@ model Tenant {
 
   // calendar
   holidays Holiday[]
+
+  // infrastructure
+  buildings Building[]
+  floors    Floor[]
+  rooms     Room[]
+
+  // teacher availability
+  teacherAvailabilities TeacherAvailability[]
 
   @@map("tenants")
 }
@@ -282,21 +314,27 @@ model Section {
   gradeId     String
   sectionName String
   structureId String? // which timetable structure this section follows
+  roomId      String? // dedicated classroom for this section
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   grade     Grade               @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   structure TimetableStructure? @relation(fields: [structureId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  room      Room?               @relation(fields: [roomId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   sectionSubjects SectionSubject[]
   students        Student[] // current snapshot
   enrollments     StudentEnrollment[]
 
+  // teacher capabilities
+  teacherCapabilities TeacherCapability[]
+
   @@unique([id, tenantId], name: "section_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, gradeId])
   @@index([tenantId, structureId])
+  @@index([tenantId, roomId])
   @@map("sections")
 }
 
@@ -471,6 +509,7 @@ model Teacher {
   capabilities      TeacherCapability[]
   qualifications    TeacherQualification[]
   employmentHistory TeacherEmploymentHistory[]
+  availabilities    TeacherAvailability[]
 
   @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
@@ -564,6 +603,7 @@ model TeacherCapability {
   // Optional scoping: null means "all courses" or "all grades"
   courseId String?
   gradeId  String?
+  sectionId String?
 
   expertiseLevel   ExpertiseLevel @default(intermediate)
   isPrimary        Boolean        @default(false)
@@ -581,6 +621,7 @@ model TeacherCapability {
   subject Subject @relation(fields: [subjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   course  Course? @relation(fields: [courseId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   grade   Grade?  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section Section? @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   // NOTE: No composite unique with nullable courseId/gradeId to avoid PostgreSQL null uniqueness issues.
   // Duplicate prevention is handled in service logic.
@@ -589,7 +630,30 @@ model TeacherCapability {
   @@index([tenantId, subjectId])
   @@index([tenantId, courseId])
   @@index([tenantId, gradeId])
+  @@index([tenantId, sectionId])
   @@map("teacher_capabilities")
+}
+
+// ---------------- Teacher Availability (recurring weekly schedule) ----------------
+model TeacherAvailability {
+  id          String    @id @default(uuid())
+  tenantId    String
+  teacherId   String
+  dayOfWeek   DayOfWeek
+  startTime   Int       // minutes from midnight (360 = 6:00 AM)
+  endTime     Int       // minutes from midnight (1080 = 6:00 PM)
+  isAvailable Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  teacher Teacher @relation(fields: [teacherId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, teacherId, dayOfWeek, startTime, endTime], name: "uniqueTeacherAvailabilitySlot")
+  @@unique([id, tenantId], name: "teacher_availability_tenant_identity")
+  @@index([tenantId, teacherId])
+  @@map("teacher_availability")
 }
 
 // ---------------- Timetable Structures & Periods ----------------
@@ -666,6 +730,79 @@ model TimetableEntry {
   @@index([tenantId, sectionSubjectId])
   @@index([tenantId, periodId])
   @@map("timetable_entries")
+}
+
+// ---------------- Infrastructure: Buildings, Floors, Rooms ----------------
+model Building {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String?
+  description String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  floors Floor[]
+
+  @@unique([id, tenantId], name: "building_tenant_identity")
+  @@unique([tenantId, name], name: "uniqueBuildingNamePerTenant")
+  @@index([tenantId])
+  @@map("buildings")
+}
+
+model Floor {
+  id          String   @id @default(uuid())
+  tenantId    String
+  buildingId  String
+  floorNumber Int
+  name        String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  building Building @relation(fields: [buildingId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  rooms    Room[]
+
+  @@unique([id, tenantId], name: "floor_tenant_identity")
+  @@unique([tenantId, buildingId, floorNumber], name: "uniqueFloorPerBuilding")
+  @@index([tenantId])
+  @@index([tenantId, buildingId])
+  @@map("floors")
+}
+
+model Room {
+  id           String       @id @default(uuid())
+  tenantId     String
+  floorId      String
+  roomNumber   String
+  roomName     String?
+  roomType     RoomType     @default(classroom)
+  roomCategory RoomCategory?
+  capacity     Int
+  status       EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  floor    Floor     @relation(fields: [floorId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  sections Section[]
+
+  @@unique([id, tenantId], name: "room_tenant_identity")
+  @@unique([tenantId, floorId, roomNumber], name: "uniqueRoomPerFloor")
+  @@index([tenantId])
+  @@index([tenantId, floorId])
+  @@index([tenantId, status])
+  @@map("rooms")
 }
 
 // ---------------- Attendance ----------------

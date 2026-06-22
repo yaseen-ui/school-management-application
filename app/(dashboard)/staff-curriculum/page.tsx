@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { UserCheck, GitBranch, UserCog, BookMarked, ArrowRight } from "lucide-react"
+import { UserCheck, GitBranch, UserCog, BookMarked, Clock, ArrowRight } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,15 @@ const modules = [
     color: "from-amber-500 to-amber-600",
     lightColor: "bg-amber-50 dark:bg-amber-950/30",
     iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    title: "Teacher Availability",
+    description: "Plan and manage weekly availability schedules for teachers. Define available time slots for each day of the week.",
+    icon: Clock,
+    href: "/teachers/availability",
+    color: "from-rose-500 to-rose-600",
+    lightColor: "bg-rose-50 dark:bg-rose-950/30",
+    iconColor: "text-rose-600 dark:text-rose-400",
   },
 ]
 

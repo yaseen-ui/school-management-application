@@ -12,8 +12,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { useCreateSection } from "@/hooks/use-sections"
 import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
+import { RoomSelector } from "@/components/shared/room-selector"
 
 interface CreateSectionDialogProps {
   open: boolean
@@ -23,6 +25,7 @@ interface CreateSectionDialogProps {
 interface FormData {
   sectionName: string
   gradeId: string
+  roomId: string
 }
 
 export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogProps) {
@@ -30,6 +33,7 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
     defaultValues: {
       sectionName: "",
       gradeId: "",
+      roomId: "",
     },
   })
 
@@ -44,7 +48,11 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
 
   const onSubmit = async (data: FormData) => {
     console.log("[v0] Create section form data:", data)
-    await createSection.mutateAsync(data)
+    await createSection.mutateAsync({
+      sectionName: data.sectionName,
+      gradeId: data.gradeId,
+      roomId: data.roomId || undefined,
+    })
     reset()
     onOpenChange(false)
   }
@@ -89,6 +97,13 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
                   }}
                 />
                 {errors.gradeId && <p className="text-sm text-destructive">{errors.gradeId.message}</p>}
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">Classroom Assignment (Optional)</h4>
+                <RoomSelector fieldName="roomId" />
               </div>
             </div>
 

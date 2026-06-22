@@ -1,6 +1,6 @@
 "use client"
 
-import { Users } from "lucide-react"
+import { Users, Building2, DoorOpen } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import type { Section } from "@/lib/api/sections"
@@ -49,6 +49,39 @@ export function ViewSectionDialog({ open, onOpenChange, section }: ViewSectionDi
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Grade</h4>
             <Badge variant="secondary">{section.grade?.gradeName || section.gradeId}</Badge>
           </div>
+
+          {section.room && (
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Assigned Classroom</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Building:</span>
+                  <span className="font-medium">{section.room.floor.building.name}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <DoorOpen className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Room:</span>
+                  <span className="font-medium">
+                    {section.room.roomNumber}
+                    {section.room.roomName ? ` - ${section.room.roomName}` : ""}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Capacity:</span>
+                  <span className="font-medium">{section.room.capacity} students</span>
+                </div>
+                {section.room.roomCategory && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Category:</span>
+                    <Badge variant="outline" className="capitalize">
+                      {section.room.roomCategory.replace("_", " ")}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="pt-4 border-t space-y-2">
             <div className="flex justify-between text-sm">

@@ -41,6 +41,10 @@ export function ViewTeacherCapabilityDialog({ open, onOpenChange, capability }: 
               <p className="text-sm">{capability.grade?.gradeName || "All Grades"}</p>
             </div>
             <div>
+              <p className="text-sm font-medium text-muted-foreground">Section</p>
+              <p className="text-sm">{capability.section?.sectionName || "All Sections"}</p>
+            </div>
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Expertise Level</p>
               <Badge
                 variant={
