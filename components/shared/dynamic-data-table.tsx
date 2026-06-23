@@ -484,43 +484,63 @@ export function DynamicDataTable<TData>({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-32">
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm">Loading data...</span>
-                  </div>
+      {isLoading ? (
+        <TableRow>
+          <TableCell colSpan={columns.length} className="h-32">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center gap-2 text-muted-foreground"
+            >
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-sm">Loading data...</span>
+            </motion.div>
+          </TableCell>
+        </TableRow>
+      ) : table.getRowModel().rows?.length ? (
+        <AnimatePresence mode="popLayout">
+          {table.getRowModel().rows.map((row, index) => (
+            <motion.tr
+              key={row.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{
+                duration: 0.25,
+                delay: Math.min(index * 0.04, 0.4),
+                ease: "easeOut",
+              }}
+              data-state={row.getIsSelected() && "selected"}
+              className={cn(
+                "border-border/50 transition-colors",
+                row.getIsSelected() ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50",
+              )}
+              style={{ display: "table-row" }}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="whitespace-nowrap">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, index) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className={cn(
-                    "border-border/50 transition-colors",
-                    row.getIsSelected() ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50",
-                  )}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-32">
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <Search className="h-8 w-8 opacity-50" />
-                    <span className="text-sm font-medium">No results found</span>
-                    <span className="text-xs">Try adjusting your search or filters</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+              ))}
+            </motion.tr>
+          ))}
+        </AnimatePresence>
+      ) : (
+        <TableRow>
+          <TableCell colSpan={columns.length} className="h-32">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col items-center justify-center gap-2 text-muted-foreground"
+            >
+              <Search className="h-8 w-8 opacity-50" />
+              <span className="text-sm font-medium">No results found</span>
+              <span className="text-xs">Try adjusting your search or filters</span>
+            </motion.div>
+          </TableCell>
+        </TableRow>
+      )}
           </TableBody>
         </Table>
       </div>

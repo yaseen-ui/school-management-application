@@ -1,5 +1,6 @@
 "use client"
 
+import { motion } from "framer-motion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Building2, Phone, MapPin, User, Globe, Calendar } from "lucide-react"
@@ -98,7 +99,12 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
 
         <div className="space-y-6 py-4">
           {/* Contact Address */}
-          <div className="space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.05 }}
+            className="space-y-3"
+          >
             <h3 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               Contact Address
@@ -109,10 +115,15 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
                 {tenant.contactAddress?.city}, {tenant.contactAddress?.state} {tenant.contactAddress?.zip}
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Contact Information */}
-          <div className="space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.12 }}
+            className="space-y-3"
+          >
             <h3 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
               <Phone className="h-4 w-4 text-muted-foreground" />
               Contact Information
@@ -127,10 +138,15 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
                 <p className="text-foreground font-medium">{tenant.contactEmail}</p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Admin Information */}
-          <div className="space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.19 }}
+            className="space-y-3"
+          >
             <h3 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
               <User className="h-4 w-4 text-muted-foreground" />
               Admins{tenant.users && tenant.users.length > 1 ? ` (${tenant.users.length})` : ""}
@@ -157,11 +173,16 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
             ) : (
               <p className="pl-6 text-sm text-muted-foreground">No admin assigned.</p>
             )}
-          </div>
+          </motion.div>
 
           {/* Domain */}
           {tenant.domain && (
-            <div className="space-y-3">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.26 }}
+              className="space-y-3"
+            >
               <h3 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 Domain
@@ -176,11 +197,16 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
                   {tenant.domain}
                 </a>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Timestamps */}
-          <div className="space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.33 }}
+            className="space-y-3"
+          >
             <h3 className="text-sm font-medium text-foreground flex items-center gap-2 border-b pb-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               Timeline
@@ -195,7 +221,7 @@ export function ViewTenantDialog({ open, onOpenChange, tenant }: ViewTenantDialo
                 <p className="text-foreground font-medium">{formatDate(tenant.updatedAt)}</p>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </DialogContent>
     </Dialog>

@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { motion } from "framer-motion"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { MobileSidebar } from "@/components/layout/mobile-sidebar"
@@ -17,7 +18,7 @@ export default function DashboardLayout({
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background bg-ambient-glow">
         <Sidebar />
         <MobileSidebar />
         <div
@@ -27,7 +28,14 @@ export default function DashboardLayout({
           )}
         >
           <Header />
-          <main className="p-6">{children}</main>
+          <motion.main
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="p-6"
+          >
+            {children}
+          </motion.main>
         </div>
       </div>
     </AuthGuard>

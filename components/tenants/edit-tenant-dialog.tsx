@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import { motion } from "framer-motion"
 import { Loader2 } from "lucide-react"
 import {
   Dialog,
@@ -153,7 +154,12 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* School Information */}
-          <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.05 }}
+            className="space-y-4"
+          >
             <h3 className="text-sm font-medium text-foreground border-b pb-2">School Information</h3>
 
             <div className="space-y-2">
@@ -225,10 +231,15 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </motion.div>
 
           {/* Contact Address */}
-          <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.12 }}
+            className="space-y-4"
+          >
             <h3 className="text-sm font-medium text-foreground border-b pb-2">Contact Address</h3>
 
             <div className="space-y-2">
@@ -284,10 +295,15 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
                 <p className="text-sm text-destructive">{errors.contactAddressZip.message}</p>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Contact Information */}
-          <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.19 }}
+            className="space-y-4"
+          >
             <h3 className="text-sm font-medium text-foreground border-b pb-2">Contact Information</h3>
 
             <div className="grid grid-cols-2 gap-4">
@@ -320,10 +336,15 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
                 {errors.contactEmail && <p className="text-sm text-destructive">{errors.contactEmail.message}</p>}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Admin Information */}
-          <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.26 }}
+            className="space-y-4"
+          >
             <h3 className="text-sm font-medium text-foreground border-b pb-2">Admin Information</h3>
 
             <div className="space-y-2">
@@ -367,7 +388,7 @@ export function EditTenantDialog({ open, onOpenChange, tenant }: EditTenantDialo
                 {errors.adminEmail && <p className="text-sm text-destructive">{errors.adminEmail.message}</p>}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
