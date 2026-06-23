@@ -48,6 +48,23 @@ enum AttendanceStatus {
   excused
 }
 
+enum AttendanceType {
+  period_wise
+  shift_wise
+}
+
+enum AttendanceContextType {
+  regular
+  exam
+  event
+  seminar
+  sports
+  assembly
+  lab
+  field_trip
+  other
+}
+
 enum DayOfWeek {
   Monday
   Tuesday
@@ -230,6 +247,9 @@ model User {
   teacher Teacher?
   parent  Parent?
 
+  // attendance sessions taken by this user
+  attendanceSessionsTaken AttendanceSession[]
+
   // NOTE: For UserType.company rows (tenantId IS NULL), Postgres treats multiple
   // NULL tenantIds as distinct, so the composite unique below does not prevent
   // duplicate emails. Add this partial unique index in a raw SQL migration:
@@ -309,12 +329,17 @@ model Grade {
 }
 
 model Section {
-  id          String   @id @default(uuid())
-  tenantId    String
-  gradeId     String
-  sectionName String
-  structureId String? // which timetable structure this section follows
-  roomId      String? // dedicated classroom for this section
+  id             String         @id @default(uuid())
+  tenantId       String
+  gradeId        String
+  sectionName    String
+  structureId    String? // which timetable structure this section follows
+  roomId         String? // dedicated classroom for this section
+
+  // Attendance configuration
+  attendanceType AttendanceType @default(period_wise)
+  shifts         Json?          // [{name:"Morning",sortOrder:1},{name:"Afternoon",sortOrder:2}] — only for shift_wise
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -329,6 +354,9 @@ model Section {
 
   // teacher capabilities
   teacherCapabilities TeacherCapability[]
+
+  // attendance sessions
+  attendanceSessions AttendanceSession[]
 
   @@unique([id, tenantId], name: "section_tenant_identity")
   @@index([tenantId])
@@ -407,10 +435,10 @@ model AcademicYear {
   enrollments        StudentEnrollment[]
   teacherAssignments TeacherAssignment[]
   timetableEntries   TimetableEntry[]
-  attendanceSessions AttendanceSession[]
   holidays           Holiday[]
 
-  exams Exam[]
+  exams               Exam[]
+  attendanceSessions  AttendanceSession[]
 
   // NOTE: Only one AcademicYear may be `active` per tenant. Prisma cannot
   // express partial unique indexes; add this in a raw SQL migration:
@@ -583,7 +611,6 @@ model TeacherAssignment {
   sectionSubject SectionSubject @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   timetableEntries   TimetableEntry[]
-  attendanceSessions AttendanceSession[]
 
   @@unique([tenantId, academicYearId, teacherId, sectionSubjectId], name: "uniqueTeacherAssignment")
   @@unique([id, tenantId], name: "teacher_assignment_tenant_identity")
@@ -806,35 +833,52 @@ model Room {
 }
 
 // ---------------- Attendance ----------------
+/// Represents a single attendance-taking event for a section.
+/// Supports period_wise (with period + subject) and shift_wise (with shift name) modes.
+/// Context type (regular, exam, event, etc.) is flexible and user-selectable.
 model AttendanceSession {
-  id                  String   @id @default(uuid())
-  tenantId            String
-  academicYearId      String
-  sectionSubjectId    String
-  teacherAssignmentId String?
-  date                DateTime
-  periodId            String // required; use a "FULL_DAY" sentinel period for daily-mark schools
-  notes               String?
+  id              String   @id @default(uuid())
+  tenantId        String
+  academicYearId  String
+  sectionId       String
+  takenById       String?  // teacher/user who marked attendance
+
+  date            DateTime @db.Date
+
+  // Context — what kind of session this is
+  contextType     AttendanceContextType @default(regular)
+  contextName     String?  // e.g. "Science Fair 2026", "Mid Term Maths"
+  contextRefId    String?  // polymorphic ref to exam/event/etc.
+  contextRefType  String?  // "exam" | "exam_paper" | "event" | etc.
+
+  // Period-wise fields (null for shift_wise)
+  periodId        String?
+  sectionSubjectId String?
+
+  // Shift-wise fields (null for period_wise)
+  shift           String?  // "Morning", "Afternoon", etc.
+
+  notes           String?
 
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  academicYear      AcademicYear       @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  sectionSubject    SectionSubject     @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  period            TimetablePeriod    @relation(fields: [periodId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  // NoAction (not SetNull) preserves the required tenantId on attendance history.
-  // Admin must reassign or clear teacherAssignmentId before deleting a TeacherAssignment.
-  teacherAssignment TeacherAssignment? @relation(fields: [teacherAssignmentId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  academicYear  AcademicYear     @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section       Section          @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  takenBy       User?            @relation(fields: [takenById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  period        TimetablePeriod? @relation(fields: [periodId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  sectionSubject SectionSubject? @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   marks AttendanceMark[]
 
-  @@unique([tenantId, academicYearId, sectionSubjectId, date, periodId], name: "uniqueAttendanceSession")
+  @@unique([tenantId, sectionId, date, periodId, shift, contextType], name: "uniqueAttendanceSession")
   @@unique([id, tenantId], name: "attendance_session_tenant_identity")
-  @@index([tenantId, academicYearId, date])
+  @@index([tenantId, sectionId, date])
+  @@index([tenantId, academicYearId])
+  @@index([tenantId, takenById])
   @@map("attendance_sessions")
 }
 

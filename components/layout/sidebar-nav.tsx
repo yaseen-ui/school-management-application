@@ -20,6 +20,7 @@ import {
   Calendar,
   BookHeart,
   CalendarClock,
+  ClipboardCheck,
 } from "lucide-react"
 
 
@@ -83,10 +84,11 @@ const tenantNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Timetable",
+    title: "Timetable & Attendance",
     items: [
       { title: "Timetable", href: "/timetable", icon: CalendarClock },
       { title: "Structures", href: "/timetable-structures", icon: CalendarClock },
+      { title: "Attendance", href: "/attendance", icon: ClipboardCheck },
     ],
   },
 
