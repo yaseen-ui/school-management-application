@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { useUpdateSection } from "@/hooks/use-sections"
 import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { RoomSelector } from "@/components/shared/room-selector"
+import { TeacherSelector } from "@/components/shared/teacher-selector"
 import type { Section } from "@/lib/api/sections"
 
 interface EditSectionDialogProps {
@@ -30,6 +31,7 @@ interface FormData {
   sectionName: string
   gradeId: string
   roomId: string
+  sectionInChargeId: string
 }
 
 export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDialogProps) {
@@ -49,6 +51,7 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
         sectionName: section.sectionName,
         gradeId: section.gradeId,
         roomId: section.roomId ?? "",
+        sectionInChargeId: section.sectionInChargeId ?? "",
       })
     }
   }, [section, open, reset])
@@ -64,6 +67,7 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
         sectionName: data.sectionName,
         gradeId: data.gradeId,
         roomId: data.roomId || undefined,
+        sectionInChargeId: data.sectionInChargeId || undefined,
       },
     })
     onOpenChange(false)
@@ -111,6 +115,13 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
                   }}
                 />
                 {errors.gradeId && <p className="text-sm text-destructive">{errors.gradeId.message}</p>}
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">Section In-Charge (Optional)</h4>
+                <TeacherSelector fieldName="sectionInChargeId" initialTeacherId={section.sectionInChargeId ?? undefined} />
               </div>
 
               <Separator />

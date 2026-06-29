@@ -393,8 +393,9 @@ model Section {
   tenantId       String
   gradeId        String
   sectionName    String
-  structureId    String? // which timetable structure this section follows
-  roomId         String? // dedicated classroom for this section
+  structureId         String? // which timetable structure this section follows
+  roomId              String? // dedicated classroom for this section
+  sectionInChargeId   String? // teacher assigned as section in-charge
 
   // Attendance configuration
   attendanceType AttendanceType @default(period_wise)
@@ -407,6 +408,7 @@ model Section {
   grade     Grade               @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   structure TimetableStructure? @relation(fields: [structureId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   room      Room?               @relation(fields: [roomId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  sectionInCharge Teacher?      @relation(fields: [sectionInChargeId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   sectionSubjects SectionSubject[]
   students        Student[] // current snapshot
@@ -618,6 +620,7 @@ model Teacher {
   qualifications    TeacherQualification[]
   employmentHistory TeacherEmploymentHistory[]
   availabilities    TeacherAvailability[]
+  sectionsInCharge  Section[]
 
   @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")

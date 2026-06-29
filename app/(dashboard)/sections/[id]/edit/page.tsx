@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useSection, useUpdateSection } from "@/hooks/use-sections"
 import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { RoomSelector } from "@/components/shared/room-selector"
+import { TeacherSelector } from "@/components/shared/teacher-selector"
 import { motion } from "framer-motion"
 import { CardSkeleton } from "@/components/shared/loading-skeleton"
 
@@ -20,6 +21,7 @@ interface FormData {
   courseId: string
   gradeId: string
   roomId: string
+  sectionInChargeId: string
 }
 
 export default function EditSectionPage() {
@@ -36,6 +38,7 @@ export default function EditSectionPage() {
       courseId: "",
       gradeId: "",
       roomId: "",
+      sectionInChargeId: "",
     },
   })
   const {
@@ -55,6 +58,7 @@ export default function EditSectionPage() {
         gradeId: section.gradeId,
         roomId: section.roomId ?? "",
         courseId: section.grade?.courseId || "",
+        sectionInChargeId: section.sectionInChargeId ?? "",
       })
     }
   }, [section, reset])
@@ -69,6 +73,7 @@ export default function EditSectionPage() {
         sectionName: data.sectionName,
         gradeId: data.gradeId,
         roomId: data.roomId || undefined,
+        sectionInChargeId: data.sectionInChargeId || undefined,
       },
     })
     router.push("/sections")
@@ -175,6 +180,13 @@ export default function EditSectionPage() {
                   }}
                 />
                 {errors.gradeId && <p className="text-sm text-destructive">{errors.gradeId.message}</p>}
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">Section In-Charge (Optional)</h4>
+                <TeacherSelector fieldName="sectionInChargeId" initialTeacherId={section.sectionInChargeId ?? undefined} />
               </div>
 
               <Separator />

@@ -11,12 +11,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useCreateSection } from "@/hooks/use-sections"
 import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { RoomSelector } from "@/components/shared/room-selector"
+import { TeacherSelector } from "@/components/shared/teacher-selector"
 import { motion } from "framer-motion"
 
 interface FormData {
   sectionName: string
   gradeId: string
   roomId: string
+  sectionInChargeId: string
 }
 
 export default function CreateSectionPage() {
@@ -26,6 +28,7 @@ export default function CreateSectionPage() {
       sectionName: "",
       gradeId: "",
       roomId: "",
+      sectionInChargeId: "",
     },
   })
 
@@ -43,6 +46,7 @@ export default function CreateSectionPage() {
       sectionName: data.sectionName,
       gradeId: data.gradeId,
       roomId: data.roomId || undefined,
+      sectionInChargeId: data.sectionInChargeId || undefined,
     })
     reset()
     router.push("/sections")
@@ -102,6 +106,13 @@ export default function CreateSectionPage() {
                   }}
                 />
                 {errors.gradeId && <p className="text-sm text-destructive">{errors.gradeId.message}</p>}
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">Section In-Charge (Optional)</h4>
+                <TeacherSelector fieldName="sectionInChargeId" />
               </div>
 
               <Separator />

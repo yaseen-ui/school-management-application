@@ -24,6 +24,7 @@ export interface Section {
   gradeId: string
   sectionName: string
   roomId?: string | null
+  sectionInChargeId?: string | null
   createdAt: string
   updatedAt: string
   grade?: {
@@ -49,6 +50,11 @@ export interface Section {
       }
     }
   } | null
+  sectionInCharge?: {
+    id: string
+    fullName: string
+    employeeCode?: string | null
+  } | null
   sectionSubjects?: SectionSubjectRow[]
 }
 
@@ -56,6 +62,7 @@ export interface CreateSectionRequest {
   sectionName: string
   gradeId: string
   roomId?: string
+  sectionInChargeId?: string
   subjectIds?: string[]
 }
 
@@ -64,6 +71,7 @@ export interface UpdateSectionRequest {
   sectionName: string
   gradeId: string
   roomId?: string
+  sectionInChargeId?: string
   subjectIds?: string[]
 }
 

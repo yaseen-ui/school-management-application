@@ -1,6 +1,6 @@
 "use client"
 
-import { Users, Building2, DoorOpen } from "lucide-react"
+import { Users, Building2, DoorOpen, User } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import type { Section } from "@/lib/api/sections"
@@ -49,6 +49,19 @@ export function ViewSectionDialog({ open, onOpenChange, section }: ViewSectionDi
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Grade</h4>
             <Badge variant="secondary">{section.grade?.gradeName || section.gradeId}</Badge>
           </div>
+
+          {section.sectionInCharge && (
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Section In-Charge</h4>
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{section.sectionInCharge.fullName}</span>
+                {section.sectionInCharge.employeeCode && (
+                  <span className="text-muted-foreground">({section.sectionInCharge.employeeCode})</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {section.room && (
             <div className="pt-4 border-t">

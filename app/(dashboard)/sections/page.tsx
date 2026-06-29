@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar, DoorOpen } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar, DoorOpen, User } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DynamicDataTable, type ApiColumn } from "@/components/shared/dynamic-data-table"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -60,6 +60,7 @@ export default function SectionsPage() {
   const apiColumns: ApiColumn[] = data?.data?.columns || [
     { field: "sectionName", headerName: "Section Name" },
     { field: "grade.gradeName", headerName: "Grade" },
+    { field: "sectionInCharge.fullName", headerName: "Section In-Charge" },
     { field: "createdAt", headerName: "Created At" },
   ]
 
@@ -101,6 +102,20 @@ export default function SectionsPage() {
 
       case "grade.gradeName":
         return <Badge variant="secondary">{row.grade?.gradeName || "N/A"}</Badge>
+
+      case "sectionInCharge.fullName":
+        if (!row.sectionInCharge) return <span className="text-sm text-muted-foreground">—</span>
+        return (
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium">{row.sectionInCharge.fullName}</p>
+              {row.sectionInCharge.employeeCode && (
+                <p className="text-xs text-muted-foreground">{row.sectionInCharge.employeeCode}</p>
+              )}
+            </div>
+          </div>
+        )
 
       case "room.roomNumber":
       case "room":
