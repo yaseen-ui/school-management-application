@@ -21,6 +21,9 @@ import {
   BookHeart,
   CalendarClock,
   ClipboardCheck,
+  FileText,
+  PenLine,
+  Trophy,
   DollarSign,
   Receipt,
   CreditCard,
@@ -88,8 +91,12 @@ const tenantNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Timetable & Attendance",
+    title: "Exams & Timetable",
     items: [
+      { title: "Exams", href: "/exams", icon: FileText },
+      { title: "Exam Schedules", href: "/exam-schedules", icon: Calendar },
+      { title: "Marks Entry", href: "/marks-entry", icon: PenLine },
+      { title: "Results", href: "/results", icon: Trophy },
       { title: "Timetable", href: "/timetable", icon: CalendarClock },
       { title: "Structures", href: "/timetable-structures", icon: CalendarClock },
       { title: "Attendance", href: "/attendance", icon: ClipboardCheck },

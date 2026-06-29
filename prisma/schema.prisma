@@ -110,11 +110,25 @@ enum TeacherRole {
   lab_incharge
 }
 
+enum ExamType {
+  weekly
+  quarterly
+  half_yearly
+  annually
+}
+
 enum ExamStatus {
   draft
   published
   locked
   archived
+}
+
+enum ExamScheduleStatus {
+  pending
+  scheduled
+  completed
+  cancelled
 }
 
 enum HolidayType {
@@ -224,11 +238,14 @@ model Tenant {
   studentParents StudentParent[]
 
   // exams & grading
-  exams         Exam[]
-  examPapers    ExamPaper[]
-  examMarks     ExamMark[]
-  gradingScales GradingScale[]
-  gradingBands  GradingBand[]
+  exams               Exam[]
+  examTargetGrades    ExamTargetGrade[]
+  examTargetSections  ExamTargetSection[]
+  examSchedules       ExamSchedule[]
+  examSchedulePapers  ExamSchedulePaper[]
+  examMarks           ExamMark[]
+  gradingScales       GradingScale[]
+  gradingBands        GradingBand[]
 
   // calendar
   holidays Holiday[]
@@ -382,6 +399,9 @@ model Grade {
   // teacher capabilities
   teacherCapabilities TeacherCapability[]
 
+  // exam target audience
+  examTargetGrades ExamTargetGrade[]
+
   @@unique([id, tenantId], name: "grade_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, courseId])
@@ -426,6 +446,10 @@ model Section {
   // store
   storeProductSections StoreProductSection[]
   storeKitSections     StoreKitSection[]
+
+  // exam schedules
+  examSchedules      ExamSchedule[]
+  examTargetSections ExamTargetSection[]
 
   @@unique([id, tenantId], name: "section_tenant_identity")
   @@index([tenantId])
@@ -474,7 +498,7 @@ id         String   @id @default(uuid())
   teacherAssignments TeacherAssignment[]
   timetableEntries   TimetableEntry[]
   electiveSelections StudentEnrollmentElective[]
-  examPapers         ExamPaper[]
+  examSchedulePapers ExamSchedulePaper[]
   attendanceSessions AttendanceSession[]
 
   @@unique([tenantId, sectionId, subjectId], name: "sectionSubjectUnique")
@@ -621,6 +645,7 @@ model Teacher {
   employmentHistory TeacherEmploymentHistory[]
   availabilities    TeacherAvailability[]
   sectionsInCharge  Section[]
+  examPapersInCharge ExamSchedulePaper[]
 
   @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
@@ -1042,17 +1067,22 @@ model StudentParent {
 }
 
 // ---------------- Exams / Marks / Grading ----------------
+/// Admin-defined exam blueprint (e.g., "Quarterly 2026", "Weekly Test 3")
+/// Defines the high-level exam type, date range, and target audience.
 model Exam {
   id             String @id @default(uuid())
   tenantId       String
   academicYearId String
 
-  name        String // "Unit Test 1", "Mid Term"
+  name        String     // "Quarterly 2026", "Weekly Test 3"
   description String?
-  examType    String // UNIT_TEST / MID_TERM / FINAL / PRACTICAL / INTERNAL
+  examType    ExamType   // weekly / quarterly / half_yearly / annually
   status      ExamStatus @default(draft)
-  startDate   DateTime
-  endDate     DateTime
+  startDate   DateTime   // overall start date of the exam period
+  endDate     DateTime   // overall end date of the exam period
+
+  // Source: "admin" for admin-released exams, "custom" for teacher-created local exams
+  source String @default("admin")
 
   gradingScaleId String?
 
@@ -1067,7 +1097,12 @@ model Exam {
   // detach the grading scale from the exam before deleting the scale.
   gradingScale GradingScale? @relation(fields: [gradingScaleId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
 
-  papers ExamPaper[]
+  // Target audience: which grades and sections this exam is released for
+  targetGrades    ExamTargetGrade[]
+  targetSections  ExamTargetSection[]
+
+  // Scheduled exam papers (per subject, per section)
+  schedules ExamSchedule[]
 
   @@unique([tenantId, academicYearId, name], name: "uniqueExamNamePerYear")
   @@unique([id, tenantId], name: "exam_tenant_identity")
@@ -1076,17 +1111,93 @@ model Exam {
   @@map("exams")
 }
 
-model ExamPaper {
+/// Target grade for an exam (admin-defined audience)
+model ExamTargetGrade {
+  id       String @id @default(uuid())
+  tenantId String
+  examId   String
+  gradeId  String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exam   Exam   @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  grade  Grade  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, examId, gradeId], name: "uniqueExamTargetGrade")
+  @@unique([id, tenantId], name: "exam_target_grade_tenant_identity")
+  @@index([tenantId, examId])
+  @@index([tenantId, gradeId])
+  @@map("exam_target_grades")
+}
+
+/// Target section for an exam (admin-defined audience)
+model ExamTargetSection {
+  id        String @id @default(uuid())
+  tenantId  String
+  examId    String
+  sectionId String
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exam    Exam    @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, examId, sectionId], name: "uniqueExamTargetSection")
+  @@unique([id, tenantId], name: "exam_target_section_tenant_identity")
+  @@index([tenantId, examId])
+  @@index([tenantId, sectionId])
+  @@map("exam_target_sections")
+}
+
+/// Exam schedule — per-section scheduling of the exam
+/// Created by the Section In-Charge (teacher) for their section.
+/// For admin-released exams, schedules are derived from the exam blueprint.
+/// For custom exams, the teacher creates this directly.
+model ExamSchedule {
+  id        String @id @default(uuid())
+  tenantId  String
+  examId    String?  // null for custom (teacher-created) exams
+  sectionId String
+
+  name        String             // "Quarterly 2026 - Section A", or custom exam name
+  description String?
+  status      ExamScheduleStatus @default(pending)
+  startDate   DateTime           // overall start date for this section's exam period
+  endDate     DateTime           // overall end date for this section's exam period
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exam    Exam?   @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  // Subject-wise exam papers scheduled for this section
+  papers ExamSchedulePaper[]
+
+  @@unique([id, tenantId], name: "exam_schedule_tenant_identity")
+  @@index([tenantId, examId])
+  @@index([tenantId, sectionId])
+  @@map("exam_schedules")
+}
+
+/// Individual subject paper within a schedule
+/// Each row in the scheduling table that the teacher edits.
+model ExamSchedulePaper {
   id               String @id @default(uuid())
   tenantId         String
-  examId           String
+  scheduleId       String
   sectionSubjectId String
+
+  examDate        DateTime
+  startTime       Int      // minutes from midnight (e.g., 540 = 9:00 AM)
+  endTime         Int      // minutes from midnight (e.g., 600 = 10:00 AM)
+  durationMinutes Int?
+  room            String?  // assigned classroom/location
+  inChargeId      String?  // teacher assigned as invigilator
 
   maxMarks        Int
   passMarks       Int
-  examDate        DateTime
-  durationMinutes Int?
-  room            String?
 
   createdById String?
   updatedById String?
@@ -1094,16 +1205,18 @@ model ExamPaper {
   updatedAt   DateTime @updatedAt
 
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  exam           Exam           @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  schedule       ExamSchedule   @relation(fields: [scheduleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   sectionSubject SectionSubject @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  inCharge       Teacher?       @relation(fields: [inChargeId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   marks ExamMark[]
 
-  @@unique([tenantId, examId, sectionSubjectId], name: "uniquePaperPerExamSectionSubject")
-  @@unique([id, tenantId], name: "exam_paper_tenant_identity")
-  @@index([tenantId, examId])
+  @@unique([tenantId, scheduleId, sectionSubjectId], name: "uniquePaperPerScheduleSubject")
+  @@unique([id, tenantId], name: "exam_schedule_paper_tenant_identity")
+  @@index([tenantId, scheduleId])
   @@index([tenantId, sectionSubjectId])
-  @@map("exam_papers")
+  @@index([tenantId, inChargeId])
+  @@map("exam_schedule_papers")
 }
 
 model ExamMark {
@@ -1112,8 +1225,9 @@ model ExamMark {
   examPaperId  String
   enrollmentId String
 
-  marksObtained Float
+  marksObtained Float?  // nullable; auto-calculated from breakup sum if breakup is provided
   isAbsent      Boolean @default(false)
+  breakup       Json?   // free JSON object e.g. {"topics":[{"topic":"Algebra","marks":15}]}
   remarks       String?
   gradeLabel    String? // snapshot; can also be derived from grading scale
 
@@ -1123,7 +1237,7 @@ model ExamMark {
   updatedAt   DateTime @updatedAt
 
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  examPaper  ExamPaper         @relation(fields: [examPaperId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  examPaper  ExamSchedulePaper @relation(fields: [examPaperId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   enrollment StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([tenantId, examPaperId, enrollmentId], name: "uniqueMarkPerStudentPerPaper")
