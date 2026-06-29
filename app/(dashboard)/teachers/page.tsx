@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { CreateTeacherWizard } from "@/components/teachers/create-teacher-wizard"
 import { ViewTeacherDialog } from "@/components/teachers/view-teacher-dialog"
@@ -64,6 +65,7 @@ export default function TeachersPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Teachers" }]} />
       <PageHeader title="Teachers" description="Manage teaching staff and their profiles">
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />

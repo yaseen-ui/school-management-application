@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { UserCog, Eye, Pencil, Trash2, Plus, MoreVertical } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -72,6 +73,7 @@ export default function TeacherAssignmentsPage() {
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Teacher Assignments" }]} />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader
           title="Teacher Assignments"
@@ -89,7 +91,7 @@ export default function TeacherAssignmentsPage() {
           isLoading={isLoading}
           onBulkDelete={handleBulkDelete}
           idField="id"
-          renderCell={(row: TeacherAssignment, field: string) => {
+          renderCell={({ row, field }: { row: TeacherAssignment; field: string; value: unknown }) => {
             if (field === "teacher.fullName") {
               return (
                 <div className="flex items-center gap-2">

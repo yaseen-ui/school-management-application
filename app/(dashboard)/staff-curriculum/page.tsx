@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { UserCheck, GitBranch, UserCog, BookMarked, Clock, ArrowRight } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -81,6 +82,7 @@ const cardVariants = {
 export default function StaffCurriculumPage() {
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Staff & Curriculum" }]} />
       <PageHeader
         title="Staff & Curriculum"
         description="Manage teachers, their capabilities, assignments, and section-subject mappings"

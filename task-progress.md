@@ -1,9 +1,22 @@
-# Implementation Progress
+# Store Module Architecture Changes - Progress
 
-- [ ] Step 1: Prisma Schema - Add sectionId to TeacherCapability model
-- [ ] Step 2: API Types - Update lib/api/teacher-capabilities.ts
-- [ ] Step 3: Backend Service - Rewrite createBulk for nested structure
-- [ ] Step 4: Create Dialog - Rewrite with accordion-based multi-course UI
-- [ ] Step 5: Edit Dialog - Update for section-level editing
-- [ ] Step 6: View Dialog - Update to show section info
-- [ ] Step 7: Capabilities Page - Update edit handler for backward compatibility
+## Phase 1: Schema Changes ✅
+- [x] Update Prisma schema with all changes
+- [x] Create migration
+- [x] Update store design document
+
+## Phase 2: Backend Service Changes
+- [ ] Update store.service.js
+- [ ] Update store.controller.js
+- [ ] Update API routes
+
+## Phase 3: Frontend Changes
+- [ ] Update types & API client
+- [ ] Update hooks
+- [ ] Update distribute page
+- [ ] Update store page
+- [ ] Add returns UI
+- [ ] Add dues UI
+
+## Phase 4: Documentation
+- [ ] Update store-module-design.md

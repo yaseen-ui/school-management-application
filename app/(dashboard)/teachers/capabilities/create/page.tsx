@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { useCreateBulkTeacherCapabilities } from "@/hooks/use-teacher-capabilities"
 import { useTeachers } from "@/hooks/use-teachers"
 import { useSubjects } from "@/hooks/use-subjects"
@@ -346,10 +347,12 @@ export default function CreateTeacherCapabilitiesPage() {
   const availableCourses = allCourses.filter((c: any) => !selectedCourseIds.includes(c.id))
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <PageHeader
-        title="Create Teacher Capabilities"
-        description="Select a teacher, then add courses, grades, sections, and assign subjects to define their teaching capabilities"
+    <>
+      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Teacher Capabilities", href: "/teachers/capabilities" }, { label: "Create" }]} />
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+        <PageHeader
+          title="Create Teacher Capabilities"
+          description="Select a teacher, then add courses, grades, sections, and assign subjects to define their teaching capabilities"
       >
         <Button variant="outline" onClick={() => router.push("/teachers/capabilities")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -780,5 +783,6 @@ export default function CreateTeacherCapabilitiesPage() {
         )}
       </form>
     </motion.div>
+    </>
   )
 }

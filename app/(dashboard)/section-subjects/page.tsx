@@ -4,6 +4,7 @@ import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import { BookMarked, Eye, Pencil, Trash2, Plus, MoreVertical, Layers } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -100,6 +101,7 @@ export default function SectionSubjectsPage() {
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Section Subjects" }]} />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader
           title="Section Subjects"

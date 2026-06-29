@@ -21,9 +21,13 @@ import {
   BookHeart,
   CalendarClock,
   ClipboardCheck,
+  DollarSign,
+  Receipt,
+  CreditCard,
+  Banknote,
+  ListOrdered,
+  Store,
 } from "lucide-react"
-
-
 
 import { config } from "@/lib/config"
 
@@ -91,8 +95,24 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Attendance", href: "/attendance", icon: ClipboardCheck },
     ],
   },
+  {
+    title: "Fee Management",
+    items: [
+      { title: "Fee Heads", href: "/fee-heads", icon: ListOrdered },
+      { title: "Section Fees", href: "/section-fees", icon: Receipt },
+      { title: "Fee Terms", href: "/fee-terms", icon: CalendarClock },
+      { title: "Student Fees", href: "/student-fees", icon: DollarSign },
+      { title: "Payments", href: "/fee-payments", icon: CreditCard },
+      { title: "Refunds", href: "/fee-refunds", icon: Banknote },
+    ],
 
-
+  },
+  {
+    title: "Store",
+    items: [
+      { title: "Store", href: "/store", icon: Store },
+    ],
+  },
   {
     title: "System",
     items: [{ title: "Settings", href: "/settings", icon: Settings }],

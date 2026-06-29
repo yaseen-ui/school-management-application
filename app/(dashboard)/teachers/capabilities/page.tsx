@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { GitBranch, Eye, Pencil, Trash2, Plus, MoreVertical, BookOpen } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -211,6 +212,7 @@ export default function TeacherCapabilitiesPage() {
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Teacher Capabilities" }]} />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader
           title="Teacher Capabilities"

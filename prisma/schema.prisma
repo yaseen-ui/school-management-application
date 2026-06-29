@@ -48,6 +48,34 @@ enum AttendanceStatus {
   excused
 }
 
+enum DiscountType {
+  percentage
+  fixed
+}
+
+enum PaymentMethod {
+  cash
+  card
+  bank_transfer
+  upi
+  cheque
+  online
+  other
+}
+
+enum PaymentStatus {
+  paid
+  partial
+  pending
+  refunded
+  cancelled
+}
+
+enum FeeAllocationMethod {
+  equal
+  custom
+}
+
 enum AttendanceType {
   period_wise
   shift_wise
@@ -155,6 +183,7 @@ model Tenant {
   domain           String?          @unique
   logo             String?
   caption          String?
+  defaultTermCount Int      @default(1) // default number of fee terms for this institution
 
   createdById String?
   updatedById String?
@@ -212,6 +241,30 @@ model Tenant {
   // teacher availability
   teacherAvailabilities TeacherAvailability[]
 
+  // fee management
+  feeHeads        FeeHead[]
+  sectionFees     SectionFee[]
+  sectionFeeHeads SectionFeeHead[]
+  feeTerms        FeeTerm[]
+  studentFees     StudentFee[]
+  studentFeeHeads StudentFeeHead[]
+  feePayments     FeePayment[]
+  feeRefunds      FeeRefund[]
+
+  // store
+  storeCategories      StoreCategory[]
+  storeProducts        StoreProduct[]
+  storeProductSections StoreProductSection[]
+  storeKits            StoreKit[]
+  storeKitItems        StoreKitItem[]
+  storeKitSections     StoreKitSection[]
+  storeOrders          StoreOrder[]
+  storeOrderItems      StoreOrderItem[]
+  storePendingItems    StorePendingItem[]
+  storeDues            StoreDue[]
+  storeDuePayments     StoreDuePayment[]
+  storeReturns         StoreReturn[]
+
   @@map("tenants")
 }
 
@@ -249,6 +302,13 @@ model User {
 
   // attendance sessions taken by this user
   attendanceSessionsTaken AttendanceSession[]
+
+  // fee management
+  collectedPayments FeePayment[] // payments collected by this user
+  processedRefunds  FeeRefund[]  // refunds processed by this user
+
+  // store
+  createdStoreOrders StoreOrder[]
 
   // NOTE: For UserType.company rows (tenantId IS NULL), Postgres treats multiple
   // NULL tenantIds as distinct, so the composite unique below does not prevent
@@ -358,6 +418,13 @@ model Section {
   // attendance sessions
   attendanceSessions AttendanceSession[]
 
+  // fee management
+  sectionFees SectionFee[]
+
+  // store
+  storeProductSections StoreProductSection[]
+  storeKitSections     StoreKitSection[]
+
   @@unique([id, tenantId], name: "section_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, gradeId])
@@ -440,6 +507,12 @@ model AcademicYear {
   exams               Exam[]
   attendanceSessions  AttendanceSession[]
 
+  // fee management
+  sectionFees SectionFee[]
+
+  // store
+  storeOrders StoreOrder[]
+
   // NOTE: Only one AcademicYear may be `active` per tenant. Prisma cannot
   // express partial unique indexes; add this in a raw SQL migration:
   //   CREATE UNIQUE INDEX academic_year_one_active_per_tenant
@@ -477,6 +550,13 @@ model StudentEnrollment {
   electiveSelections StudentEnrollmentElective[]
   attendanceMarks    AttendanceMark[]
   examMarks          ExamMark[]
+
+  // fee management
+  studentFee StudentFee?
+
+  // store
+  storeOrders StoreOrder[]
+  storeDues   StoreDue[]
 
   @@unique([tenantId, studentId, academicYearId], name: "oneEnrollmentPerYear")
   @@unique([id, tenantId], name: "student_enrollment_tenant_identity")
@@ -1294,4 +1374,571 @@ model Upload {
   @@index([tenantId, entityId])
   @@index([tenantId, entityType, entityId])
   @@map("uploads")
+}
+
+// ---------------- Fee Management ----------------
+/// Configurable fee categories per tenant (e.g., Tuition Fee, Transport Fee, Lab Fee)
+model FeeHead {
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  isOptional  Boolean @default(false)
+  sortOrder   Int     @default(0)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  sectionFeeHeads SectionFeeHead[]
+  studentFeeHeads StudentFeeHead[]
+  feePayments     FeePayment[]
+
+  @@unique([tenantId, name], name: "uniqueFeeHeadPerTenant")
+  @@unique([id, tenantId], name: "fee_head_tenant_identity")
+  @@index([tenantId])
+  @@map("fee_heads")
+}
+
+/// Fee configuration per section per academic year
+model SectionFee {
+  id             String   @id @default(uuid())
+  tenantId       String
+  sectionId      String
+  academicYearId String
+
+  // Overrides tenant defaultTermCount if needed
+  termCount Int @default(1)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  section      Section      @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  feeHeads SectionFeeHead[]
+  terms    FeeTerm[]
+
+  @@unique([tenantId, sectionId, academicYearId], name: "uniqueSectionFeePerYear")
+  @@unique([id, tenantId], name: "section_fee_tenant_identity")
+  @@index([tenantId, sectionId])
+  @@index([tenantId, academicYearId])
+  @@map("section_fees")
+}
+
+/// Per-head amount for a section's fee configuration
+model SectionFeeHead {
+  id           String  @id @default(uuid())
+  tenantId     String
+  sectionFeeId String
+  feeHeadId    String
+  amount       Decimal @db.Decimal(10, 2)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sectionFee SectionFee @relation(fields: [sectionFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  feeHead    FeeHead    @relation(fields: [feeHeadId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, sectionFeeId, feeHeadId], name: "uniqueSectionFeeHead")
+  @@unique([id, tenantId], name: "section_fee_head_tenant_identity")
+  @@index([tenantId, sectionFeeId])
+  @@index([tenantId, feeHeadId])
+  @@map("section_fee_heads")
+}
+
+/// Terms for a section's fee in an academic year (e.g., Term 1, Term 2)
+model FeeTerm {
+  id           String   @id @default(uuid())
+  tenantId     String
+  sectionFeeId String
+  name         String
+  dueDate      DateTime
+  sortOrder    Int      @default(0)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sectionFee SectionFee @relation(fields: [sectionFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  payments FeePayment[]
+
+  @@unique([tenantId, sectionFeeId, name], name: "uniqueFeeTermPerSectionFee")
+  @@unique([id, tenantId], name: "fee_term_tenant_identity")
+  @@index([tenantId, sectionFeeId])
+  @@map("fee_terms")
+}
+
+/// Per-student fee assignment linked to their enrollment
+model StudentFee {
+  id           String   @id @default(uuid())
+  tenantId     String
+  enrollmentId String
+
+  allocationMethod FeeAllocationMethod @default(equal)
+
+  // When auto: derived from SectionFee; when manual: set explicitly
+  totalActualFee     Decimal @db.Decimal(10, 2)
+  totalNegotiatedFee Decimal @db.Decimal(10, 2)
+
+  // Discount info
+  discountType  DiscountType?
+  discountValue Decimal? @db.Decimal(10, 2) // percentage or fixed amount
+  discountReason String?
+
+  // JSON: per-head discount/waiver overrides
+  // e.g., {"feeHeadId": {"discountPercentage": 25}} or {"feeHeadId": {"waivedAmount": 500}}
+  headWiseDiscounts Json?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  enrollment StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  feeHeads StudentFeeHead[]
+  payments FeePayment[]
+
+  @@unique([enrollmentId, tenantId], name: "uniqueStudentFeePerEnrollment")
+  @@unique([id, tenantId], name: "student_fee_tenant_identity")
+  @@index([tenantId, enrollmentId])
+  @@map("student_fees")
+}
+
+/// Per-head breakdown for a student's fee
+model StudentFeeHead {
+  id              String  @id @default(uuid())
+  tenantId        String
+  studentFeeId    String
+  feeHeadId       String
+  actualAmount    Decimal @db.Decimal(10, 2)
+  negotiatedAmount Decimal @db.Decimal(10, 2)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  studentFee StudentFee @relation(fields: [studentFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  feeHead    FeeHead    @relation(fields: [feeHeadId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, studentFeeId, feeHeadId], name: "uniqueStudentFeeHead")
+  @@unique([id, tenantId], name: "student_fee_head_tenant_identity")
+  @@index([tenantId, studentFeeId])
+  @@index([tenantId, feeHeadId])
+  @@map("student_fee_heads")
+}
+
+/// Individual payment records
+model FeePayment {
+  id           String        @id @default(uuid())
+  tenantId     String
+  studentFeeId String
+  termId       String?
+  feeHeadId    String?       // null means payment is for the whole fee (not head-specific)
+
+  amountPaid    Decimal       @db.Decimal(10, 2)
+  paymentDate   DateTime
+  paymentMethod PaymentMethod
+  transactionId String?       // receipt/transaction/cheque number
+  status        PaymentStatus @default(paid)
+  remarks       String?
+
+  collectedById String?       // user who collected the payment
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  studentFee  StudentFee  @relation(fields: [studentFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  term        FeeTerm?    @relation(fields: [termId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  feeHead     FeeHead?    @relation(fields: [feeHeadId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  collectedBy User?       @relation(fields: [collectedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  refunds FeeRefund[]
+
+  @@unique([id, tenantId], name: "fee_payment_tenant_identity")
+  @@index([tenantId, studentFeeId])
+  @@index([tenantId, termId])
+  @@index([tenantId, paymentDate])
+  @@index([tenantId, collectedById])
+  @@map("fee_payments")
+}
+
+/// Refund/adjustment tracking for payments
+model FeeRefund {
+  id            String   @id @default(uuid())
+  tenantId      String
+  paymentId     String
+  amount        Decimal  @db.Decimal(10, 2)
+  reason        String
+  refundDate    DateTime @default(now())
+  processedById String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  payment     FeePayment  @relation(fields: [paymentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  processedBy User?       @relation(fields: [processedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "fee_refund_tenant_identity")
+  @@index([tenantId, paymentId])
+  @@map("fee_refunds")
+}
+
+// ─── Store Module ─────────────────────────────────────────────────────────────
+
+/// Categories for store products (e.g., Accessories, Books, Uniforms)
+model StoreCategory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  products StoreProduct[]
+
+  @@unique([id, tenantId], name: "store_category_tenant_identity")
+  @@index([tenantId, name])
+  @@map("store_categories")
+}
+
+/// Individual products available in the store
+model StoreProduct {
+  id          String   @id @default(uuid())
+  tenantId    String
+  categoryId  String
+  name        String
+  description String?
+  basePrice   Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+
+  // Section applicability
+  isGeneral     Boolean @default(true) // true = available to all sections
+  stockQuantity Int     @default(0)    // available stock count
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category StoreCategory  @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  sectionAssignments StoreProductSection[]
+  kitItems           StoreKitItem[]
+  orderItems         StoreOrderItem[]
+  pendingItems       StorePendingItem[]
+  returns            StoreReturn[]
+
+  @@unique([id, tenantId], name: "store_product_tenant_identity")
+  @@index([tenantId, categoryId])
+  @@index([tenantId, name])
+  @@map("store_products")
+}
+
+/// Product-to-section assignments (only when isGeneral = false)
+model StoreProductSection {
+  id        String   @id @default(uuid())
+  tenantId  String
+  productId String
+  sectionId String
+  createdAt DateTime @default(now())
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product StoreProduct @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section Section      @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, productId, sectionId], name: "uniqueProductSection")
+  @@unique([id, tenantId], name: "store_product_section_tenant_identity")
+  @@index([tenantId, productId])
+  @@index([tenantId, sectionId])
+  @@map("store_product_sections")
+}
+
+/// Kits — templates/groups of products (NOT stock items)
+/// A kit is just a template. When added to cart, it expands into individual products.
+model StoreKit {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  totalPrice  Decimal  @db.Decimal(10, 2) @default(0) // pre-calculated sum of all kit items
+  isActive    Boolean  @default(true)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  items      StoreKitItem[]
+  sections   StoreKitSection[]
+  orderItems StoreOrderItem[]
+
+  @@unique([id, tenantId], name: "store_kit_tenant_identity")
+  @@index([tenantId])
+  @@map("store_kits")
+}
+
+/// Items within a kit (snapshotted from products at kit creation time)
+model StoreKitItem {
+  id           String   @id @default(uuid())
+  tenantId     String
+  kitId        String
+  productId    String?  // optional reference back to product
+  productName  String   // SNAPSHOTTED from product name
+  categoryName String   // SNAPSHOTTED from category name
+  unitPrice    Decimal  @db.Decimal(10, 2) // SNAPSHOTTED from product's basePrice
+  quantity     Int
+  totalPrice   Decimal  @db.Decimal(10, 2) // pre-calculated: unitPrice × quantity
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  kit     StoreKit     @relation(fields: [kitId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  product StoreProduct? @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "store_kit_item_tenant_identity")
+  @@index([tenantId, kitId])
+  @@map("store_kit_items")
+}
+
+/// Which sections a kit is available for
+model StoreKitSection {
+  id        String   @id @default(uuid())
+  tenantId  String
+  kitId     String
+  sectionId String
+  createdAt DateTime @default(now())
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  kit     StoreKit @relation(fields: [kitId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  section Section  @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, kitId, sectionId], name: "uniqueKitSection")
+  @@unique([id, tenantId], name: "store_kit_section_tenant_identity")
+  @@index([tenantId, kitId])
+  @@index([tenantId, sectionId])
+  @@map("store_kit_sections")
+}
+
+/// Orders placed by admin on behalf of students or external customers
+model StoreOrder {
+  id             String   @id @default(uuid())
+  tenantId       String
+  enrollmentId   String?  // null for external (non-student) customers
+  academicYearId String?
+  orderDate      DateTime @default(now())
+
+  // Pricing breakdown
+  totalAmount     Decimal  @db.Decimal(10, 2) // final amount after discount
+  actualTotalAmount Decimal @db.Decimal(10, 2) // total before any discount
+  discountAmount  Decimal  @db.Decimal(10, 2) @default(0) // total discount applied
+  offeredAmount   Decimal? @db.Decimal(10, 2) // what the user offered to pay (if different)
+
+  // Customer info (for non-student customers)
+  customerName  String?
+  customerPhone String?
+  customerType  String   @default("student") // "student" | "external"
+
+  status  String   @default("confirmed") // confirmed | partially_delivered | delivered | cancelled | collected
+  remarks String?
+
+  // Payment info
+  paymentMethod  String? // cash | card | upi | etc.
+  transactionId  String? // receipt/transaction number
+  paymentMode    String? // full | partial
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  enrollment   StudentEnrollment? @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  academicYear AcademicYear?      @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  createdBy    User?             @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  items StoreOrderItem[]
+  dues  StoreDue[]
+
+  @@unique([id, tenantId], name: "store_order_tenant_identity")
+  @@index([tenantId, enrollmentId])
+  @@index([tenantId, academicYearId])
+  @@map("store_orders")
+}
+
+/// Items within an order (snapshotted at order time)
+model StoreOrderItem {
+  id          String   @id @default(uuid())
+  tenantId    String
+  orderId     String
+  productId   String?  // if individual product
+  kitId       String?  // if kit was ordered
+  productName String   // SNAPSHOTTED
+  unitPrice   Decimal  @db.Decimal(10, 2) // SNAPSHOTTED
+  quantity    Int
+  totalPrice  Decimal  @db.Decimal(10, 2) // pre-calculated
+
+  // Kit grouping: items from the same kit share a reference ID
+  kitReferenceId String? // groups items that came from the same kit expansion
+
+  // Return/exchange support
+  isReturned Boolean   @default(false)
+  returnedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order   StoreOrder   @relation(fields: [orderId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  product StoreProduct? @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  kit     StoreKit?    @relation(fields: [kitId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  pendingItems StorePendingItem[]
+  returns     StoreReturn[]
+
+  @@unique([id, tenantId], name: "store_order_item_tenant_identity")
+  @@index([tenantId, orderId])
+  @@map("store_order_items")
+}
+
+/// Pending fulfillment items (when items are out of stock at distribution time)
+model StorePendingItem {
+  id          String   @id @default(uuid())
+  tenantId    String
+  orderItemId String
+  productId   String?
+  productName String   // SNAPSHOTTED
+  quantity    Int
+  status      String   @default("pending") // pending | collected
+  collectedAt DateTime?
+
+  // Payment status for pending items
+  isPaid  Boolean   @default(false)
+  paidAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderItem StoreOrderItem @relation(fields: [orderItemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  product   StoreProduct?  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "store_pending_item_tenant_identity")
+  @@index([tenantId, orderItemId])
+  @@index([tenantId, status])
+  @@map("store_pending_items")
+}
+
+/// Dues — when a customer pays less than the total bill amount
+model StoreDue {
+  id          String   @id @default(uuid())
+  tenantId    String
+  orderId     String
+  enrollmentId String? // null for external customers
+
+  // Customer info
+  customerName  String
+  customerPhone String?
+  customerType  String   @default("student") // "student" | "external"
+
+  totalDueAmount Decimal  @db.Decimal(10, 2) // total amount due
+  paidAmount     Decimal  @db.Decimal(10, 2) @default(0) // amount paid so far
+  status         String   @default("pending") // pending | partially_paid | settled | written_off
+
+  remarks String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order      StoreOrder        @relation(fields: [orderId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  enrollment StudentEnrollment? @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  payments StoreDuePayment[]
+
+  @@unique([id, tenantId], name: "store_due_tenant_identity")
+  @@index([tenantId, orderId])
+  @@index([tenantId, status])
+  @@map("store_dues")
+}
+
+/// Payments made against a due
+model StoreDuePayment {
+  id            String   @id @default(uuid())
+  tenantId      String
+  dueId         String
+  amount        Decimal  @db.Decimal(10, 2)
+  paymentDate   DateTime @default(now())
+  paymentMethod String?  // cash | card | upi | etc.
+  transactionId String?  // receipt/transaction number
+  remarks       String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  due    StoreDue @relation(fields: [dueId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "store_due_payment_tenant_identity")
+  @@index([tenantId, dueId])
+  @@map("store_due_payments")
+}
+
+/// Returns/exchanges — when a customer returns a product from an order
+model StoreReturn {
+  id          String   @id @default(uuid())
+  tenantId    String
+  orderItemId String
+  productId   String?
+  productName String   // SNAPSHOTTED
+  quantity    Int
+  refundAmount Decimal  @db.Decimal(10, 2) // amount refunded for this return
+  reason      String?
+  returnedAt  DateTime @default(now())
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderItem StoreOrderItem @relation(fields: [orderItemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  product   StoreProduct?  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "store_return_tenant_identity")
+  @@index([tenantId, orderItemId])
+  @@map("store_returns")
 }
