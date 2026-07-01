@@ -30,6 +30,9 @@ import {
   Banknote,
   ListOrdered,
   Store,
+  BookCheck,
+  Wallet,
+  PiggyBank,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -118,6 +121,20 @@ const tenantNavGroups: NavGroup[] = [
     title: "Store",
     items: [
       { title: "Store", href: "/store", icon: Store },
+    ],
+  },
+  {
+    title: "Payroll",
+    items: [
+      { title: "Salary Components", href: "/payroll/salary-components", icon: ListOrdered },
+      { title: "Employee Compensation", href: "/payroll/compensation", icon: Wallet },
+      { title: "Payroll Processing", href: "/payroll/processing", icon: PiggyBank },
+    ],
+  },
+  {
+    title: "Accounts",
+    items: [
+      { title: "Ledger", href: "/accounts", icon: BookCheck },
     ],
   },
   {
