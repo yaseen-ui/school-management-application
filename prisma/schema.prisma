@@ -120,6 +120,9 @@ enum ExamType {
 enum ExamStatus {
   draft
   published
+  in_progress
+  completed
+  cancelled
   locked
   archived
 }

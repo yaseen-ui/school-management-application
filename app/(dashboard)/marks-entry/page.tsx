@@ -1,8 +1,9 @@
+
 "use client"
 
 import { useState, useCallback } from "react"
 import { motion } from "framer-motion"
-import { FileText, Save, Loader2, User, X, Check, Plus } from "lucide-react"
+import { FileText, Save, Loader2, User, X, Check, GraduationCap, BookOpen, Layers } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,27 +11,58 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useExams, useExamSchedules, useScheduleMarksGrid, useUpsertStudentScheduleMarks } from "@/hooks/use-exams"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useCourses } from "@/hooks/use-courses"
+import { useGrades } from "@/hooks/use-grades"
+import { useSections } from "@/hooks/use-sections"
+import { useExamSchedules, useScheduleMarksGrid, useUpsertStudentScheduleMarks } from "@/hooks/use-exams"
 import { toast } from "@/components/ui/sonner"
 import type { MarksGridData, MarksGridStudent } from "@/lib/api/exams"
 
 export default function MarksEntryPage() {
-  const [selectedExamId, setSelectedExamId] = useState<string>("")
+  // Hierarchical filters
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("")
+  const [selectedGradeId, setSelectedGradeId] = useState<string>("")
+  const [selectedSectionId, setSelectedSectionId] = useState<string>("")
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("")
+
+  // Marks entry state
   const [selectedStudent, setSelectedStudent] = useState<MarksGridStudent | null>(null)
   const [marksInput, setMarksInput] = useState<Record<string, { marksObtained: string; isAbsent: boolean; breakup: string }>>({})
   const [saving, setSaving] = useState(false)
 
-  const { data: exams } = useExams()
-  const { data: schedules } = useExamSchedules(selectedExamId ? { examId: selectedExamId } : {})
+  // Data fetching
+  const { data: courses } = useCourses()
+  const { data: grades } = useGrades(selectedCourseId || undefined)
+  const { data: sections } = useSections(selectedGradeId || undefined, selectedCourseId || undefined)
+  const { data: schedules } = useExamSchedules(
+    selectedSectionId ? { sectionId: selectedSectionId } : {}
+  )
   const { data: marksGrid, isLoading: gridLoading } = useScheduleMarksGrid(selectedScheduleId || null)
   const upsertMarks = useUpsertStudentScheduleMarks()
 
   // Filter schedules that have papers (subjects configured)
-  const schedulesWithPapers = (schedules || []).filter((s) => (s._count?.papers || 0) > 0)
+  const schedulesWithPapers = (schedules || []).filter((s) => (s.papers?.length || 0) > 0)
 
-  const handleExamChange = (value: string) => {
-    setSelectedExamId(value)
+  const handleCourseChange = (value: string) => {
+    setSelectedCourseId(value)
+    setSelectedGradeId("")
+    setSelectedSectionId("")
+    setSelectedScheduleId("")
+    setSelectedStudent(null)
+    setMarksInput({})
+  }
+
+  const handleGradeChange = (value: string) => {
+    setSelectedGradeId(value)
+    setSelectedSectionId("")
+    setSelectedScheduleId("")
+    setSelectedStudent(null)
+    setMarksInput({})
+  }
+
+  const handleSectionChange = (value: string) => {
+    setSelectedSectionId(value)
     setSelectedScheduleId("")
     setSelectedStudent(null)
     setMarksInput({})
@@ -121,54 +153,110 @@ export default function MarksEntryPage() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <PageHeader
         title="Marks Entry"
-        description="Select exam, section, and student to enter marks"
+        description="Select course, grade, section, and exam to enter marks"
       />
 
-      {/* Filters */}
+      {/* Hierarchical Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Select Exam & Schedule
+            Select Section & Exam
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Course */}
             <div className="space-y-2">
-              <Label>Exam</Label>
-              <Select value={selectedExamId} onValueChange={handleExamChange}>
+              <Label className="flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                Course
+              </Label>
+              <Select value={selectedCourseId} onValueChange={handleCourseChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an exam" />
+                  <SelectValue placeholder="Select course" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(exams || []).map((exam) => (
-                    <SelectItem key={exam.id} value={exam.id}>
-                      {exam.name} ({exam.examType})
+                  {(courses?.data?.rows || []).map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.courseName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Grade */}
             <div className="space-y-2">
-              <Label>Schedule (Section)</Label>
+              <Label className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                Grade
+              </Label>
+              <Select
+                value={selectedGradeId}
+                onValueChange={handleGradeChange}
+                disabled={!selectedCourseId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedCourseId ? "Select grade" : "Select course first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(grades?.rows || []).map((grade: any) => (
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.gradeName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
+                Section
+              </Label>
+              <Select
+                value={selectedSectionId}
+                onValueChange={handleSectionChange}
+                disabled={!selectedGradeId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedGradeId ? "Select section" : "Select grade first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(sections?.data?.rows || []).map((section) => (
+                    <SelectItem key={section.id} value={section.id}>
+                      {section.sectionName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Exam Schedule */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                Exam Schedule
+              </Label>
               <Select
                 value={selectedScheduleId}
                 onValueChange={handleScheduleChange}
-                disabled={!selectedExamId}
+                disabled={!selectedSectionId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={selectedExamId ? "Select a schedule" : "Select exam first"} />
+                  <SelectValue placeholder={selectedSectionId ? "Select exam" : "Select section first"} />
                 </SelectTrigger>
                 <SelectContent>
                   {schedulesWithPapers.map((schedule) => (
                     <SelectItem key={schedule.id} value={schedule.id}>
-                      {schedule.name} - {schedule.section?.sectionName || "N/A"} ({schedule._count?.papers || 0} papers)
+                      {schedule.exam?.name || schedule.name} - {new Date(schedule.endDate).toLocaleDateString()}
                     </SelectItem>
                   ))}
-                  {schedulesWithPapers.length === 0 && selectedExamId && (
+                  {schedulesWithPapers.length === 0 && selectedSectionId && (
                     <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                      No schedules with papers found
+                      No exam schedules found for this section
                     </div>
                   )}
                 </SelectContent>
@@ -260,67 +348,65 @@ export default function MarksEntryPage() {
                       <p>Select a student from the list to enter marks</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Subject</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Max Marks</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Pass Marks</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Marks Obtained</th>
-                            <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Absent</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Breakup (JSON)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {marksGrid.papers.map((paper) => {
-                            const input = marksInput[paper.paperId] || { marksObtained: "", isAbsent: false, breakup: "" }
-                            return (
-                              <tr key={paper.paperId} className="border-b hover:bg-muted/50 transition-colors">
-                                <td className="py-3 px-4 font-medium">{paper.subjectName}</td>
-                                <td className="py-3 px-4 text-center">{paper.maxMarks}</td>
-                                <td className="py-3 px-4 text-center">{paper.passMarks}</td>
-                                <td className="py-3 px-4 text-center">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    max={paper.maxMarks}
-                                    value={input.marksObtained}
-                                    onChange={(e) => handleMarksChange(paper.paperId, e.target.value)}
-                                    disabled={input.isAbsent}
-                                    className="w-24 text-center mx-auto"
-                                    placeholder="Score"
-                                  />
-                                </td>
-                                <td className="py-3 px-4 text-center">
-                                  <Button
-                                    variant={input.isAbsent ? "destructive" : "outline"}
-                                    size="sm"
-                                    onClick={() => handleAbsentToggle(paper.paperId)}
-                                    className="w-20"
-                                  >
-                                    {input.isAbsent ? (
-                                      <><X className="h-3 w-3 mr-1" /> Absent</>
-                                    ) : (
-                                      <><Check className="h-3 w-3 mr-1" /> Present</>
-                                    )}
-                                  </Button>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <textarea
-                                    className="w-full min-h-[60px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
-                                    placeholder='{"topics":[{"topic":"Algebra","marks":15}]}'
-                                    value={input.breakup}
-                                    onChange={(e) => handleBreakupChange(paper.paperId, e.target.value)}
-                                    rows={2}
-                                  />
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject</TableHead>
+                          <TableHead className="text-center">Max Marks</TableHead>
+                          <TableHead className="text-center">Pass Marks</TableHead>
+                          <TableHead className="text-center">Marks Obtained</TableHead>
+                          <TableHead className="text-center">Absent</TableHead>
+                          <TableHead>Breakup (JSON)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {marksGrid.papers.map((paper) => {
+                          const input = marksInput[paper.paperId] || { marksObtained: "", isAbsent: false, breakup: "" }
+                          return (
+                            <TableRow key={paper.paperId}>
+                              <TableCell className="font-medium">{paper.subjectName}</TableCell>
+                              <TableCell className="text-center">{paper.maxMarks}</TableCell>
+                              <TableCell className="text-center">{paper.passMarks}</TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={paper.maxMarks}
+                                  value={input.marksObtained}
+                                  onChange={(e) => handleMarksChange(paper.paperId, e.target.value)}
+                                  disabled={input.isAbsent}
+                                  className="w-24 text-center mx-auto"
+                                  placeholder="Score"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  variant={input.isAbsent ? "destructive" : "outline"}
+                                  size="sm"
+                                  onClick={() => handleAbsentToggle(paper.paperId)}
+                                  className="w-20"
+                                >
+                                  {input.isAbsent ? (
+                                    <><X className="h-3 w-3 mr-1" /> Absent</>
+                                  ) : (
+                                    <><Check className="h-3 w-3 mr-1" /> Present</>
+                                  )}
+                                </Button>
+                              </TableCell>
+                              <TableCell>
+                                <textarea
+                                  className="w-full min-h-[60px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono"
+                                  placeholder='{"topics":[{"topic":"Algebra","marks":15}]}'
+                                  value={input.breakup}
+                                  onChange={(e) => handleBreakupChange(paper.paperId, e.target.value)}
+                                  rows={2}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
                   )}
                 </CardContent>
               </Card>

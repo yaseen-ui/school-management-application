@@ -154,7 +154,7 @@ export default function ExamSchedulesPage() {
             if (field === "papers") {
               return (
                 <span className="text-sm text-muted-foreground">
-                  {row._count?.papers || 0} paper(s)
+                  {row.papers?.length || 0} paper(s)
                 </span>
               )
             }

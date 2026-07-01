@@ -86,7 +86,7 @@ export function ViewScheduleDialog({ open, onOpenChange, schedule }: ViewSchedul
 
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Papers</p>
-            <p className="font-medium">{schedule._count?.papers || 0} paper(s)</p>
+            <p className="font-medium">{schedule.papers?.length || 0} paper(s)</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-4 border-t">
