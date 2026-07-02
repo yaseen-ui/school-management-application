@@ -10,10 +10,20 @@ export interface Teacher {
   phone?: string
   gender?: "Male" | "Female" | "Other"
   employeeCode?: string
+  employeeType?: "teacher" | "driver" | "clerk" | "office_boy" | "admin" | "accountant" | "security" | "cleaner" | "other"
   profilePhotoUrl?: string
   dateOfBirth?: string
   dateOfJoining?: string
   yearsOfExperience?: number
+  governmentIdType?: string
+  governmentIdNumber?: string
+  governmentIdUrl?: string
+  drivingLicenseNumber?: string
+  drivingLicenseUrl?: string
+  drivingExperienceYears?: number
+  vehicleType?: string
+  licenseExpiryDate?: string
+  medicalCertificateUrl?: string
   createdAt: string
   updatedAt: string
   qualifications?: TeacherQualification[]
@@ -59,9 +69,21 @@ export interface CreateTeacherRequest {
   phone?: string
   gender?: "Male" | "Female" | "Other"
   employeeCode?: string
+  employeeType?: "teacher" | "driver" | "clerk" | "office_boy" | "admin" | "accountant" | "security" | "cleaner" | "other"
   profilePhotoUrl?: string
+  dateOfBirth?: string
+  dateOfJoining?: string
   yearsOfExperience?: number
   userId?: string
+  governmentIdType?: string
+  governmentIdNumber?: string
+  governmentIdUrl?: string
+  drivingLicenseNumber?: string
+  drivingLicenseUrl?: string
+  drivingExperienceYears?: number
+  vehicleType?: string
+  licenseExpiryDate?: string
+  medicalCertificateUrl?: string
 }
 
 export interface CreateQualificationRequest {

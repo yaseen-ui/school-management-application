@@ -1,23 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import React from "react"
 import { useForm, FormProvider } from "react-hook-form"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, Check } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { filterNullValues } from "@/lib/utils"
+import { ChevronLeft, ChevronRight, Check, ArrowLeft } from "lucide-react"
+import { cn, filterNullValues } from "@/lib/utils"
 import { useCreateTeacher, useUpdateTeacher } from "@/hooks/use-teachers"
 import { TeacherBasicProfile } from "./wizard-steps/basic-profile"
 import { TeacherQualifications } from "./wizard-steps/qualifications"
 import { TeacherEmploymentHistory } from "./wizard-steps/employment-history"
 import type { Teacher, CreateTeacherRequest } from "@/lib/api/teachers"
+import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 
-interface CreateTeacherWizardProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+interface StaffWizardPageProps {
   teacherToEdit?: Teacher | null
 }
 
@@ -27,7 +26,8 @@ const STEPS = [
   { id: 3, title: "Employment History", description: "Work experience" },
 ]
 
-export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: CreateTeacherWizardProps) {
+export function StaffWizardPage({ teacherToEdit }: StaffWizardPageProps) {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [createdTeacherId, setCreatedTeacherId] = useState<string | null>(null)
   const isEditMode = !!teacherToEdit
@@ -38,8 +38,8 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
 
   const teacherId = teacherToEdit?.id || createdTeacherId
 
-  React.useEffect(() => {
-    if (isEditMode && teacherToEdit && open) {
+  useEffect(() => {
+    if (isEditMode && teacherToEdit) {
       methods.reset({
         fullName: teacherToEdit.fullName,
         email: teacherToEdit.email,
@@ -52,11 +52,20 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
         dateOfJoining: teacherToEdit.dateOfJoining,
         yearsOfExperience: teacherToEdit.yearsOfExperience,
         userId: teacherToEdit.userId,
+        governmentIdType: teacherToEdit.governmentIdType,
+        governmentIdNumber: teacherToEdit.governmentIdNumber,
+        governmentIdUrl: teacherToEdit.governmentIdUrl,
+        drivingLicenseNumber: teacherToEdit.drivingLicenseNumber,
+        drivingLicenseUrl: teacherToEdit.drivingLicenseUrl,
+        drivingExperienceYears: teacherToEdit.drivingExperienceYears,
+        vehicleType: teacherToEdit.vehicleType,
+        licenseExpiryDate: teacherToEdit.licenseExpiryDate,
+        medicalCertificateUrl: teacherToEdit.medicalCertificateUrl,
       })
       setCreatedTeacherId(teacherToEdit.id)
       setCurrentStep(1)
     }
-  }, [isEditMode, teacherToEdit, open, methods])
+  }, [isEditMode, teacherToEdit, methods])
 
   const isFirstStep = currentStep === 1
   const isLastStep = currentStep === STEPS.length
@@ -83,12 +92,21 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
           dateOfJoining: formData.dateOfJoining,
           yearsOfExperience: formData.yearsOfExperience,
           userId: formData.userId,
+          governmentIdType: formData.governmentIdType,
+          governmentIdNumber: formData.governmentIdNumber,
+          governmentIdUrl: formData.governmentIdUrl,
+          drivingLicenseNumber: formData.drivingLicenseNumber,
+          drivingLicenseUrl: formData.drivingLicenseUrl,
+          drivingExperienceYears: formData.drivingExperienceYears,
+          vehicleType: formData.vehicleType,
+          licenseExpiryDate: formData.licenseExpiryDate,
+          medicalCertificateUrl: formData.medicalCertificateUrl,
         }) as CreateTeacherRequest,
         {
           onSuccess: (response: any) => {
-            const teacherId = response.data?.id || response.data?.data?.id
-            if (teacherId) {
-              setCreatedTeacherId(teacherId)
+            const newTeacherId = response.data?.id || response.data?.data?.id
+            if (newTeacherId) {
+              setCreatedTeacherId(newTeacherId)
               setCurrentStep(2)
             }
           },
@@ -121,42 +139,55 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
             profilePhotoUrl: formData.profilePhotoUrl,
             yearsOfExperience: formData.yearsOfExperience,
             userId: formData.userId,
+            governmentIdType: formData.governmentIdType,
+            governmentIdNumber: formData.governmentIdNumber,
+            governmentIdUrl: formData.governmentIdUrl,
+            drivingLicenseNumber: formData.drivingLicenseNumber,
+            drivingLicenseUrl: formData.drivingLicenseUrl,
+            drivingExperienceYears: formData.drivingExperienceYears,
+            vehicleType: formData.vehicleType,
+            licenseExpiryDate: formData.licenseExpiryDate,
+            medicalCertificateUrl: formData.medicalCertificateUrl,
           }),
         },
         {
           onSuccess: () => {
-            onOpenChange(false)
-            methods.reset()
-            setCurrentStep(1)
-            setCreatedTeacherId(null)
+            router.push("/teachers")
           },
         },
       )
     } else {
-      // In create mode, just close (qualifications and employment already saved)
-      onOpenChange(false)
-      methods.reset()
-      setCurrentStep(1)
-      setCreatedTeacherId(null)
+      // In create mode, just navigate back
+      router.push("/teachers")
     }
   }
 
-  const handleClose = () => {
-    onOpenChange(false)
-    methods.reset()
-    setCurrentStep(1)
-    setCreatedTeacherId(null)
+  const handleCancel = () => {
+    router.push("/teachers")
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? "Edit Staff" : "Add New Staff"}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Breadcrumbs
+        items={[
+          { label: "Staff & Curriculum", href: "/staff-curriculum" },
+          { label: "Staff", href: "/teachers" },
+          { label: isEditMode ? "Edit Staff" : "Add Staff" },
+        ]}
+      />
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title={isEditMode ? "Edit Staff" : "Add New Staff"}
+          description={isEditMode ? "Update employee information" : "Create a new employee profile"}
+        >
+          <Button variant="outline" onClick={handleCancel}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Staff
+          </Button>
+        </PageHeader>
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-2">
           {STEPS.map((step, index) => (
             <div key={step.id} className="flex items-center flex-1">
               <div className="flex flex-col items-center flex-1">
@@ -198,7 +229,7 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
 
         {/* Form Steps */}
         <FormProvider {...methods}>
-          <form className="flex-1 overflow-y-auto">
+          <form className="flex-1">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -223,13 +254,13 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
           </Button>
 
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={handleClose} disabled={isLoading}>
+            <Button type="button" variant="ghost" onClick={handleCancel} disabled={isLoading}>
               Cancel
             </Button>
 
             {isLastStep ? (
               <Button type="button" onClick={handleFinish} disabled={isLoading}>
-                {isLoading ? "Saving..." : isEditMode ? "Update" : "Finish"}
+                {isLoading ? "Saving..." : isEditMode ? "Update Staff" : "Finish"}
               </Button>
             ) : (
               <Button type="button" onClick={handleNext} disabled={isLoading}>
@@ -239,7 +270,7 @@ export function CreateTeacherWizard({ open, onOpenChange, teacherToEdit }: Creat
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   )
 }

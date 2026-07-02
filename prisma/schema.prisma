@@ -81,6 +81,18 @@ enum FeeAllocationMethod {
   custom
 }
 
+enum EmployeeType {
+  teacher
+  driver
+  clerk
+  office_boy
+  admin
+  accountant
+  security
+  cleaner
+  other
+}
+
 enum AttendanceType {
   period_wise
   shift_wise
@@ -642,11 +654,27 @@ model Teacher {
   gender       Gender?
   employeeCode String?
 
+  // Employee type (teacher by default, can be driver, clerk, etc.)
+  employeeType EmployeeType @default(teacher)
+
   // Onboarding profile
   profilePhotoUrl   String?
   dateOfBirth       DateTime?
   dateOfJoining     DateTime?
   yearsOfExperience Float?
+
+  // Government ID (for all non-teaching staff)
+  governmentIdType   String?  // "aadhar", "pan", "voter_id", "passport"
+  governmentIdNumber String?
+  governmentIdUrl    String?  // GCP upload URL for ID document
+
+  // Driver-specific fields (nullable, only for employeeType = driver)
+  drivingLicenseNumber    String?
+  drivingLicenseUrl       String?  // GCP upload URL
+  drivingExperienceYears  Int?
+  vehicleType             String?  // "bus", "van", "car", "auto"
+  licenseExpiryDate       DateTime?
+  medicalCertificateUrl   String?  // GCP upload URL
 
   status    EntityStatus @default(active)
   deletedAt DateTime?

@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button"
 
 const modules = [
   {
-    title: "Teachers",
-    description: "Manage teacher profiles, create, edit, and view detailed teacher information including qualifications and experience.",
+    title: "Staff",
+    description: "Manage all employees including teachers, drivers, clerks, and other staff. Create, edit, and view detailed employee information.",
     icon: UserCheck,
     href: "/teachers",
     color: "from-blue-500 to-blue-600",

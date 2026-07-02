@@ -98,8 +98,10 @@ export default function PayrollProcessingPage() {
   })
 
   // Auto-load batch when month/year changes if one already exists
+  // Also runs on mount to restore previously processed batch
   useEffect(() => {
-    const batches = allBatches?.data
+    // listPayrollBatches() returns res.data which is the array directly
+    const batches = allBatches
     if (batches && batches.length > 0) {
       const existingBatch = batches.find(
         (b: { month: number; year: number; id: string }) =>
@@ -114,8 +116,8 @@ export default function PayrollProcessingPage() {
   // Create or get batch
   const batchMutation = useMutation({
     mutationFn: () => createOrGetPayrollBatch({ month: selectedMonth, year: selectedYear }),
-    onSuccess: (response) => {
-      const batch = response?.data || response
+    onSuccess: (batch) => {
+      // createOrGetPayrollBatch() returns res.data which is the batch object directly
       setBatchId(batch.id)
       queryClient.invalidateQueries({ queryKey: ["payroll-batch", batch.id] })
       toast.success("Payroll batch ready")
@@ -130,7 +132,8 @@ export default function PayrollProcessingPage() {
     enabled: !!batchId,
   })
 
-  const batch: PayrollBatch | null = batchResponse?.data || batchResponse || null
+  // getPayrollBatch() returns res.data which is the batch object directly
+  const batch: PayrollBatch | null = batchResponse || null
   // Map nested employee data to top-level fields
   const rawRecords = batch?.records || []
   const records: PayrollRecord[] = rawRecords.map((r: any) => ({

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, GraduationCap, MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react"
+import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import { Plus, GraduationCap, MoreHorizontal, Eye, Pencil, Trash2, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,21 +14,40 @@ import {
 import { PageHeader } from "@/components/shared/page-header"
 import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
-import { CreateTeacherWizard } from "@/components/teachers/create-teacher-wizard"
 import { ViewTeacherDialog } from "@/components/teachers/view-teacher-dialog"
 import { DeleteTeacherDialog } from "@/components/teachers/delete-teacher-dialog"
 import { useTeachers } from "@/hooks/use-teachers"
 import type { Teacher } from "@/lib/api/teachers"
 import { format } from "date-fns"
 import type { ColumnDef } from "@tanstack/react-table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-export default function TeachersPage() {
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
+const EMPLOYEE_TYPES = [
+  { value: "all", label: "All Types" },
+  { value: "teacher", label: "Teacher" },
+  { value: "driver", label: "Driver" },
+  { value: "clerk", label: "Clerk" },
+  { value: "office_boy", label: "Office Boy" },
+  { value: "admin", label: "Admin" },
+  { value: "accountant", label: "Accountant" },
+  { value: "security", label: "Security" },
+  { value: "cleaner", label: "Cleaner" },
+  { value: "other", label: "Other" },
+]
+
+export default function StaffPage() {
+  const router = useRouter()
   const [viewTeacher, setViewTeacher] = useState<Teacher | null>(null)
-  const [editTeacher, setEditTeacher] = useState<Teacher | null>(null)
   const [deleteTeacher, setDeleteTeacher] = useState<Teacher | null>(null)
+  const [employeeTypeFilter, setEmployeeTypeFilter] = useState("all")
 
   const { data: teachers, isLoading } = useTeachers()
+
+  const filteredTeachers = useMemo(() => {
+    if (!teachers) return []
+    if (employeeTypeFilter === "all") return teachers
+    return teachers.filter((t) => t.employeeType === employeeTypeFilter)
+  }, [teachers, employeeTypeFilter])
 
   const columns: ColumnDef<Teacher>[] = [
     {
@@ -53,6 +73,17 @@ export default function TeachersPage() {
       accessorKey: "employeeCode",
     },
     {
+      header: "Employee Type",
+      accessorKey: "employeeType",
+      cell: ({ row }) => {
+        const type = row.original.employeeType
+        if (!type) return "—"
+        return (
+          <span className="capitalize">{type.replace(/_/g, " ")}</span>
+        )
+      },
+    },
+    {
       header: "Gender",
       accessorKey: "gender",
     },
@@ -65,16 +96,32 @@ export default function TeachersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Teachers" }]} />
-      <PageHeader title="Teachers" description="Manage teaching staff and their profiles">
-        <Button onClick={() => setIsCreateOpen(true)}>
+      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Staff" }]} />
+      <PageHeader title="Staff" description="Manage all employees and their profiles">
+        <Button onClick={() => router.push("/teachers/create")}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Teacher
+          Add Staff
         </Button>
       </PageHeader>
 
+      <div className="flex items-center gap-2">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select value={employeeTypeFilter} onValueChange={setEmployeeTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            {EMPLOYEE_TYPES.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <DynamicDataTable<Teacher>
-        data={teachers || []}
+        data={filteredTeachers}
         columns={columns}
         isLoading={isLoading}
         renderActions={(teacher) => (
@@ -89,7 +136,7 @@ export default function TeachersPage() {
                 <Eye className="h-4 w-4 mr-2" />
                 View
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setEditTeacher(teacher)}>
+              <DropdownMenuItem onClick={() => router.push(`/teachers/${teacher.id}/edit`)}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
@@ -102,15 +149,7 @@ export default function TeachersPage() {
           </DropdownMenu>
         )}
         idField="id"
-        searchPlaceholder="Search teachers..."
-      />
-
-      <CreateTeacherWizard open={isCreateOpen} onOpenChange={setIsCreateOpen} />
-
-      <CreateTeacherWizard
-        open={!!editTeacher}
-        onOpenChange={(open) => { if (!open) setEditTeacher(null) }}
-        teacherToEdit={editTeacher}
+        searchPlaceholder="Search staff..."
       />
 
       {viewTeacher && <ViewTeacherDialog teacher={viewTeacher} onClose={() => setViewTeacher(null)} />}

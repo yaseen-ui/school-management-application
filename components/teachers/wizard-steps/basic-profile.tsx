@@ -9,6 +9,31 @@ import { useUsers } from "@/hooks/use-users"
 import { DatePickerInput } from "@/components/ui/date-picker"
 
 const GENDERS = ["Male", "Female", "Other"]
+const EMPLOYEE_TYPES = [
+  { value: "teacher", label: "Teacher" },
+  { value: "driver", label: "Driver" },
+  { value: "clerk", label: "Clerk" },
+  { value: "office_boy", label: "Office Boy" },
+  { value: "admin", label: "Admin" },
+  { value: "accountant", label: "Accountant" },
+  { value: "security", label: "Security" },
+  { value: "cleaner", label: "Cleaner" },
+  { value: "other", label: "Other" },
+]
+
+const GOVERNMENT_ID_TYPES = [
+  { value: "aadhar", label: "Aadhar Card" },
+  { value: "pan", label: "PAN Card" },
+  { value: "voter_id", label: "Voter ID" },
+  { value: "passport", label: "Passport" },
+]
+
+const VEHICLE_TYPES = [
+  { value: "bus", label: "Bus" },
+  { value: "van", label: "Van" },
+  { value: "car", label: "Car" },
+  { value: "auto", label: "Auto Rickshaw" },
+]
 
 export function TeacherBasicProfile() {
   const {
@@ -22,9 +47,18 @@ export function TeacherBasicProfile() {
   const dateOfJoining = watch("dateOfJoining")
   const profilePhotoUrl = watch("profilePhotoUrl")
   const gender = watch("gender")
+  const employeeType = watch("employeeType")
   const teacherId = watch("id")
+  const governmentIdType = watch("governmentIdType")
+  const drivingLicenseUrl = watch("drivingLicenseUrl")
+  const medicalCertificateUrl = watch("medicalCertificateUrl")
+  const governmentIdUrl = watch("governmentIdUrl")
+  const licenseExpiryDate = watch("licenseExpiryDate")
 
   const { data: users, isLoading: isLoadingUsers } = useUsers()
+
+  const isNonTeaching = employeeType && employeeType !== "teacher"
+  const isDriver = employeeType === "driver"
 
   return (
     <div className="space-y-6">
@@ -73,7 +107,7 @@ export function TeacherBasicProfile() {
               required: "Email is required",
               pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
             })}
-            placeholder="teacher@example.com"
+            placeholder="employee@example.com"
           />
           {errors.email && <p className="text-sm text-destructive">{errors.email.message as string}</p>}
         </div>
@@ -146,7 +180,7 @@ export function TeacherBasicProfile() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Employee Code */}
         <div className="space-y-2">
           <Label htmlFor="employeeCode">
@@ -158,6 +192,29 @@ export function TeacherBasicProfile() {
             placeholder="Enter employee code"
           />
           {errors.employeeCode && <p className="text-sm text-destructive">{errors.employeeCode.message as string}</p>}
+        </div>
+
+        {/* Employee Type */}
+        <div className="space-y-2">
+          <Label htmlFor="employeeType">
+            Employee Type <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={employeeType || undefined}
+            onValueChange={(value) => setValue("employeeType", value, { shouldValidate: true })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select employee type" />
+            </SelectTrigger>
+            <SelectContent>
+              {EMPLOYEE_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.employeeType && <p className="text-sm text-destructive">{errors.employeeType.message as string}</p>}
         </div>
 
         {/* User Linking */}
@@ -182,6 +239,171 @@ export function TeacherBasicProfile() {
           </Select>
         </div>
       </div>
+
+      {/* Government ID Section - For all non-teaching staff */}
+      {isNonTeaching && (
+        <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Government ID</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="governmentIdType">ID Type</Label>
+              <Select
+                value={governmentIdType || undefined}
+                onValueChange={(value) => setValue("governmentIdType", value, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select ID type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GOVERNMENT_ID_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="governmentIdNumber">ID Number</Label>
+              <Input
+                id="governmentIdNumber"
+                {...register("governmentIdNumber")}
+                placeholder="Enter ID number"
+              />
+            </div>
+            {teacherId && (
+              <div className="space-y-2">
+                <Label>ID Document Upload</Label>
+                <FileUpload
+                  category="teachers"
+                  entityId={teacherId}
+                  documentType="government_id"
+                  value={governmentIdUrl}
+                  onUploadComplete={(url) => setValue("governmentIdUrl", url)}
+                  accept="image/*,.pdf"
+                  maxSize={5 * 1024 * 1024}
+                  compact
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Driver-Specific Fields */}
+      {isDriver && (
+        <div className="border rounded-lg p-4 space-y-4 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+          <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+            Driver Information
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Driving License Number */}
+            <div className="space-y-2">
+              <Label htmlFor="drivingLicenseNumber">
+                Driving License Number <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="drivingLicenseNumber"
+                {...register("drivingLicenseNumber", { required: isDriver ? "License number is required" : false })}
+                placeholder="Enter driving license number"
+              />
+              {errors.drivingLicenseNumber && (
+                <p className="text-sm text-destructive">{errors.drivingLicenseNumber.message as string}</p>
+              )}
+            </div>
+
+            {/* Vehicle Type */}
+            <div className="space-y-2">
+              <Label htmlFor="vehicleType">Vehicle Type</Label>
+              <Select
+                value={watch("vehicleType") || undefined}
+                onValueChange={(value) => setValue("vehicleType", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vehicle type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {VEHICLE_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Driving Experience */}
+            <div className="space-y-2">
+              <Label htmlFor="drivingExperienceYears">Driving Experience (Years)</Label>
+              <Input
+                id="drivingExperienceYears"
+                type="number"
+                min="0"
+                {...register("drivingExperienceYears", { valueAsNumber: true })}
+                placeholder="e.g. 5"
+              />
+            </div>
+
+            {/* License Expiry Date */}
+            <div className="space-y-2">
+              <Label>License Expiry Date</Label>
+              <DatePickerInput
+                value={licenseExpiryDate ? new Date(licenseExpiryDate) : undefined}
+                onChange={(date) => setValue("licenseExpiryDate", date?.toISOString() || "", { shouldValidate: true })}
+                placeholder="Pick expiry date"
+                minDate={new Date()}
+              />
+            </div>
+
+            {/* Years of Experience (reuse existing field) */}
+            <div className="space-y-2">
+              <Label htmlFor="yearsOfExperience">Total Work Experience (Years)</Label>
+              <Input
+                id="yearsOfExperience"
+                type="number"
+                min="0"
+                step="0.5"
+                {...register("yearsOfExperience", { valueAsNumber: true })}
+                placeholder="e.g. 3.5"
+              />
+            </div>
+          </div>
+
+          {/* Document Uploads */}
+          {teacherId && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Driving License Document</Label>
+                <FileUpload
+                  category="teachers"
+                  entityId={teacherId}
+                  documentType="driving_license"
+                  value={drivingLicenseUrl}
+                  onUploadComplete={(url) => setValue("drivingLicenseUrl", url)}
+                  accept="image/*,.pdf"
+                  maxSize={5 * 1024 * 1024}
+                  compact
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Medical Certificate</Label>
+                <FileUpload
+                  category="teachers"
+                  entityId={teacherId}
+                  documentType="medical_certificate"
+                  value={medicalCertificateUrl}
+                  onUploadComplete={(url) => setValue("medicalCertificateUrl", url)}
+                  accept="image/*,.pdf"
+                  maxSize={5 * 1024 * 1024}
+                  compact
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
