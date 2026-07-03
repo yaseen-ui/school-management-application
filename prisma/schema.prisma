@@ -357,7 +357,26 @@ model User {
   processedRefunds  FeeRefund[]  // refunds processed by this user
 
   // store
-  createdStoreOrders StoreOrder[]
+  createdStoreOrders       StoreOrder[]
+  createdStoreDues         StoreDue[]          @relation("createdStoreDues")
+  updatedStoreDues         StoreDue[]          @relation("updatedStoreDues")
+  createdStoreDuePayments  StoreDuePayment[]   @relation("createdStoreDuePayments")
+  createdStoreReturns      StoreReturn[]        @relation("createdStoreReturns")
+  createdStorePendingItems StorePendingItem[]
+
+  // payroll
+  createdSalaryComponents      SalaryComponent[] @relation("createdSalaryComponents")
+  updatedSalaryComponents      SalaryComponent[] @relation("updatedSalaryComponents")
+  createdEmployeeCompensations EmployeeCompensation[]
+  updatedEmployeeCompensations EmployeeCompensation[] @relation("updatedEmployeeCompensation")
+  changedCompensationHistories CompensationHistory[]
+  createdPayrollBatches        PayrollBatch[]
+  processedPayrollBatches      PayrollBatch[]         @relation("processedPayrollBatch")
+  createdPayrollRecords        PayrollRecord[]
+
+  // accounts
+  createdAccountTransactions AccountTransaction[]
+  voidedAccountTransactions  AccountTransaction[]  @relation("voidedAccountTransaction")
 
   // NOTE: For UserType.company rows (tenantId IS NULL), Postgres treats multiple
   // NULL tenantIds as distinct, so the composite unique below does not prevent
@@ -2017,12 +2036,14 @@ model StorePendingItem {
   isPaid  Boolean   @default(false)
   paidAt  DateTime?
 
+  createdById String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   orderItem StoreOrderItem @relation(fields: [orderItemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   product   StoreProduct?  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  createdBy User?          @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "store_pending_item_tenant_identity")
   @@index([tenantId, orderItemId])
@@ -2056,6 +2077,8 @@ model StoreDue {
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   order      StoreOrder        @relation(fields: [orderId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   enrollment StudentEnrollment? @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  createdBy  User?             @relation("createdStoreDues", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  updatedBy  User?             @relation("updatedStoreDues", fields: [updatedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   payments StoreDuePayment[]
 
@@ -2082,6 +2105,7 @@ model StoreDuePayment {
 
   tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   due    StoreDue @relation(fields: [dueId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  createdBy User? @relation("createdStoreDuePayments", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "store_due_payment_tenant_identity")
   @@index([tenantId, dueId])
@@ -2107,6 +2131,7 @@ model StoreReturn {
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   orderItem StoreOrderItem @relation(fields: [orderItemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   product   StoreProduct?  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  createdBy User?          @relation("createdStoreReturns", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "store_return_tenant_identity")
   @@index([tenantId, orderItemId])
@@ -2132,6 +2157,9 @@ model SalaryComponent {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
+  createdBy User? @relation("createdSalaryComponents", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  updatedBy User? @relation("updatedSalaryComponents", fields: [updatedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
   compensationComponents CompensationComponent[]
 
   @@unique([tenantId, name], name: "uniqueSalaryComponentPerTenant")
@@ -2155,6 +2183,9 @@ model EmployeeCompensation {
 
   tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   employee Teacher @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  createdBy User? @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  updatedBy User? @relation("updatedEmployeeCompensation", fields: [updatedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   components CompensationComponent[]
   history    CompensationHistory[]
@@ -2201,6 +2232,7 @@ model CompensationHistory {
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   employee     Teacher             @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   compensation EmployeeCompensation? @relation(fields: [compensationId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  changedBy    User?               @relation(fields: [changedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "compensation_history_tenant_identity")
   @@index([tenantId, employeeId])
@@ -2223,6 +2255,9 @@ model PayrollBatch {
   updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdBy  User? @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  processedBy User? @relation("processedPayrollBatch", fields: [processedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   records PayrollRecord[]
 
@@ -2250,6 +2285,7 @@ model PayrollRecord {
   tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   batch    PayrollBatch  @relation(fields: [batchId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   employee Teacher       @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  createdBy User?        @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([tenantId, batchId, employeeId], name: "uniqueRecordPerBatchEmployee")
   @@unique([id, tenantId], name: "payroll_record_tenant_identity")
@@ -2308,6 +2344,8 @@ model AccountTransaction {
 
   tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   category AccountCategory @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  createdBy User?          @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  voidedBy  User?          @relation("voidedAccountTransaction", fields: [voidedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   @@unique([id, tenantId], name: "account_transaction_tenant_identity")
   @@index([tenantId, categoryId])
