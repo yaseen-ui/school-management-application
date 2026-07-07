@@ -187,6 +187,20 @@ enum RoomCategory {
   deluxe
 }
 
+enum VehicleCategoryType {
+  bus
+  van
+  car
+  auto
+}
+
+enum VehicleAmenity {
+  ac
+  non_ac
+  deluxe
+  standard
+}
+
 enum RoomType {
   classroom
   laboratory
@@ -313,6 +327,13 @@ model Tenant {
   compensationHistory     CompensationHistory[]
   payrollBatches          PayrollBatch[]
   payrollRecords          PayrollRecord[]
+
+  // transportation
+  vehicleCategories           VehicleCategory[]
+  vehicles                    Vehicle[]
+  vehicleDriverAssignments    VehicleDriverAssignment[]
+  pickupPoints                PickupPoint[]
+  studentTransportAssignments StudentTransportAssignment[]
 
   @@map("tenants")
 }
@@ -635,6 +656,9 @@ model StudentEnrollment {
   storeOrders StoreOrder[]
   storeDues   StoreDue[]
 
+  // transportation
+  transportAssignments StudentTransportAssignment[]
+
   @@unique([tenantId, studentId, academicYearId], name: "oneEnrollmentPerYear")
   @@unique([id, tenantId], name: "student_enrollment_tenant_identity")
   @@index([tenantId, academicYearId])
@@ -718,6 +742,9 @@ model Teacher {
   compensations      EmployeeCompensation[]
   compensationHistory CompensationHistory[]
   payrollRecords     PayrollRecord[]
+
+  // transportation
+  vehicleDriverAssignments VehicleDriverAssignment[]
 
   @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
@@ -1010,6 +1037,147 @@ model Room {
   @@index([tenantId, floorId])
   @@index([tenantId, status])
   @@map("rooms")
+}
+
+// ---------------- Transportation Module ----------------
+
+/// Vehicle categories define the type and amenities of vehicles
+/// e.g., "Deluxe Bus (AC, 40 seats)", "Standard Van (Non-AC, 12 seats)"
+model VehicleCategory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String   // e.g., "Deluxe Bus", "Standard Van", "AC Car"
+  type        VehicleCategoryType // bus, van, car, auto
+  occupancy   Int      // number of people it can carry (e.g., 40, 30, 5, 10)
+  amenities   VehicleAmenity[] // ac, non_ac, deluxe, standard
+  description String?
+  isActive    Boolean  @default(true)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  vehicles Vehicle[]
+  studentTransportAssignments StudentTransportAssignment[]
+
+  @@unique([tenantId, name], name: "uniqueVehicleCategoryPerTenant")
+  @@unique([id, tenantId], name: "vehicle_category_tenant_identity")
+  @@index([tenantId])
+  @@map("vehicle_categories")
+}
+
+/// Individual vehicles registered in the system
+model Vehicle {
+  id                String   @id @default(uuid())
+  tenantId          String
+  categoryId        String
+  name              String   // e.g., "Bus 01", "Deluxe Bus A"
+  registrationNumber String? // e.g., "KA-01-AB-1234"
+  capacity          Int      // actual seating capacity (may differ from category occupancy)
+  description       String?
+  status            EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category VehicleCategory @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  driverAssignments VehicleDriverAssignment[]
+  transportAssignments StudentTransportAssignment[]
+
+  @@unique([tenantId, registrationNumber], name: "uniqueVehicleRegPerTenant")
+  @@unique([id, tenantId], name: "vehicle_tenant_identity")
+  @@index([tenantId])
+  @@index([tenantId, categoryId])
+  @@map("vehicles")
+}
+
+/// Driver-to-vehicle assignments
+model VehicleDriverAssignment {
+  id            String   @id @default(uuid())
+  tenantId      String
+  vehicleId     String
+  driverId      String   // references Teacher.id where employeeType = driver
+  isPrimaryDriver Boolean @default(true)
+  assignedDate  DateTime @default(now())
+  endDate       DateTime?
+  status        EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  driver  Teacher @relation(fields: [driverId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([tenantId, vehicleId, driverId], name: "uniqueDriverVehicleAssignment")
+  @@unique([id, tenantId], name: "vehicle_driver_assignment_tenant_identity")
+  @@index([tenantId, vehicleId])
+  @@index([tenantId, driverId])
+  @@map("vehicle_driver_assignments")
+}
+
+/// Pickup points with GPS coordinates
+model PickupPoint {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String   // e.g., "Main Gate", "Bus Stop A"
+  address   String?
+  latitude  Float
+  longitude Float
+  isActive  Boolean  @default(true)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  transportAssignments StudentTransportAssignment[]
+
+  @@unique([tenantId, name], name: "uniquePickupPointPerTenant")
+  @@unique([id, tenantId], name: "pickup_point_tenant_identity")
+  @@index([tenantId])
+  @@map("pickup_points")
+}
+
+/// Student transport assignments — links a student to a pickup point, vehicle, and category
+model StudentTransportAssignment {
+  id            String   @id @default(uuid())
+  tenantId      String
+  enrollmentId  String
+  pickupPointId String
+  vehicleId     String?
+  categoryId    String?
+  isActive      Boolean  @default(true)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  enrollment StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  pickupPoint PickupPoint      @relation(fields: [pickupPointId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  vehicle    Vehicle?          @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  category   VehicleCategory?  @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([tenantId, enrollmentId], name: "uniqueTransportPerEnrollment")
+  @@unique([id, tenantId], name: "student_transport_assignment_tenant_identity")
+  @@index([tenantId, enrollmentId])
+  @@index([tenantId, pickupPointId])
+  @@index([tenantId, vehicleId])
+  @@index([tenantId, categoryId])
+  @@map("student_transport_assignments")
 }
 
 // ---------------- Attendance ----------------
@@ -2328,6 +2496,11 @@ model AccountTransaction {
   description     String?
   transactionDate DateTime        @default(now())
 
+  // Who is this transaction for?
+  partyType   String?  // "teacher" | "student" | "staff" | "vendor" | "other"
+  partyId     String?  // ID of teacher/student/staff (null for vendors/other)
+  partyName   String?  // Denormalized name for display (required for vendors/other)
+
   // Polymorphic reference for future integration with Fee, Salary, etc.
   referenceType String? // "fee_payment" | "salary" | etc.
   referenceId   String?
@@ -2351,5 +2524,6 @@ model AccountTransaction {
   @@index([tenantId, categoryId])
   @@index([tenantId, transactionDate])
   @@index([tenantId, referenceType, referenceId])
+  @@index([tenantId, partyType, partyId])
   @@map("account_transactions")
 }

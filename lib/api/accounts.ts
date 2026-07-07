@@ -33,6 +33,9 @@ export interface AccountTransaction {
   amount: number
   description: string | null
   transactionDate: string
+  partyType: string | null
+  partyId: string | null
+  partyName: string | null
   referenceType: string | null
   referenceId: string | null
   isVoided: boolean
@@ -53,6 +56,9 @@ export interface CreateAccountTransactionRequest {
   amount: number
   description?: string
   transactionDate?: string
+  partyType?: string
+  partyId?: string
+  partyName?: string
   referenceType?: string
   referenceId?: string
 }
@@ -63,6 +69,9 @@ export interface UpdateAccountTransactionRequest {
   amount?: number
   description?: string
   transactionDate?: string
+  partyType?: string
+  partyId?: string
+  partyName?: string
 }
 
 export interface VoidTransactionRequest {

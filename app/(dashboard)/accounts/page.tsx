@@ -8,6 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { accountCategoriesApi, accountTransactionsApi, accountSummaryApi } from "@/lib/api/accounts"
 import type { AccountCategory, AccountTransaction, LedgerSummary } from "@/lib/api/accounts"
+import { teachersApi } from "@/lib/api/teachers"
+import { studentsApi } from "@/lib/api/students"
+import type { Teacher } from "@/lib/api/teachers"
+import type { Student } from "@/lib/api/students"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -235,13 +239,68 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
   categories: AccountCategory[]
 }) {
   const [loading, setLoading] = useState(false)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [loadingParty, setLoadingParty] = useState(false)
   const [form, setForm] = useState({
     categoryId: "",
     type: "debit" as "debit" | "credit",
     amount: "",
     description: "",
     transactionDate: format(new Date(), "yyyy-MM-dd"),
+    partyType: "",
+    partyName: "",
+    partyId: "",
   })
+
+  // Fetch teachers or students when party type changes
+  useEffect(() => {
+    if (form.partyType === "teacher") {
+      setLoadingParty(true)
+      teachersApi.getAll().then((res) => {
+        const data = res.data as any
+        setTeachers(data?.rows || [])
+      }).catch(() => {
+        toast.error("Failed to load teachers")
+      }).finally(() => {
+        setLoadingParty(false)
+      })
+    } else if (form.partyType === "student") {
+      setLoadingParty(true)
+      studentsApi.list().then((res) => {
+        const data = res.data as any
+        setStudents(data?.rows || [])
+      }).catch(() => {
+        toast.error("Failed to load students")
+      }).finally(() => {
+        setLoadingParty(false)
+      })
+    } else {
+      setTeachers([])
+      setStudents([])
+    }
+    // Reset party name/id when party type changes
+    setForm((prev) => ({ ...prev, partyName: "", partyId: "" }))
+  }, [form.partyType])
+
+  const handlePartySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value
+    if (form.partyType === "teacher") {
+      const teacher = teachers.find((t) => t.id === selectedId)
+      setForm((prev) => ({
+        ...prev,
+        partyId: selectedId,
+        partyName: teacher ? teacher.fullName : "",
+      }))
+    } else if (form.partyType === "student") {
+      const student = students.find((s) => s.id === selectedId)
+      setForm((prev) => ({
+        ...prev,
+        partyId: selectedId,
+        partyName: student ? `${student.firstName} ${student.lastName}` : "",
+      }))
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -257,6 +316,9 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
         amount: parseFloat(form.amount),
         description: form.description || undefined,
         transactionDate: form.transactionDate || undefined,
+        partyType: form.partyType || undefined,
+        partyName: form.partyName || undefined,
+        partyId: form.partyId || undefined,
       })
       toast.success("Transaction created successfully")
       onSuccess()
@@ -267,6 +329,9 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
         amount: "",
         description: "",
         transactionDate: format(new Date(), "yyyy-MM-dd"),
+        partyType: "",
+        partyName: "",
+        partyId: "",
       })
     } catch (err: any) {
       toast.error(err?.message || "Failed to create transaction")
@@ -345,6 +410,70 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
               onChange={(e) => setForm({ ...form, transactionDate: e.target.value })}
             />
           </div>
+
+          {/* Party / Person Details */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold mb-3">Person / Party Details</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Party Type</label>
+                <select
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  value={form.partyType}
+                  onChange={(e) => setForm({ ...form, partyType: e.target.value })}
+                >
+                  <option value="">Select type</option>
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="staff">Staff</option>
+                  <option value="vendor">Vendor</option>
+                  <option value="parent">Parent</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {form.partyType === "teacher"
+                    ? "Select Teacher"
+                    : form.partyType === "student"
+                    ? "Select Student"
+                    : "Party Name"}
+                </label>
+                {form.partyType === "teacher" || form.partyType === "student" ? (
+                  <select
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    value={form.partyId}
+                    onChange={handlePartySelect}
+                    disabled={loadingParty}
+                  >
+                    <option value="">
+                      {loadingParty ? "Loading..." : `Select ${form.partyType}`}
+                    </option>
+                    {form.partyType === "teacher" &&
+                      teachers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.fullName}
+                        </option>
+                      ))}
+                    {form.partyType === "student" &&
+                      students.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.firstName} {s.lastName}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    value={form.partyName}
+                    onChange={(e) => setForm({ ...form, partyName: e.target.value })}
+                    placeholder="e.g. John Doe"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={loading}>
@@ -511,6 +640,8 @@ export default function AccountsPage() {
                 { field: "type", headerName: "Type" },
                 { field: "category.name", headerName: "Category" },
                 { field: "amount", headerName: "Amount" },
+                { field: "partyType", headerName: "Party Type" },
+                { field: "partyName", headerName: "Party Name" },
                 { field: "description", headerName: "Description" },
                 { field: "isVoided", headerName: "Voided", type: "boolean" },
               ]}

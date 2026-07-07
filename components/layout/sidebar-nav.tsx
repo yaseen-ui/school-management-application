@@ -33,6 +33,9 @@ import {
   BookCheck,
   Wallet,
   PiggyBank,
+  Bus,
+  MapPin,
+  Route,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -121,6 +124,16 @@ const tenantNavGroups: NavGroup[] = [
     title: "Store",
     items: [
       { title: "Store", href: "/store", icon: Store },
+    ],
+  },
+  {
+    title: "Transportation",
+    items: [
+      { title: "Vehicle Categories", href: "/transportation/vehicle-categories", icon: Bus },
+      { title: "Vehicles", href: "/transportation/vehicles", icon: Bus },
+      { title: "Driver Assignments", href: "/transportation/driver-assignments", icon: Users },
+      { title: "Pickup Points", href: "/transportation/pickup-points", icon: MapPin },
+      { title: "Transport Assignments", href: "/transportation/assignments", icon: Route },
     ],
   },
   {
