@@ -16,7 +16,7 @@ export interface User {
   email: string
   fullName: string
   phone: string
-  userType: "tenant" | "company"
+  userType: "tenant" | "company" | "parent" | "staff"
   tenantId?: string
   roleId: string
   otp?: string | null
@@ -25,14 +25,14 @@ export interface User {
   updatedAt: string
 }
 
-export interface User {
+export interface User2 {
   id: string
   email: string
   firstName?: string
   lastName?: string
   fullName?: string
   role: string
-  userType: "tenant" | "company"
+  userType: "tenant" | "company" | "parent" | "staff"
   tenantId?: string
   createdAt: string
   updatedAt: string

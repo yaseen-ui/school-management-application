@@ -20,9 +20,13 @@ export function useLogin() {
         description: `Welcome back, ${response.data?.user.firstName || response.data?.user.fullName || "User"}!`,
       })
 
-      // Redirect based on host type
+      // Redirect based on host type and user type
       if (config.isCompanyHost) {
         router.push("/tenants")
+      } else if (response.data?.user?.userType === "parent") {
+        router.push("/parent-portal")
+      } else if (response.data?.user?.userType === "staff") {
+        router.push("/staff-portal")
       } else {
         router.push("/dashboard")
       }

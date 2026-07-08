@@ -219,6 +219,32 @@ enum RoomType {
   other
 }
 
+// ---------------- Visitor Module Enums ----------------
+enum VisitorType {
+  registered
+  non_registered
+}
+
+enum VisitorApprovalStatus {
+  pending
+  approved
+  rejected
+  not_required
+}
+
+enum VisitorStatus {
+  scheduled
+  checked_in
+  checked_out
+  cancelled
+}
+
+enum ApprovalFrom {
+  headmaster
+  point_of_contact
+  admin
+}
+
 
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
@@ -335,6 +361,11 @@ model Tenant {
   pickupPoints                PickupPoint[]
   studentTransportAssignments StudentTransportAssignment[]
 
+  // visitor module
+  visitorPurposes VisitorPurpose[]
+  visitors        Visitor[]
+  visitorNotifications VisitorNotification[]
+
   @@map("tenants")
 }
 
@@ -399,6 +430,11 @@ model User {
   createdAccountTransactions AccountTransaction[]
   voidedAccountTransactions  AccountTransaction[]  @relation("voidedAccountTransaction")
 
+  // visitor module
+  visitorApproved       Visitor[]                @relation("visitorApprovedBy")
+  visitorCreated        Visitor[]                @relation("visitorCreatedBy")
+  visitorNotifications  VisitorNotification[]
+  
   // NOTE: For UserType.company rows (tenantId IS NULL), Postgres treats multiple
   // NULL tenantIds as distinct, so the composite unique below does not prevent
   // duplicate emails. Add this partial unique index in a raw SQL migration:
@@ -700,6 +736,11 @@ model Teacher {
   // Employee type (teacher by default, can be driver, clerk, etc.)
   employeeType EmployeeType @default(teacher)
 
+  // Registration flow — invite-based staff registration
+  registrationToken    String?   @unique
+  registrationTokenExp DateTime?
+  isRegistered         Boolean   @default(false)
+
   // Onboarding profile
   profilePhotoUrl   String?
   dateOfBirth       DateTime?
@@ -745,6 +786,9 @@ model Teacher {
 
   // transportation
   vehicleDriverAssignments VehicleDriverAssignment[]
+
+  // visitor module — visitors who selected this staff as point of contact
+  visitorsAsPointOfContact Visitor[]
 
   @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
@@ -1267,6 +1311,11 @@ model Parent {
   aadhaarNumber String?
   occupation    String?
 
+  // Registration flow — invite-based parent registration
+  registrationToken    String?   @unique
+  registrationTokenExp DateTime?
+  isRegistered         Boolean   @default(false)
+
   status    EntityStatus @default(active)
   deletedAt DateTime?
 
@@ -1279,6 +1328,9 @@ model Parent {
   user   User?  @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   students StudentParent[]
+
+  // visitor module
+  visitors Visitor[]
 
   @@unique([userId, tenantId], name: "parent_user_tenant_unique")
   @@unique([id, tenantId], name: "parent_tenant_identity")
@@ -2526,4 +2578,110 @@ model AccountTransaction {
   @@index([tenantId, referenceType, referenceId])
   @@index([tenantId, partyType, partyId])
   @@map("account_transactions")
+}
+
+// ---------------- Visitor Module ----------------
+
+/// Configurable visitor purposes per tenant
+model VisitorPurpose {
+  id                String       @id @default(uuid())
+  tenantId          String
+  name              String       // "Meet Student", "Pick Up Student", "Consult Department", "Admission Inquiry", "General Purpose", "Meet Staff"
+  description       String?      // optional description of this purpose
+  requiresApproval  Boolean      @default(false)
+  approvalFrom      ApprovalFrom @default(admin) // headmaster | point_of_contact | admin
+  isActive          Boolean      @default(true)
+  sortOrder         Int          @default(0)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  visitors Visitor[]
+
+  @@unique([tenantId, name], name: "uniqueVisitorPurposePerTenant")
+  @@unique([id, tenantId], name: "visitor_purpose_tenant_identity")
+  @@index([tenantId])
+  @@map("visitor_purposes")
+}
+
+/// Main visitor tracking table — records every campus visit
+model Visitor {
+  id                String                @id @default(uuid())
+  tenantId          String
+
+  visitorType       VisitorType           // registered | non_registered
+  parentId          String?               // links to Parent for registered visitors
+  visitorName       String?               // for non-registered visitors
+  visitorPhone      String?               // contact phone
+  visitorEmail      String?               // contact email
+
+  purposeId         String                // links to VisitorPurpose
+  description       String?               // reason / additional notes
+
+  // For non-registered visitors: who they're meeting
+  pointOfContactId  String?               // staff member to meet (references Teacher.id)
+
+  approvalStatus    VisitorApprovalStatus @default(not_required)
+  approvedById      String?               // user who approved
+  approvedAt        DateTime?
+  rejectionReason   String?
+
+  // Time tracking
+  checkInTime       DateTime?
+  checkOutTime      DateTime?
+  status            VisitorStatus         @default(scheduled)
+
+  // Metadata
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  parent          Parent?         @relation(fields: [parentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  purpose         VisitorPurpose  @relation(fields: [purposeId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  pointOfContact  Teacher?        @relation(fields: [pointOfContactId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  approvedBy      User?           @relation("visitorApprovedBy", fields: [approvedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  createdBy       User?           @relation("visitorCreatedBy", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  notifications VisitorNotification[]
+
+  @@unique([id, tenantId], name: "visitor_tenant_identity")
+  @@index([tenantId, visitorType])
+  @@index([tenantId, parentId])
+  @@index([tenantId, purposeId])
+  @@index([tenantId, pointOfContactId])
+  @@index([tenantId, approvalStatus])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("visitors")
+}
+
+/// Notifications sent to reception/staff for visitor events
+model VisitorNotification {
+  id            String   @id @default(uuid())
+  tenantId      String
+  visitorId     String
+  sentToId      String?  // user to notify
+  type          String   // reception | point_of_contact | headmaster | approval_request
+  message       String?
+  isRead        Boolean  @default(false)
+  readAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  visitor  Visitor @relation(fields: [visitorId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  sentTo   User?   @relation(fields: [sentToId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "visitor_notification_tenant_identity")
+  @@index([tenantId, visitorId])
+  @@index([tenantId, sentToId])
+  @@index([tenantId, isRead])
+  @@map("visitor_notifications")
 }

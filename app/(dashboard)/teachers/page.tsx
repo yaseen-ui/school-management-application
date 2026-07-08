@@ -18,6 +18,8 @@ import { ViewTeacherDialog } from "@/components/teachers/view-teacher-dialog"
 import { DeleteTeacherDialog } from "@/components/teachers/delete-teacher-dialog"
 import { useTeachers } from "@/hooks/use-teachers"
 import type { Teacher } from "@/lib/api/teachers"
+import { StaffStatusBadge } from "@/components/teachers/staff-status-badge"
+import { InviteStaffButton } from "@/components/teachers/invite-staff-button"
 import { format } from "date-fns"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -88,9 +90,23 @@ export default function StaffPage() {
       accessorKey: "gender",
     },
     {
+      header: "Status",
+      accessorKey: "isRegistered",
+      cell: ({ row }) => <StaffStatusBadge isRegistered={(row.original as any).isRegistered ?? !!row.original.userId} />,
+    },
+    {
       header: "Date of Joining",
       accessorKey: "dateOfJoining",
       cell: ({ row }) => (row.original.dateOfJoining ? format(new Date(row.original.dateOfJoining), "MMM dd, yyyy") : "—"),
+    },
+    {
+      header: "",
+      id: "actions",
+      cell: ({ row }) => {
+        const teacher = row.original as any
+        if (teacher.isRegistered || teacher.userId) return null
+        return <InviteStaffButton teacherId={teacher.id} teacherName={teacher.fullName} />
+      },
     },
   ]
 

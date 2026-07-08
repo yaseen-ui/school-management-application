@@ -36,6 +36,7 @@ import {
   Bus,
   MapPin,
   Route,
+  DoorOpen,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -91,6 +92,8 @@ const tenantNavGroups: NavGroup[] = [
     items: [
       { title: "Users", href: "/users", icon: Users },
       { title: "Staff & Curriculum", href: "/staff-curriculum", icon: BookHeart },
+      { title: "Parents", href: "/parents", icon: Users },
+      { title: "Visitors", href: "/visitors", icon: DoorOpen },
       { title: "Roles & Permissions", href: "/roles", icon: Shield },
       { title: "Infrastructure", href: "/infrastructure", icon: Building2 },
       { title: "Inventory", href: "/inventory", icon: Package },

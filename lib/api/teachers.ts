@@ -158,4 +158,14 @@ export const teachersApi = {
 
   deleteEmploymentHistory: (teacherId: string, employmentHistoryId: string) =>
     apiClient.delete<ApiResponse<null>>(`/teachers/${teacherId}/employment-history/${employmentHistoryId}`),
+
+  // Staff Registration
+  sendInvite: (teacherId: string) =>
+    apiClient.post<ApiResponse<any>>(`/teachers/${teacherId}/invite`),
+
+  validateInviteToken: (token: string) =>
+    apiClient.get<ApiResponse<{ fullName: string; phone: string; email: string; employeeType: string; employeeCode: string; missingFields: string[] }>>(`/teachers/invite/${token}`),
+
+  register: (data: { token: string; password: string; email?: string; phone?: string }) =>
+    apiClient.post<ApiResponse<any>>("/teachers/register", data),
 }
