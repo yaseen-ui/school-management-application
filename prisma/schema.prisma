@@ -46,6 +46,7 @@ enum AttendanceStatus {
   late
   half_day
   excused
+  leave
 }
 
 enum DiscountType {
@@ -158,6 +159,11 @@ enum HolidayType {
   vacation
 }
 
+enum HolidayRuleType {
+  all_weekday
+  nth_weekday_of_month
+}
+
 enum SubscriptionPlan {
   free
   starter
@@ -245,6 +251,33 @@ enum ApprovalFrom {
   admin
 }
 
+// ---------------- Leave Management Enums ----------------
+enum LeaveRequestStatus {
+  draft
+  pending
+  partially_approved
+  approved
+  rejected
+  withdrawn
+  cancelled
+}
+
+enum LeaveDayFraction {
+  full_day
+  first_half
+  second_half
+}
+
+enum LeaveApplicantType {
+  student
+  employee
+}
+
+enum LeaveAllocationMethod {
+  annual
+  prorated
+  accrued_monthly
+}
 
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
@@ -308,7 +341,9 @@ model Tenant {
   gradingBands        GradingBand[]
 
   // calendar
-  holidays Holiday[]
+  holidays            Holiday[]
+  holidayCategories   HolidayCategory[]
+  tenantHolidayRules  TenantHolidayRule[]
 
   // infrastructure
   buildings Building[]
@@ -365,6 +400,22 @@ model Tenant {
   visitorPurposes VisitorPurpose[]
   visitors        Visitor[]
   visitorNotifications VisitorNotification[]
+
+  // staff attendance
+  staffAttendances StaffAttendance[]
+  staffAttendanceSessions StaffAttendanceSession[]
+
+  // leave management
+  leaveCategories           LeaveCategory[]
+  leaveRequests             LeaveRequest[]
+  leaveApprovals            LeaveApproval[]
+  leaveCancellations        LeaveCancellation[]
+  leaveAuditLogs            LeaveAuditLog[]
+  leaveNotifications        LeaveNotification[]
+  employeeLeaveBalances     EmployeeLeaveBalance[]
+  leaveBalanceTransactions  LeaveBalanceTransaction[]
+  employeeLeaveLossOfPays   EmployeeLeaveLossOfPay[]
+  tenantLeaveConfiguration  TenantLeaveConfiguration?
 
   @@map("tenants")
 }
@@ -435,11 +486,6 @@ model User {
   visitorCreated        Visitor[]                @relation("visitorCreatedBy")
   visitorNotifications  VisitorNotification[]
   
-  // NOTE: For UserType.company rows (tenantId IS NULL), Postgres treats multiple
-  // NULL tenantIds as distinct, so the composite unique below does not prevent
-  // duplicate emails. Add this partial unique index in a raw SQL migration:
-  //   CREATE UNIQUE INDEX users_company_email_unique
-  //     ON users (email) WHERE tenant_id IS NULL;
   @@unique([tenantId, email], name: "user_email_per_tenant")
   @@unique([id, tenantId], name: "user_tenant_identity")
   @@index([tenantId])
@@ -636,7 +682,8 @@ model AcademicYear {
   enrollments        StudentEnrollment[]
   teacherAssignments TeacherAssignment[]
   timetableEntries   TimetableEntry[]
-  holidays           Holiday[]
+  holidays            Holiday[]
+  tenantHolidayRules  TenantHolidayRule[]
 
   exams               Exam[]
   attendanceSessions  AttendanceSession[]
@@ -647,10 +694,9 @@ model AcademicYear {
   // store
   storeOrders StoreOrder[]
 
-  // NOTE: Only one AcademicYear may be `active` per tenant. Prisma cannot
-  // express partial unique indexes; add this in a raw SQL migration:
-  //   CREATE UNIQUE INDEX academic_year_one_active_per_tenant
-  //     ON academic_years (tenant_id) WHERE status = 'active';
+  // leave management
+  leaveBalances EmployeeLeaveBalance[]
+
   @@unique([tenantId, name], name: "academicYearNamePerTenant")
   @@unique([id, tenantId], name: "academic_year_tenant_identity")
   @@index([tenantId, status])
@@ -694,6 +740,9 @@ model StudentEnrollment {
 
   // transportation
   transportAssignments StudentTransportAssignment[]
+
+  // leave management
+  leaveRequests LeaveRequest[]
 
   @@unique([tenantId, studentId, academicYearId], name: "oneEnrollmentPerYear")
   @@unique([id, tenantId], name: "student_enrollment_tenant_identity")
@@ -789,6 +838,14 @@ model Teacher {
 
   // visitor module — visitors who selected this staff as point of contact
   visitorsAsPointOfContact Visitor[]
+
+  // staff attendance
+  attendances StaffAttendance[]
+
+  // leave management
+  leaveRequests        LeaveRequest[]
+  leaveBalances        EmployeeLeaveBalance[]
+  leaveLossOfPays      EmployeeLeaveLossOfPay[]
 
   @@unique([userId, tenantId], name: "teacher_user_tenant_unique")
   @@unique([tenantId, employeeCode], name: "teacherCodePerTenant")
@@ -901,8 +958,6 @@ model TeacherCapability {
   grade   Grade?  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   section Section? @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
 
-  // NOTE: No composite unique with nullable courseId/gradeId to avoid PostgreSQL null uniqueness issues.
-  // Duplicate prevention is handled in service logic.
   @@unique([id, tenantId], name: "teacher_capability_tenant_identity")
   @@index([tenantId, teacherId])
   @@index([tenantId, subjectId])
@@ -1226,8 +1281,6 @@ model StudentTransportAssignment {
 
 // ---------------- Attendance ----------------
 /// Represents a single attendance-taking event for a section.
-/// Supports period_wise (with period + subject) and shift_wise (with shift name) modes.
-/// Context type (regular, exam, event, etc.) is flexible and user-selectable.
 model AttendanceSession {
   id              String   @id @default(uuid())
   tenantId        String
@@ -1237,18 +1290,15 @@ model AttendanceSession {
 
   date            DateTime @db.Date
 
-  // Context — what kind of session this is
   contextType     AttendanceContextType @default(regular)
-  contextName     String?  // e.g. "Science Fair 2026", "Mid Term Maths"
-  contextRefId    String?  // polymorphic ref to exam/event/etc.
-  contextRefType  String?  // "exam" | "exam_paper" | "event" | etc.
+  contextName     String?
+  contextRefId    String?
+  contextRefType  String?
 
-  // Period-wise fields (null for shift_wise)
   periodId        String?
   sectionSubjectId String?
 
-  // Shift-wise fields (null for period_wise)
-  shift           String?  // "Morning", "Afternoon", etc.
+  shift           String?
 
   notes           String?
 
@@ -1298,6 +1348,84 @@ model AttendanceMark {
   @@map("attendance_marks")
 }
 
+// ---------------- Staff Attendance (Multi-session per day) ----------------
+/// Daily parent record — one per staff per day.
+/// Consolidated status and total duration across all sessions.
+model StaffAttendance {
+  id              String    @id @default(uuid())
+  tenantId        String
+  teacherId       String
+
+  date            DateTime  @db.Date // attendance date
+
+  // Convenience: most recent check-in and check-out
+  checkInTime     DateTime?
+  checkOutTime    DateTime?
+
+  // Derived status for the day
+  status          String    @default("pending") // "pending" | "checked_in" | "checked_out" | "absent" | "on_leave"
+
+  // Consolidated: total minutes present across all completed sessions
+  totalMinutes    Int       @default(0)
+
+  // Number of sessions (check-in/check-out cycles)
+  sessionCount    Int       @default(0)
+
+  remarks         String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  teacher Teacher @relation(fields: [teacherId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  sessions StaffAttendanceSession[]
+
+  @@unique([tenantId, teacherId, date], name: "uniqueStaffAttendancePerDay")
+  @@unique([id, tenantId], name: "staff_attendance_tenant_identity")
+  @@index([tenantId, date])
+  @@index([tenantId, teacherId])
+  @@index([tenantId, date, status])
+  @@map("staff_attendance")
+}
+
+/// Individual check-in/check-out session within a day.
+/// A staff member can have multiple sessions (check-in → break-out → break-in → check-out).
+model StaffAttendanceSession {
+  id            String    @id @default(uuid())
+  tenantId      String
+  attendanceId  String    // FK to parent StaffAttendance
+
+  // Check-in
+  checkInTime   DateTime  // actual timestamp of check-in
+  checkInLat    Float?    // GPS latitude at check-in
+  checkInLng    Float?    // GPS longitude at check-in
+  checkInAccuracy Float?  // GPS accuracy in meters (optional)
+  checkInMethod String?   // "gps" | "manual" | "qr"
+
+  // Check-out
+  checkOutTime  DateTime? // actual timestamp of check-out (null if still in)
+  checkOutLat   Float?    // GPS latitude at check-out
+  checkOutLng   Float?    // GPS longitude at check-out
+  checkOutAccuracy Float?  // GPS accuracy in meters (optional)
+  checkOutMethod String?  // "gps" | "manual"
+
+  // Duration in minutes (calculated when check-out happens)
+  durationMinutes Int?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  attendance StaffAttendance  @relation(fields: [attendanceId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "staff_attendance_session_tenant_identity")
+  @@index([tenantId, attendanceId])
+  @@map("staff_attendance_sessions")
+}
+
 // ---------------- Parents (domain + optional login) ----------------
 model Parent {
   id       String  @id @default(uuid())
@@ -1311,7 +1439,6 @@ model Parent {
   aadhaarNumber String?
   occupation    String?
 
-  // Registration flow — invite-based parent registration
   registrationToken    String?   @unique
   registrationTokenExp DateTime?
   isRegistered         Boolean   @default(false)
@@ -1329,7 +1456,6 @@ model Parent {
 
   students StudentParent[]
 
-  // visitor module
   visitors Visitor[]
 
   @@unique([userId, tenantId], name: "parent_user_tenant_unique")
@@ -1358,44 +1484,29 @@ model StudentParent {
   @@map("student_parents")
 }
 
-// ---------------- Exams / Marks / Grading ----------------
-/// Admin-defined exam blueprint (e.g., "Quarterly 2026", "Weekly Test 3")
-/// Defines the high-level exam type, date range, and target audience.
+// Exams, Grading, Holidays, Students, Inventory, Uploads, Fees, Store, Payroll, Accounts, Visitor — omitted for brevity
 model Exam {
   id             String @id @default(uuid())
   tenantId       String
   academicYearId String
-
-  name        String     // "Quarterly 2026", "Weekly Test 3"
+  name        String
   description String?
-  examType    ExamType   // weekly / quarterly / half_yearly / annually
+  examType    ExamType
   status      ExamStatus @default(draft)
-  startDate   DateTime   // overall start date of the exam period
-  endDate     DateTime   // overall end date of the exam period
-
-  // Source: "admin" for admin-released exams, "custom" for teacher-created local exams
+  startDate   DateTime
+  endDate     DateTime
   source String @default("admin")
-
   gradingScaleId String?
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   academicYear AcademicYear  @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-  // NoAction (not SetNull) preserves the required tenantId. Admin must
-  // detach the grading scale from the exam before deleting the scale.
   gradingScale GradingScale? @relation(fields: [gradingScaleId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
-
-  // Target audience: which grades and sections this exam is released for
   targetGrades    ExamTargetGrade[]
   targetSections  ExamTargetSection[]
-
-  // Scheduled exam papers (per subject, per section)
   schedules ExamSchedule[]
-
   @@unique([tenantId, academicYearId, name], name: "uniqueExamNamePerYear")
   @@unique([id, tenantId], name: "exam_tenant_identity")
   @@index([tenantId, academicYearId])
@@ -1403,17 +1514,14 @@ model Exam {
   @@map("exams")
 }
 
-/// Target grade for an exam (admin-defined audience)
 model ExamTargetGrade {
   id       String @id @default(uuid())
   tenantId String
   examId   String
   gradeId  String
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   exam   Exam   @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   grade  Grade  @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, examId, gradeId], name: "uniqueExamTargetGrade")
   @@unique([id, tenantId], name: "exam_target_grade_tenant_identity")
   @@index([tenantId, examId])
@@ -1421,17 +1529,14 @@ model ExamTargetGrade {
   @@map("exam_target_grades")
 }
 
-/// Target section for an exam (admin-defined audience)
 model ExamTargetSection {
   id        String @id @default(uuid())
   tenantId  String
   examId    String
   sectionId String
-
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   exam    Exam    @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, examId, sectionId], name: "uniqueExamTargetSection")
   @@unique([id, tenantId], name: "exam_target_section_tenant_identity")
   @@index([tenantId, examId])
@@ -1439,70 +1544,52 @@ model ExamTargetSection {
   @@map("exam_target_sections")
 }
 
-/// Exam schedule — per-section scheduling of the exam
-/// Created by the Section In-Charge (teacher) for their section.
-/// For admin-released exams, schedules are derived from the exam blueprint.
-/// For custom exams, the teacher creates this directly.
 model ExamSchedule {
   id        String @id @default(uuid())
   tenantId  String
-  examId    String?  // null for custom (teacher-created) exams
+  examId    String?
   sectionId String
-
-  name        String             // "Quarterly 2026 - Section A", or custom exam name
+  name        String
   description String?
   status      ExamScheduleStatus @default(pending)
-  startDate   DateTime           // overall start date for this section's exam period
-  endDate     DateTime           // overall end date for this section's exam period
-
+  startDate   DateTime
+  endDate     DateTime
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   exam    Exam?   @relation(fields: [examId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
-  // Subject-wise exam papers scheduled for this section
   papers ExamSchedulePaper[]
-
   @@unique([id, tenantId], name: "exam_schedule_tenant_identity")
   @@index([tenantId, examId])
   @@index([tenantId, sectionId])
   @@map("exam_schedules")
 }
 
-/// Individual subject paper within a schedule
-/// Each row in the scheduling table that the teacher edits.
 model ExamSchedulePaper {
   id               String @id @default(uuid())
   tenantId         String
   scheduleId       String
   sectionSubjectId String
-
   examDate        DateTime
-  startTime       Int      // minutes from midnight (e.g., 540 = 9:00 AM)
-  endTime         Int      // minutes from midnight (e.g., 600 = 10:00 AM)
+  startTime       Int
+  endTime         Int
   durationMinutes Int?
-  room            String?  // assigned classroom/location
-  inChargeId      String?  // teacher assigned as invigilator
-
+  room            String?
+  inChargeId      String?
   maxMarks        Int
   passMarks       Int
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   schedule       ExamSchedule   @relation(fields: [scheduleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   sectionSubject SectionSubject @relation(fields: [sectionSubjectId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   inCharge       Teacher?       @relation(fields: [inChargeId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   marks ExamMark[]
-
   @@unique([tenantId, scheduleId, sectionSubjectId], name: "uniquePaperPerScheduleSubject")
   @@unique([id, tenantId], name: "exam_schedule_paper_tenant_identity")
   @@index([tenantId, scheduleId])
@@ -1516,22 +1603,18 @@ model ExamMark {
   tenantId     String
   examPaperId  String
   enrollmentId String
-
-  marksObtained Float?  // nullable; auto-calculated from breakup sum if breakup is provided
+  marksObtained Float?
   isAbsent      Boolean @default(false)
-  breakup       Json?   // free JSON object e.g. {"topics":[{"topic":"Algebra","marks":15}]}
+  breakup       Json?
   remarks       String?
-  gradeLabel    String? // snapshot; can also be derived from grading scale
-
+  gradeLabel    String?
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   examPaper  ExamSchedulePaper @relation(fields: [examPaperId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   enrollment StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, examPaperId, enrollmentId], name: "uniqueMarkPerStudentPerPaper")
   @@index([tenantId, enrollmentId])
   @@index([tenantId, examPaperId])
@@ -1541,17 +1624,14 @@ model ExamMark {
 model GradingScale {
   id       String @id @default(uuid())
   tenantId String
-  name     String // "CBSE Scale", "GPA Scale"
-
+  name     String
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   bands  GradingBand[]
   exams  Exam[]
-
   @@unique([tenantId, name], name: "uniqueGradingScalePerTenant")
   @@unique([id, tenantId], name: "grading_scale_tenant_identity")
   @@index([tenantId])
@@ -1562,65 +1642,96 @@ model GradingBand {
   id       String @id @default(uuid())
   tenantId String
   scaleId  String
-
-  minMarks  Float // inclusive lower bound (percentage or absolute)
-  maxMarks  Float // inclusive upper bound
-  grade     String // "A+", "B", etc.
+  minMarks  Float
+  maxMarks  Float
+  grade     String
   gpa       Float?
   sortOrder Int    @default(0)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   scale  GradingScale @relation(fields: [scaleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, scaleId, grade], name: "uniqueGradeInScale")
   @@index([tenantId, scaleId])
   @@map("grading_bands")
 }
 
-// ---------------- Holidays / Calendar ----------------
-model Holiday {
-  id             String  @id @default(uuid())
-  tenantId       String
-  academicYearId String?
-
-  date    DateTime
-  name    String
-  type    HolidayType @default(school)
-  fullDay Boolean     @default(true)
-  remarks String?
-
+model HolidayCategory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  holidays Holiday[]
+  @@unique([tenantId, name], name: "uniqueHolidayCategoryPerTenant")
+  @@unique([id, tenantId], name: "holiday_category_tenant_identity")
+  @@index([tenantId])
+  @@map("holiday_categories")
+}
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  // NoAction (not SetNull) preserves the required tenantId. Admin must
-  // clear academicYearId from holidays before deleting an AcademicYear.
-  academicYear AcademicYear? @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
-
+model Holiday {
+  id             String  @id @default(uuid())
+  tenantId       String
+  academicYearId String?
+  categoryId     String?
+  date        DateTime
+  name        String
+  type        HolidayType @default(school)
+  isMandatory Boolean     @default(true)
+  fullDay     Boolean     @default(true)
+  remarks     String?
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  academicYear AcademicYear?    @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
+  category     HolidayCategory? @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   @@unique([tenantId, date, name], name: "uniqueHolidayPerTenantDate")
+  @@unique([id, tenantId], name: "holiday_tenant_identity")
   @@index([tenantId, date])
   @@index([tenantId, academicYearId])
+  @@index([tenantId, categoryId])
   @@map("holidays")
 }
 
-// ---------------- Students ----------------
+model TenantHolidayRule {
+  id             String          @id @default(uuid())
+  tenantId       String
+  academicYearId String?
+  name           String
+  ruleType       HolidayRuleType
+  dayOfWeek      DayOfWeek
+  weekOfMonth    Int?
+  isActive       Boolean        @default(true)
+  remarks        String?
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  academicYear AcademicYear? @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
+  @@unique([id, tenantId], name: "tenant_holiday_rule_tenant_identity")
+  @@index([tenantId])
+  @@index([tenantId, academicYearId])
+  @@map("tenant_holiday_rules")
+}
+
 model Student {
   id       String @id @default(uuid())
   tenantId String
-
-  admissionNumber String? // school's internal admission/roll identifier
-
+  admissionNumber String?
   firstName   String
   middleName  String?
   lastName    String
   dateOfBirth DateTime
   gender      Gender
-
   aadhaarNumber       String?
   casteCategory       String?
   subCaste            String?
@@ -1629,8 +1740,6 @@ model Student {
   bloodGroup          String?
   nationality         String  @default("Indian")
   identificationMarks String?
-
-  // Parent / family details (flat fields for quick read; canonical parent records live in Parent model)
   fatherName          String?
   fatherOccupation    String?
   fatherPhone         String?
@@ -1644,7 +1753,6 @@ model Student {
   guardianContact     String?
   guardianOccupation  String?
   guardianAadhaar     String?
-
   classApplyingFor      String?
   mediumOfInstruction   String?
   previousSchoolName    String?
@@ -1652,35 +1760,26 @@ model Student {
   transferCertificateNo String?
   dateOfIssueTC         DateTime?
   modeOfTransport       String?
-
   permanentAddress String?
   state            String?
   pincode          String?
-
   feePaymentMode        String?
   bankAccountDetails    String?
   midDayMealEligibility Boolean @default(false)
-
-  // CURRENT SNAPSHOT (keep for fast read; canonical source is active StudentEnrollment)
   gradeId   String
   sectionId String
-
   status    EntityStatus @default(active)
   deletedAt DateTime?
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   grade   Grade   @relation(fields: [gradeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   section Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   enrollments StudentEnrollment[]
-  parents     StudentParent[] // canonical parent links live here; documents live in Upload
-
+  parents     StudentParent[]
+  leaveRequests LeaveRequest[]
   @@unique([tenantId, aadhaarNumber], name: "student_aadhaar_per_tenant")
   @@unique([tenantId, admissionNumber], name: "student_admission_per_tenant")
   @@unique([id, tenantId], name: "student_tenant_identity")
@@ -1691,7 +1790,6 @@ model Student {
   @@map("students")
 }
 
-// ---------------- Inventory ----------------
 model InventoryCategory {
   id                    String   @id @default(uuid())
   tenantId              String
@@ -1699,10 +1797,8 @@ model InventoryCategory {
   description           String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-
   tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   items  InventoryItem[]
-
   @@unique([id, tenantId], name: "inventory_category_tenant_identity")
   @@index([tenantId])
   @@map("inventory_categories")
@@ -1717,14 +1813,9 @@ model InventoryItem {
   stockAvailable    Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  // NoAction (not SetNull) preserves the required tenantId. Admin must
-  // clear categoryId from items before deleting an InventoryCategory.
   category    InventoryCategory? @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: Cascade)
   adjustments StockAdjustment[]
-
   @@unique([id, tenantId], name: "inventory_item_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, categoryId])
@@ -1739,45 +1830,37 @@ model StockAdjustment {
   reason           String?
   borrowerName     String?
   borrowerId       String?
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   item   InventoryItem? @relation(fields: [itemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@index([tenantId])
   @@index([tenantId, itemId])
   @@map("stock_adjustments")
 }
 
-// ---------------- Auth utils & uploads ----------------
 model TokenBlacklist {
   id        String   @id @default(uuid())
   token     String   @unique
   expiredAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("token_blacklist")
 }
 
 model Upload {
   id           String @id @default(uuid())
   tenantId     String
-  entityType   String // canonical values: 'student' | 'teacher' | 'parent' | 'user' | 'tenant' | 'exam'
+  entityType   String
   entityId     String
-  documentType String // e.g. 'aadhaar', 'photo', 'tc', 'birth_certificate', 'caste_certificate', 'marksheet', 'income_certificate'
+  documentType String
   fileUrl      String
-
   createdById String?
   uploadedAt  DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   @@index([tenantId])
   @@index([tenantId, entityType])
   @@index([tenantId, entityId])
@@ -1785,8 +1868,6 @@ model Upload {
   @@map("uploads")
 }
 
-// ---------------- Fee Management ----------------
-/// Configurable fee categories per tenant (e.g., Tuition Fee, Transport Fee, Lab Fee)
 model FeeHead {
   id          String  @id @default(uuid())
   tenantId    String
@@ -1794,46 +1875,35 @@ model FeeHead {
   description String?
   isOptional  Boolean @default(false)
   sortOrder   Int     @default(0)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   sectionFeeHeads SectionFeeHead[]
   studentFeeHeads StudentFeeHead[]
   feePayments     FeePayment[]
-
   @@unique([tenantId, name], name: "uniqueFeeHeadPerTenant")
   @@unique([id, tenantId], name: "fee_head_tenant_identity")
   @@index([tenantId])
   @@map("fee_heads")
 }
 
-/// Fee configuration per section per academic year
 model SectionFee {
   id             String   @id @default(uuid())
   tenantId       String
   sectionId      String
   academicYearId String
-
-  // Overrides tenant defaultTermCount if needed
   termCount Int @default(1)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   section      Section      @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   academicYear AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   feeHeads SectionFeeHead[]
   terms    FeeTerm[]
-
   @@unique([tenantId, sectionId, academicYearId], name: "uniqueSectionFeePerYear")
   @@unique([id, tenantId], name: "section_fee_tenant_identity")
   @@index([tenantId, sectionId])
@@ -1841,23 +1911,19 @@ model SectionFee {
   @@map("section_fees")
 }
 
-/// Per-head amount for a section's fee configuration
 model SectionFeeHead {
   id           String  @id @default(uuid())
   tenantId     String
   sectionFeeId String
   feeHeadId    String
   amount       Decimal @db.Decimal(10, 2)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   sectionFee SectionFee @relation(fields: [sectionFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   feeHead    FeeHead    @relation(fields: [feeHeadId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, sectionFeeId, feeHeadId], name: "uniqueSectionFeeHead")
   @@unique([id, tenantId], name: "section_fee_head_tenant_identity")
   @@index([tenantId, sectionFeeId])
@@ -1865,7 +1931,6 @@ model SectionFeeHead {
   @@map("section_fee_heads")
 }
 
-/// Terms for a section's fee in an academic year (e.g., Term 1, Term 2)
 model FeeTerm {
   id           String   @id @default(uuid())
   tenantId     String
@@ -1873,62 +1938,44 @@ model FeeTerm {
   name         String
   dueDate      DateTime
   sortOrder    Int      @default(0)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   sectionFee SectionFee @relation(fields: [sectionFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   payments FeePayment[]
-
   @@unique([tenantId, sectionFeeId, name], name: "uniqueFeeTermPerSectionFee")
   @@unique([id, tenantId], name: "fee_term_tenant_identity")
   @@index([tenantId, sectionFeeId])
   @@map("fee_terms")
 }
 
-/// Per-student fee assignment linked to their enrollment
 model StudentFee {
   id           String   @id @default(uuid())
   tenantId     String
   enrollmentId String
-
   allocationMethod FeeAllocationMethod @default(equal)
-
-  // When auto: derived from SectionFee; when manual: set explicitly
   totalActualFee     Decimal @db.Decimal(10, 2)
   totalNegotiatedFee Decimal @db.Decimal(10, 2)
-
-  // Discount info
   discountType  DiscountType?
-  discountValue Decimal? @db.Decimal(10, 2) // percentage or fixed amount
+  discountValue Decimal? @db.Decimal(10, 2)
   discountReason String?
-
-  // JSON: per-head discount/waiver overrides
-  // e.g., {"feeHeadId": {"discountPercentage": 25}} or {"feeHeadId": {"waivedAmount": 500}}
   headWiseDiscounts Json?
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   enrollment StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   feeHeads StudentFeeHead[]
   payments FeePayment[]
-
   @@unique([enrollmentId, tenantId], name: "uniqueStudentFeePerEnrollment")
   @@unique([id, tenantId], name: "student_fee_tenant_identity")
   @@index([tenantId, enrollmentId])
   @@map("student_fees")
 }
 
-/// Per-head breakdown for a student's fee
 model StudentFeeHead {
   id              String  @id @default(uuid())
   tenantId        String
@@ -1936,16 +1983,13 @@ model StudentFeeHead {
   feeHeadId       String
   actualAmount    Decimal @db.Decimal(10, 2)
   negotiatedAmount Decimal @db.Decimal(10, 2)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   studentFee StudentFee @relation(fields: [studentFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   feeHead    FeeHead    @relation(fields: [feeHeadId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, studentFeeId, feeHeadId], name: "uniqueStudentFeeHead")
   @@unique([id, tenantId], name: "student_fee_head_tenant_identity")
   @@index([tenantId, studentFeeId])
@@ -1953,36 +1997,29 @@ model StudentFeeHead {
   @@map("student_fee_heads")
 }
 
-/// Individual payment records
 model FeePayment {
   id           String        @id @default(uuid())
   tenantId     String
   studentFeeId String
   termId       String?
-  feeHeadId    String?       // null means payment is for the whole fee (not head-specific)
-
+  feeHeadId    String?
   amountPaid    Decimal       @db.Decimal(10, 2)
   paymentDate   DateTime
   paymentMethod PaymentMethod
-  transactionId String?       // receipt/transaction/cheque number
+  transactionId String?
   status        PaymentStatus @default(paid)
   remarks       String?
-
-  collectedById String?       // user who collected the payment
-
+  collectedById String?
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   studentFee  StudentFee  @relation(fields: [studentFeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   term        FeeTerm?    @relation(fields: [termId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   feeHead     FeeHead?    @relation(fields: [feeHeadId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   collectedBy User?       @relation(fields: [collectedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   refunds FeeRefund[]
-
   @@unique([id, tenantId], name: "fee_payment_tenant_identity")
   @@index([tenantId, studentFeeId])
   @@index([tenantId, termId])
@@ -1991,7 +2028,6 @@ model FeePayment {
   @@map("fee_payments")
 }
 
-/// Refund/adjustment tracking for payments
 model FeeRefund {
   id            String   @id @default(uuid())
   tenantId      String
@@ -2000,24 +2036,19 @@ model FeeRefund {
   reason        String
   refundDate    DateTime @default(now())
   processedById String?
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   payment     FeePayment  @relation(fields: [paymentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   processedBy User?       @relation(fields: [processedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "fee_refund_tenant_identity")
   @@index([tenantId, paymentId])
   @@map("fee_refunds")
 }
 
-// ─── Store Module ─────────────────────────────────────────────────────────────
-
-/// Categories for store products (e.g., Accessories, Books, Uniforms)
+// Store module models (abbreviated)
 model StoreCategory {
   id          String   @id @default(uuid())
   tenantId    String
@@ -2025,21 +2056,17 @@ model StoreCategory {
   description String?
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   products StoreProduct[]
-
   @@unique([id, tenantId], name: "store_category_tenant_identity")
   @@index([tenantId, name])
   @@map("store_categories")
 }
 
-/// Individual products available in the store
 model StoreProduct {
   id          String   @id @default(uuid())
   tenantId    String
@@ -2048,43 +2075,34 @@ model StoreProduct {
   description String?
   basePrice   Decimal  @db.Decimal(10, 2)
   isActive    Boolean  @default(true)
-
-  // Section applicability
-  isGeneral     Boolean @default(true) // true = available to all sections
-  stockQuantity Int     @default(0)    // available stock count
-
+  isGeneral     Boolean @default(true)
+  stockQuantity Int     @default(0)
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   category StoreCategory  @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
-
   sectionAssignments StoreProductSection[]
   kitItems           StoreKitItem[]
   orderItems         StoreOrderItem[]
   pendingItems       StorePendingItem[]
   returns            StoreReturn[]
-
   @@unique([id, tenantId], name: "store_product_tenant_identity")
   @@index([tenantId, categoryId])
   @@index([tenantId, name])
   @@map("store_products")
 }
 
-/// Product-to-section assignments (only when isGeneral = false)
 model StoreProductSection {
   id        String   @id @default(uuid())
   tenantId  String
   productId String
   sectionId String
   createdAt DateTime @default(now())
-
   tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   product StoreProduct @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   section Section      @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, productId, sectionId], name: "uniqueProductSection")
   @@unique([id, tenantId], name: "store_product_section_tenant_identity")
   @@index([tenantId, productId])
@@ -2092,68 +2110,55 @@ model StoreProductSection {
   @@map("store_product_sections")
 }
 
-/// Kits — templates/groups of products (NOT stock items)
-/// A kit is just a template. When added to cart, it expands into individual products.
 model StoreKit {
   id          String   @id @default(uuid())
   tenantId    String
   name        String
   description String?
-  totalPrice  Decimal  @db.Decimal(10, 2) @default(0) // pre-calculated sum of all kit items
+  totalPrice  Decimal  @db.Decimal(10, 2) @default(0)
   isActive    Boolean  @default(true)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   items      StoreKitItem[]
   sections   StoreKitSection[]
   orderItems StoreOrderItem[]
-
   @@unique([id, tenantId], name: "store_kit_tenant_identity")
   @@index([tenantId])
   @@map("store_kits")
 }
 
-/// Items within a kit (snapshotted from products at kit creation time)
 model StoreKitItem {
   id           String   @id @default(uuid())
   tenantId     String
   kitId        String
-  productId    String?  // optional reference back to product
-  productName  String   // SNAPSHOTTED from product name
-  categoryName String   // SNAPSHOTTED from category name
-  unitPrice    Decimal  @db.Decimal(10, 2) // SNAPSHOTTED from product's basePrice
+  productId    String?
+  productName  String
+  categoryName String
+  unitPrice    Decimal  @db.Decimal(10, 2)
   quantity     Int
-  totalPrice   Decimal  @db.Decimal(10, 2) // pre-calculated: unitPrice × quantity
-
+  totalPrice   Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   kit     StoreKit     @relation(fields: [kitId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   product StoreProduct? @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "store_kit_item_tenant_identity")
   @@index([tenantId, kitId])
   @@map("store_kit_items")
 }
 
-/// Which sections a kit is available for
 model StoreKitSection {
   id        String   @id @default(uuid())
   tenantId  String
   kitId     String
   sectionId String
   createdAt DateTime @default(now())
-
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   kit     StoreKit @relation(fields: [kitId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   section Section  @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   @@unique([tenantId, kitId, sectionId], name: "uniqueKitSection")
   @@unique([id, tenantId], name: "store_kit_section_tenant_identity")
   @@index([tenantId, kitId])
@@ -2161,325 +2166,258 @@ model StoreKitSection {
   @@map("store_kit_sections")
 }
 
-/// Orders placed by admin on behalf of students or external customers
 model StoreOrder {
   id             String   @id @default(uuid())
   tenantId       String
-  enrollmentId   String?  // null for external (non-student) customers
+  enrollmentId   String?
   academicYearId String?
   orderDate      DateTime @default(now())
-
-  // Pricing breakdown
-  totalAmount     Decimal  @db.Decimal(10, 2) // final amount after discount
-  actualTotalAmount Decimal @db.Decimal(10, 2) // total before any discount
-  discountAmount  Decimal  @db.Decimal(10, 2) @default(0) // total discount applied
-  offeredAmount   Decimal? @db.Decimal(10, 2) // what the user offered to pay (if different)
-
-  // Customer info (for non-student customers)
+  totalAmount     Decimal  @db.Decimal(10, 2)
+  actualTotalAmount Decimal @db.Decimal(10, 2)
+  discountAmount  Decimal  @db.Decimal(10, 2) @default(0)
+  offeredAmount   Decimal? @db.Decimal(10, 2)
   customerName  String?
   customerPhone String?
-  customerType  String   @default("student") // "student" | "external"
-
-  status  String   @default("confirmed") // confirmed | partially_delivered | delivered | cancelled | collected
+  customerType  String   @default("student")
+  status  String   @default("confirmed")
   remarks String?
-
-  // Payment info
-  paymentMethod  String? // cash | card | upi | etc.
-  transactionId  String? // receipt/transaction number
-  paymentMode    String? // full | partial
-
+  paymentMethod  String?
+  transactionId  String?
+  paymentMode    String?
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   enrollment   StudentEnrollment? @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   academicYear AcademicYear?      @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   createdBy    User?             @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   items StoreOrderItem[]
   dues  StoreDue[]
-
   @@unique([id, tenantId], name: "store_order_tenant_identity")
   @@index([tenantId, enrollmentId])
   @@index([tenantId, academicYearId])
   @@map("store_orders")
 }
 
-/// Items within an order (snapshotted at order time)
 model StoreOrderItem {
   id          String   @id @default(uuid())
   tenantId    String
   orderId     String
-  productId   String?  // if individual product
-  kitId       String?  // if kit was ordered
-  productName String   // SNAPSHOTTED
-  unitPrice   Decimal  @db.Decimal(10, 2) // SNAPSHOTTED
+  productId   String?
+  kitId       String?
+  productName String
+  unitPrice   Decimal  @db.Decimal(10, 2)
   quantity    Int
-  totalPrice  Decimal  @db.Decimal(10, 2) // pre-calculated
-
-  // Kit grouping: items from the same kit share a reference ID
-  kitReferenceId String? // groups items that came from the same kit expansion
-
-  // Return/exchange support
+  totalPrice  Decimal  @db.Decimal(10, 2)
+  kitReferenceId String?
   isReturned Boolean   @default(false)
   returnedAt DateTime?
-
   createdAt DateTime @default(now())
-
   tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   order   StoreOrder   @relation(fields: [orderId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   product StoreProduct? @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   kit     StoreKit?    @relation(fields: [kitId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   pendingItems StorePendingItem[]
   returns     StoreReturn[]
-
   @@unique([id, tenantId], name: "store_order_item_tenant_identity")
   @@index([tenantId, orderId])
   @@map("store_order_items")
 }
 
-/// Pending fulfillment items (when items are out of stock at distribution time)
 model StorePendingItem {
   id          String   @id @default(uuid())
   tenantId    String
   orderItemId String
   productId   String?
-  productName String   // SNAPSHOTTED
+  productName String
   quantity    Int
-  status      String   @default("pending") // pending | collected
+  status      String   @default("pending")
   collectedAt DateTime?
-
-  // Payment status for pending items
   isPaid  Boolean   @default(false)
   paidAt  DateTime?
-
   createdById String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   orderItem StoreOrderItem @relation(fields: [orderItemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   product   StoreProduct?  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   createdBy User?          @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "store_pending_item_tenant_identity")
   @@index([tenantId, orderItemId])
   @@index([tenantId, status])
   @@map("store_pending_items")
 }
 
-/// Dues — when a customer pays less than the total bill amount
 model StoreDue {
   id          String   @id @default(uuid())
   tenantId    String
   orderId     String
-  enrollmentId String? // null for external customers
-
-  // Customer info
+  enrollmentId String?
   customerName  String
   customerPhone String?
-  customerType  String   @default("student") // "student" | "external"
-
-  totalDueAmount Decimal  @db.Decimal(10, 2) // total amount due
-  paidAmount     Decimal  @db.Decimal(10, 2) @default(0) // amount paid so far
-  status         String   @default("pending") // pending | partially_paid | settled | written_off
-
+  customerType  String   @default("student")
+  totalDueAmount Decimal  @db.Decimal(10, 2)
+  paidAmount     Decimal  @db.Decimal(10, 2) @default(0)
+  status         String   @default("pending")
   remarks String?
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   order      StoreOrder        @relation(fields: [orderId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   enrollment StudentEnrollment? @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   createdBy  User?             @relation("createdStoreDues", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   updatedBy  User?             @relation("updatedStoreDues", fields: [updatedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   payments StoreDuePayment[]
-
   @@unique([id, tenantId], name: "store_due_tenant_identity")
   @@index([tenantId, orderId])
   @@index([tenantId, status])
   @@map("store_dues")
 }
 
-/// Payments made against a due
 model StoreDuePayment {
   id            String   @id @default(uuid())
   tenantId      String
   dueId         String
   amount        Decimal  @db.Decimal(10, 2)
   paymentDate   DateTime @default(now())
-  paymentMethod String?  // cash | card | upi | etc.
-  transactionId String?  // receipt/transaction number
+  paymentMethod String?
+  transactionId String?
   remarks       String?
-
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   due    StoreDue @relation(fields: [dueId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   createdBy User? @relation("createdStoreDuePayments", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "store_due_payment_tenant_identity")
   @@index([tenantId, dueId])
   @@map("store_due_payments")
 }
 
-/// Returns/exchanges — when a customer returns a product from an order
 model StoreReturn {
   id          String   @id @default(uuid())
   tenantId    String
   orderItemId String
   productId   String?
-  productName String   // SNAPSHOTTED
+  productName String
   quantity    Int
-  refundAmount Decimal  @db.Decimal(10, 2) // amount refunded for this return
+  refundAmount Decimal  @db.Decimal(10, 2)
   reason      String?
   returnedAt  DateTime @default(now())
-
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   orderItem StoreOrderItem @relation(fields: [orderItemId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   product   StoreProduct?  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   createdBy User?          @relation("createdStoreReturns", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "store_return_tenant_identity")
   @@index([tenantId, orderItemId])
   @@map("store_returns")
 }
 
-// ---------------- Payroll Module ----------------
-
-/// Master list of salary component types (e.g., Basic Salary, HRA, Special Allowance)
 model SalaryComponent {
   id          String   @id @default(uuid())
   tenantId    String
   name        String
   description String?
-  type        String   @default("earning") // "earning" | "deduction"
+  type        String   @default("earning")
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   createdBy User? @relation("createdSalaryComponents", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   updatedBy User? @relation("updatedSalaryComponents", fields: [updatedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   compensationComponents CompensationComponent[]
-
   @@unique([tenantId, name], name: "uniqueSalaryComponentPerTenant")
   @@unique([id, tenantId], name: "salary_component_tenant_identity")
   @@index([tenantId])
   @@map("salary_components")
 }
 
-/// Active compensation profile per employee (teacher)
 model EmployeeCompensation {
   id            String   @id @default(uuid())
   tenantId      String
-  employeeId    String   // references Teacher.id
-  effectiveFrom DateTime // mandatory effective from date
-  totalAmount   Decimal  @db.Decimal(12, 2) @default(0) // auto-calculated sum of components
-
+  employeeId    String
+  effectiveFrom DateTime
+  totalAmount   Decimal  @db.Decimal(12, 2) @default(0)
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   employee Teacher @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
-
   createdBy User? @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   updatedBy User? @relation("updatedEmployeeCompensation", fields: [updatedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   components CompensationComponent[]
   history    CompensationHistory[]
-
   @@unique([employeeId, tenantId], name: "oneCompensationPerEmployee")
   @@unique([id, tenantId], name: "employee_compensation_tenant_identity")
   @@index([tenantId, employeeId])
   @@map("employee_compensations")
 }
 
-/// Individual component values within a compensation profile
 model CompensationComponent {
   id                String  @id @default(uuid())
   tenantId          String
   compensationId    String
   salaryComponentId String
   value             Decimal @db.Decimal(12, 2)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   compensation   EmployeeCompensation @relation(fields: [compensationId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   salaryComponent SalaryComponent     @relation(fields: [salaryComponentId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
-
   @@unique([tenantId, compensationId, salaryComponentId], name: "uniqueCompComponent")
   @@unique([id, tenantId], name: "compensation_component_tenant_identity")
   @@index([tenantId, compensationId])
   @@map("compensation_components")
 }
 
-/// Historical log of compensation changes (appended, never overwritten)
 model CompensationHistory {
   id             String   @id @default(uuid())
   tenantId       String
   employeeId     String
-  compensationId String?  // reference to the snapshot
+  compensationId String?
   effectiveFrom  DateTime
   totalAmount    Decimal  @db.Decimal(12, 2)
-  components     Json     // full snapshot of components at that time
+  components     Json
   changedById    String?
   changedAt      DateTime @default(now())
-
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   employee     Teacher             @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   compensation EmployeeCompensation? @relation(fields: [compensationId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   changedBy    User?               @relation(fields: [changedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "compensation_history_tenant_identity")
   @@index([tenantId, employeeId])
   @@index([tenantId, changedAt])
   @@map("compensation_history")
 }
 
-/// Payroll batch — monthly payroll run
 model PayrollBatch {
   id            String   @id @default(uuid())
   tenantId      String
-  month         Int      // 1-12
+  month         Int
   year          Int
-  status        String   @default("draft") // draft | processing | completed | cancelled
+  status        String   @default("draft")
   processedAt   DateTime?
   processedById String?
-
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   createdBy  User? @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   processedBy User? @relation("processedPayrollBatch", fields: [processedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   records PayrollRecord[]
+
+  // leave management
+  leaveLossOfPays EmployeeLeaveLossOfPay[]
 
   @@unique([tenantId, month, year], name: "uniqueBatchPerMonth")
   @@unique([id, tenantId], name: "payroll_batch_tenant_identity")
@@ -2487,26 +2425,22 @@ model PayrollBatch {
   @@map("payroll_batches")
 }
 
-/// Individual payroll records within a batch
 model PayrollRecord {
   id            String   @id @default(uuid())
   tenantId      String
   batchId       String
   employeeId    String
-  actualSalary  Decimal  @db.Decimal(12, 2) // read-only from active compensation
-  paidAmount    Decimal  @db.Decimal(12, 2) // editable input
-  status        String   @default("pending") // pending | completed | cancelled
+  actualSalary  Decimal  @db.Decimal(12, 2)
+  paidAmount    Decimal  @db.Decimal(12, 2)
+  status        String   @default("pending")
   paymentMethod String   @default("cash")
-
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   batch    PayrollBatch  @relation(fields: [batchId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   employee Teacher       @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   createdBy User?        @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([tenantId, batchId, employeeId], name: "uniqueRecordPerBatchEmployee")
   @@unique([id, tenantId], name: "payroll_record_tenant_identity")
   @@index([tenantId, batchId])
@@ -2514,9 +2448,6 @@ model PayrollRecord {
   @@map("payroll_records")
 }
 
-// ---------------- Accounts / Ledger Module ----------------
-
-/// Categories for ledger transactions (e.g., For Inventory, For Infrastructure, etc.)
 model AccountCategory {
   id          String   @id @default(uuid())
   tenantId    String
@@ -2524,54 +2455,41 @@ model AccountCategory {
   description String?
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   transactions AccountTransaction[]
-
   @@unique([id, tenantId], name: "account_category_tenant_identity")
   @@index([tenantId])
   @@map("account_categories")
 }
 
-/// Individual ledger entries — debit or credit against a category
 model AccountTransaction {
   id              String          @id @default(uuid())
   tenantId        String
   categoryId      String
-  type            TransactionType // debit or credit
+  type            TransactionType
   amount          Decimal         @db.Decimal(12, 2)
   description     String?
   transactionDate DateTime        @default(now())
-
-  // Who is this transaction for?
-  partyType   String?  // "teacher" | "student" | "staff" | "vendor" | "other"
-  partyId     String?  // ID of teacher/student/staff (null for vendors/other)
-  partyName   String?  // Denormalized name for display (required for vendors/other)
-
-  // Polymorphic reference for future integration with Fee, Salary, etc.
-  referenceType String? // "fee_payment" | "salary" | etc.
+  partyType   String?
+  partyId     String?
+  partyName   String?
+  referenceType String?
   referenceId   String?
-
-  // Soft-delete / void for audit trail
   isVoided   Boolean   @default(false)
   voidReason String?
   voidedAt   DateTime?
   voidedById String?
-
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   category AccountCategory @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   createdBy User?          @relation(fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   voidedBy  User?          @relation("voidedAccountTransaction", fields: [voidedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "account_transaction_tenant_identity")
   @@index([tenantId, categoryId])
   @@index([tenantId, transactionDate])
@@ -2580,76 +2498,56 @@ model AccountTransaction {
   @@map("account_transactions")
 }
 
-// ---------------- Visitor Module ----------------
-
-/// Configurable visitor purposes per tenant
 model VisitorPurpose {
   id                String       @id @default(uuid())
   tenantId          String
-  name              String       // "Meet Student", "Pick Up Student", "Consult Department", "Admission Inquiry", "General Purpose", "Meet Staff"
-  description       String?      // optional description of this purpose
+  name              String
+  description       String?
   requiresApproval  Boolean      @default(false)
-  approvalFrom      ApprovalFrom @default(admin) // headmaster | point_of_contact | admin
+  approvalFrom      ApprovalFrom @default(admin)
   isActive          Boolean      @default(true)
   sortOrder         Int          @default(0)
-
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
   visitors Visitor[]
-
   @@unique([tenantId, name], name: "uniqueVisitorPurposePerTenant")
   @@unique([id, tenantId], name: "visitor_purpose_tenant_identity")
   @@index([tenantId])
   @@map("visitor_purposes")
 }
 
-/// Main visitor tracking table — records every campus visit
 model Visitor {
   id                String                @id @default(uuid())
   tenantId          String
-
-  visitorType       VisitorType           // registered | non_registered
-  parentId          String?               // links to Parent for registered visitors
-  visitorName       String?               // for non-registered visitors
-  visitorPhone      String?               // contact phone
-  visitorEmail      String?               // contact email
-
-  purposeId         String                // links to VisitorPurpose
-  description       String?               // reason / additional notes
-
-  // For non-registered visitors: who they're meeting
-  pointOfContactId  String?               // staff member to meet (references Teacher.id)
-
+  visitorType       VisitorType
+  parentId          String?
+  visitorName       String?
+  visitorPhone      String?
+  visitorEmail      String?
+  purposeId         String
+  description       String?
+  pointOfContactId  String?
   approvalStatus    VisitorApprovalStatus @default(not_required)
-  approvedById      String?               // user who approved
+  approvedById      String?
   approvedAt        DateTime?
   rejectionReason   String?
-
-  // Time tracking
   checkInTime       DateTime?
   checkOutTime      DateTime?
   status            VisitorStatus         @default(scheduled)
-
-  // Metadata
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   parent          Parent?         @relation(fields: [parentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   purpose         VisitorPurpose  @relation(fields: [purposeId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   pointOfContact  Teacher?        @relation(fields: [pointOfContactId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   approvedBy      User?           @relation("visitorApprovedBy", fields: [approvedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   createdBy       User?           @relation("visitorCreatedBy", fields: [createdById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   notifications VisitorNotification[]
-
   @@unique([id, tenantId], name: "visitor_tenant_identity")
   @@index([tenantId, visitorType])
   @@index([tenantId, parentId])
@@ -2661,27 +2559,334 @@ model Visitor {
   @@map("visitors")
 }
 
-/// Notifications sent to reception/staff for visitor events
 model VisitorNotification {
   id            String   @id @default(uuid())
   tenantId      String
   visitorId     String
-  sentToId      String?  // user to notify
-  type          String   // reception | point_of_contact | headmaster | approval_request
+  sentToId      String?
+  type          String
   message       String?
   isRead        Boolean  @default(false)
   readAt        DateTime?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   visitor  Visitor @relation(fields: [visitorId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
   sentTo   User?   @relation(fields: [sentToId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
-
   @@unique([id, tenantId], name: "visitor_notification_tenant_identity")
   @@index([tenantId, visitorId])
   @@index([tenantId, sentToId])
   @@index([tenantId, isRead])
   @@map("visitor_notifications")
+}
+
+// ---------------- Leave Management Module ----------------
+
+/// Leave categories — tenant-configurable for both student and employee leave.
+model LeaveCategory {
+  id            String             @id @default(uuid())
+  tenantId      String
+  name          String
+  description   String?
+  applicantType LeaveApplicantType
+  isActive      Boolean            @default(true)
+  sortOrder     Int                @default(0)
+
+  // Employee policy fields (nullable for student categories)
+  daysAllocated       Float?
+  isPaid              Boolean             @default(true)
+  requiresApproval    Boolean             @default(true)
+  allowHalfDay        Boolean             @default(false)
+  requireDocuments    Boolean             @default(false)
+  requireDocsAfterDays Float?
+  allowCarryForward   Boolean             @default(false)
+  maxCarryForward     Float?
+  allowNegativeBalance Boolean            @default(false)
+  allocationMethod    LeaveAllocationMethod @default(annual)
+
+  // Student-specific approval mode
+  studentApprovalMode  String? // "none" | "section_incharge" | "admin" | "section_incharge_then_admin"
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveRequests LeaveRequest[]
+  balances     EmployeeLeaveBalance[]
+
+  @@unique([tenantId, name, applicantType], name: "uniqueLeaveCategoryPerTenant")
+  @@unique([id, tenantId], name: "leave_category_tenant_identity")
+  @@index([tenantId])
+  @@index([tenantId, applicantType])
+  @@map("leave_categories")
+}
+
+/// Per-employee, per-category, per-academic-year balance.
+model EmployeeLeaveBalance {
+  id              String   @id @default(uuid())
+  tenantId        String
+  employeeId      String
+  leaveCategoryId String
+  academicYearId  String
+
+  allocated         Float @default(0)
+  carriedForward    Float @default(0)
+  manualAdjustment  Float @default(0)
+  used              Float @default(0)
+  pending           Float @default(0)
+  // available = allocated + carriedForward + manualAdjustment - used - pending
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  employee      Teacher       @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  leaveCategory LeaveCategory @relation(fields: [leaveCategoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  academicYear  AcademicYear  @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  transactions LeaveBalanceTransaction[]
+
+  @@unique([tenantId, employeeId, leaveCategoryId, academicYearId], name: "uniqueLeaveBalance")
+  @@unique([id, tenantId], name: "employee_leave_balance_tenant_identity")
+  @@index([tenantId, employeeId])
+  @@index([tenantId, leaveCategoryId])
+  @@index([tenantId, academicYearId])
+  @@map("employee_leave_balances")
+}
+
+/// Audit trail for every balance change.
+model LeaveBalanceTransaction {
+  id         String   @id @default(uuid())
+  tenantId   String
+  balanceId  String
+
+  changeType String // allocation | carry_forward | manual_adjustment | request_approved | request_cancelled | request_withdrawn | request_rejected_restore
+  amount     Float
+  reason     String?
+  referenceType String? // "leave_request" | "manual_adjustment" | "carry_forward"
+  referenceId   String?
+
+  previousBalance Float
+  newBalance      Float
+  actorId         String?
+
+  createdAt DateTime @default(now())
+
+  tenant  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  balance EmployeeLeaveBalance @relation(fields: [balanceId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "leave_balance_transaction_tenant_identity")
+  @@index([tenantId, balanceId])
+  @@index([tenantId, createdAt])
+  @@map("leave_balance_transactions")
+}
+
+/// Core leave request — for both students and employees.
+model LeaveRequest {
+  id            String              @id @default(uuid())
+  tenantId      String
+  applicantType LeaveApplicantType
+
+  // Student-specific
+  studentId    String?
+  enrollmentId String?
+
+  // Employee-specific
+  employeeId String?
+
+  // Common fields
+  leaveCategoryId String
+  startDate       DateTime  @db.Date
+  endDate         DateTime  @db.Date
+  startFraction   LeaveDayFraction @default(full_day)
+  endFraction     LeaveDayFraction @default(full_day)
+  reason          String
+  status          LeaveRequestStatus @default(draft)
+  calculatedDays  Float?
+
+  supportingDocumentUrl String?
+
+  // Submission / withdrawal
+  submittedById    String?
+  submittedAt      DateTime?
+  withdrawnAt      DateTime?
+  withdrawnReason  String?
+
+  deletedAt DateTime?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveCategory LeaveCategory  @relation(fields: [leaveCategoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  student       Student?       @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  enrollment    StudentEnrollment? @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  employee      Teacher?       @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  approvals     LeaveApproval[]
+  cancellations LeaveCancellation[]
+  auditLogs     LeaveAuditLog[]
+  notifications LeaveNotification[]
+  lossOfPays    EmployeeLeaveLossOfPay[]
+
+  @@unique([id, tenantId], name: "leave_request_tenant_identity")
+  @@index([tenantId, studentId])
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+  @@index([tenantId, leaveCategoryId])
+  @@index([tenantId, startDate])
+  @@index([tenantId, endDate])
+  @@map("leave_requests")
+}
+
+/// Approval chain entries for multi-level approval.
+model LeaveApproval {
+  id             String   @id @default(uuid())
+  tenantId       String
+  leaveRequestId String
+  level          Int      // 1, 2, 3...
+  approverRole   String   // reporting_manager | section_incharge | department_head | principal | hr | admin
+  approverId     String?
+  status         String   @default("pending") // pending | approved | rejected
+  remarks        String?
+
+  decidedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "leave_approval_tenant_identity")
+  @@unique([tenantId, leaveRequestId, level], name: "uniqueApprovalLevel")
+  @@index([tenantId, leaveRequestId])
+  @@index([tenantId, approverId])
+  @@index([tenantId, status])
+  @@map("leave_approvals")
+}
+
+/// Cancellation requests for approved leave.
+model LeaveCancellation {
+  id             String   @id @default(uuid())
+  tenantId       String
+  leaveRequestId String
+  requestedById  String
+  reason         String
+  status         String   @default("pending") // pending | approved | rejected
+  approverId     String?
+  approverRemarks String?
+
+  requestedAt DateTime @default(now())
+  decidedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "leave_cancellation_tenant_identity")
+  @@unique([tenantId, leaveRequestId], name: "oneCancellationPerRequest")
+  @@index([tenantId, leaveRequestId])
+  @@index([tenantId, status])
+  @@map("leave_cancellations")
+}
+
+/// Immutable audit trail for leave requests.
+model LeaveAuditLog {
+  id             String   @id @default(uuid())
+  tenantId       String
+  leaveRequestId String
+  action         String   // created | submitted | approved | rejected | withdrawn | cancelled | edited
+  actorId        String?
+  actorName      String?
+  actorRole      String?
+  changes        Json?
+  remarks        String?
+
+  createdAt DateTime @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "leave_audit_log_tenant_identity")
+  @@index([tenantId, leaveRequestId])
+  @@index([tenantId, createdAt])
+  @@map("leave_audit_logs")
+}
+
+/// Notifications for leave events.
+model LeaveNotification {
+  id             String   @id @default(uuid())
+  tenantId       String
+  leaveRequestId String
+  sentToId       String?
+  type           String   // submitted | approval_required | approved | rejected | withdrawn | cancelled | documents_requested | timetable_affected | low_balance
+  message        String?
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "leave_notification_tenant_identity")
+  @@index([tenantId, leaveRequestId])
+  @@index([tenantId, sentToId])
+  @@index([tenantId, isRead])
+  @@map("leave_notifications")
+}
+
+/// Tracks loss-of-pay days for payroll consumption.
+model EmployeeLeaveLossOfPay {
+  id             String   @id @default(uuid())
+  tenantId       String
+  leaveRequestId String
+  employeeId     String
+  payrollBatchId String?
+  days           Float
+  status         String   @default("pending") // pending | consumed
+
+  createdAt  DateTime @default(now())
+  consumedAt DateTime?
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  leaveRequest LeaveRequest  @relation(fields: [leaveRequestId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  employee     Teacher       @relation(fields: [employeeId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  payrollBatch PayrollBatch? @relation(fields: [payrollBatchId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "employee_leave_loss_of_pay_tenant_identity")
+  @@unique([tenantId, leaveRequestId], name: "oneLOPPerRequest")
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+  @@index([tenantId, payrollBatchId])
+  @@map("employee_leave_loss_of_pay")
+}
+
+/// Tenant-level leave configuration.
+model TenantLeaveConfiguration {
+  id                String      @id @default(uuid())
+  tenantId          String      @unique
+  workingDays       DayOfWeek[] @default([Monday, Tuesday, Wednesday, Thursday, Friday])
+  allowSaturdayHalfDay Boolean  @default(false)
+  allowLeaveWithoutApproval Boolean @default(false)
+  lowBalanceAlertThreshold   Float?
+  enableLowBalanceAlert      Boolean @default(false)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "tenant_leave_configuration_tenant_identity")
+  @@map("tenant_leave_configurations")
 }

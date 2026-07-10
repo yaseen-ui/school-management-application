@@ -37,6 +37,9 @@ import {
   MapPin,
   Route,
   DoorOpen,
+  CalendarDays,
+  Tag,
+  Clock,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -94,9 +97,11 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Staff & Curriculum", href: "/staff-curriculum", icon: BookHeart },
       { title: "Parents", href: "/parents", icon: Users },
       { title: "Visitors", href: "/visitors", icon: DoorOpen },
+      { title: "Staff Attendance", href: "/staff-attendance", icon: ClipboardCheck },
       { title: "Roles & Permissions", href: "/roles", icon: Shield },
       { title: "Infrastructure", href: "/infrastructure", icon: Building2 },
       { title: "Inventory", href: "/inventory", icon: Package },
+      { title: "Holidays", href: "/holidays", icon: CalendarDays },
     ],
   },
   {
@@ -137,6 +142,16 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Driver Assignments", href: "/transportation/driver-assignments", icon: Users },
       { title: "Pickup Points", href: "/transportation/pickup-points", icon: MapPin },
       { title: "Transport Assignments", href: "/transportation/assignments", icon: Route },
+    ],
+  },
+  {
+    title: "Leave Management",
+    items: [
+      { title: "Leave Dashboard", href: "/leave", icon: CalendarClock },
+      { title: "Apply Leave", href: "/leave/apply", icon: FileText },
+      { title: "Leave Requests", href: "/leave/requests", icon: Clock },
+      { title: "Categories", href: "/leave/categories", icon: Tag },
+      { title: "Balances", href: "/leave/balances", icon: Users },
     ],
   },
   {
