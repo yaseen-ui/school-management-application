@@ -1,9 +1,20 @@
 import { apiClient } from "./client"
 import type { ApiResponse } from "./types"
 
-export type AttendanceContextType = "regular" | "exam" | "event" | "seminar" | "sports" | "assembly" | "lab" | "field_trip" | "other"
 export type AttendanceStatus = "present" | "absent" | "late" | "half_day" | "excused"
-export type AttendanceShift = "morning" | "afternoon" | "evening"
+export type AttendanceTypeCategory = "shift" | "period" | "exam"
+
+export interface AttendanceType {
+  id: string
+  tenantId: string
+  name: string
+  category: AttendanceTypeCategory
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  _count?: { sessions: number }
+}
 
 export interface AttendanceSession {
   id: string
@@ -11,25 +22,25 @@ export interface AttendanceSession {
   academicYearId: string
   sectionId: string
   takenById?: string | null
+  attendanceTypeId: string
   date: string
-  contextType: AttendanceContextType
-  contextName?: string | null
-  contextRefId?: string | null
-  contextRefType?: string | null
   periodId?: string | null
   sectionSubjectId?: string | null
-  shift?: AttendanceShift | null
+  examScheduleId?: string | null
+  shift?: string | null
   notes?: string | null
   createdAt: string
   updatedAt: string
   academicYear?: { id: string; name: string } | null
   section?: { id: string; sectionName: string } | null
+  attendanceType?: { id: string; name: string; category: string } | null
   takenBy?: { id: string; fullName: string } | null
   period?: { id: string; name: string; startTime: number; endTime: number } | null
   sectionSubject?: {
     id: string
     subject: { id: string; subjectName: string } | null
   } | null
+  examSchedule?: { id: string; name: string } | null
   marks?: AttendanceMarkWithStudent[] | null
   _count?: { marks: number; present: number } | null
 }
@@ -53,19 +64,39 @@ export interface AttendanceMarkWithStudent extends AttendanceMark {
   } | null
 }
 
+export interface CreateAttendanceTypeRequest {
+  name: string
+  category: AttendanceTypeCategory
+  sortOrder?: number
+  isActive?: boolean
+}
+
 export interface CreateAttendanceSessionRequest {
   academicYearId: string
   sectionId: string
+  attendanceTypeId: string
   date: string
   takenById?: string | null
-  contextType?: AttendanceContextType
-  contextName?: string | null
-  contextRefId?: string | null
-  contextRefType?: string | null
   periodId?: string | null
   sectionSubjectId?: string | null
-  shift?: AttendanceShift | null
+  examScheduleId?: string | null
+  shift?: string | null
   notes?: string | null
+}
+
+export interface MarkAttendanceRequest {
+  academicYearId: string
+  sectionId: string
+  attendanceTypeId: string
+  date: string
+  periodId?: string | null
+  examScheduleId?: string | null
+  shift?: string | null
+  marks: Array<{
+    enrollmentId: string
+    status: AttendanceStatus
+    remarks?: string | null
+  }>
 }
 
 export interface UpsertMarkRequest {
@@ -90,23 +121,51 @@ export interface StudentAttendanceRecord {
   status: AttendanceStatus
   remarks?: string | null
   date: string
-  contextType: AttendanceContextType
-  contextName?: string | null
+  attendanceType?: { id: string; name: string; category: string } | null
   period?: { id: string; name: string } | null
   subject?: { id: string; subjectName: string } | null
 }
 
-export const ATTENDANCE_CONTEXT_TYPES: { value: AttendanceContextType; label: string }[] = [
-  { value: "regular", label: "Regular" },
-  { value: "exam", label: "Exam" },
-  { value: "event", label: "Event" },
-  { value: "seminar", label: "Seminar" },
-  { value: "sports", label: "Sports" },
-  { value: "assembly", label: "Assembly" },
-  { value: "lab", label: "Lab" },
-  { value: "field_trip", label: "Field Trip" },
-  { value: "other", label: "Other" },
-]
+export interface AttendanceContextOptions {
+  attendanceType: { id: string; name: string; category: string }
+  options: Array<{
+    id: string
+    name: string
+    label: string
+    type?: string
+    startTime?: number
+    endTime?: number
+    sortOrder?: number
+  }>
+}
+
+export interface AttendanceRegisterResult {
+  enrollments: Array<{
+    enrollmentId: string
+    rollNumber: string | null
+    studentName: string
+  }>
+  activeTypes: string[]
+  attendance: Record<string, Record<string, Record<string, string>>>
+}
+
+export interface StudentAttendanceDetail {
+  enrollmentId: string
+  month: number
+  year: number
+  stats: {
+    total: number
+    present: number
+    absent: number
+    percentage: number
+  }
+  marks: Array<{
+    date: string
+    status: AttendanceStatus
+    attendanceType: string | null
+    remarks: string | null
+  }>
+}
 
 export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string; color: string }[] = [
   { value: "present", label: "Present", color: "text-green-600 bg-green-100" },
@@ -116,14 +175,36 @@ export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string; colo
   { value: "excused", label: "Excused", color: "text-blue-600 bg-blue-100" },
 ]
 
-export const ATTENDANCE_SHIFTS: { value: AttendanceShift; label: string }[] = [
-  { value: "morning", label: "Morning" },
-  { value: "afternoon", label: "Afternoon" },
-  { value: "evening", label: "Evening" },
+export const ATTENDANCE_TYPE_CATEGORIES: { value: AttendanceTypeCategory; label: string }[] = [
+  { value: "shift", label: "Shift" },
+  { value: "period", label: "Period" },
+  { value: "exam", label: "Exam" },
 ]
 
 export const attendanceApi = {
-  // Sessions
+  // ---- Attendance Types ----
+  getAllTypes: (filters?: Record<string, string>) => {
+    const params = filters ? new URLSearchParams(filters).toString() : ""
+    return apiClient.get<ApiResponse<AttendanceType[]>>(`/attendance/types${params ? `?${params}` : ""}`)
+  },
+
+  getTypeById: (id: string) => apiClient.get<ApiResponse<AttendanceType>>(`/attendance/types/${id}`),
+
+  createType: (data: CreateAttendanceTypeRequest) =>
+    apiClient.post<ApiResponse<AttendanceType>>("/attendance/types", data),
+
+  updateType: (id: string, data: Partial<CreateAttendanceTypeRequest>) =>
+    apiClient.put<ApiResponse<AttendanceType>>(`/attendance/types/${id}`, data),
+
+  deleteType: (id: string) => apiClient.delete<ApiResponse<null>>(`/attendance/types/${id}`),
+
+  // ---- Context Options ----
+  getContextOptions: (sectionId: string, attendanceTypeId: string) =>
+    apiClient.get<ApiResponse<AttendanceContextOptions>>(
+      `/attendance/context-options?sectionId=${sectionId}&attendanceTypeId=${attendanceTypeId}`,
+    ),
+
+  // ---- Sessions ----
   getAllSessions: (filters?: Record<string, string>) => {
     const params = filters ? new URLSearchParams(filters).toString() : ""
     return apiClient.get<ApiResponse<{ columns: Array<{ field: string; headerName: string }>; rows: AttendanceSession[] }>>(
@@ -141,7 +222,11 @@ export const attendanceApi = {
 
   deleteSession: (id: string) => apiClient.delete<ApiResponse<null>>(`/attendance/sessions/${id}`),
 
-  // Marks
+  // Combined mark (create session + marks in one call)
+  markAttendance: (data: MarkAttendanceRequest) =>
+    apiClient.put<ApiResponse<{ session: AttendanceSession; results: any[]; errors: any[] }>>("/attendance/sessions", data),
+
+  // ---- Marks ----
   getMarksForSession: (sessionId: string) =>
     apiClient.get<ApiResponse<AttendanceMarkWithStudent[]>>(`/attendance/marks/session/${sessionId}`),
 
@@ -156,7 +241,7 @@ export const attendanceApi = {
 
   deleteMark: (id: string) => apiClient.delete<ApiResponse<null>>(`/attendance/marks/${id}`),
 
-  // Reports
+  // ---- Reports ----
   getAttendanceSummary: (filters?: Record<string, string>) => {
     const params = filters ? new URLSearchParams(filters).toString() : ""
     return apiClient.get<ApiResponse<AttendanceSummary>>(`/attendance/summary${params ? `?${params}` : ""}`)
@@ -168,4 +253,15 @@ export const attendanceApi = {
       `/attendance/student/${enrollmentId}${params ? `?${params}` : ""}`,
     )
   },
+
+  // ---- Register / Detail ----
+  getAttendanceRegister: (sectionId: string, month: number, year: number) =>
+    apiClient.get<ApiResponse<AttendanceRegisterResult>>(
+      `/attendance/register?sectionId=${sectionId}&month=${month}&year=${year}`,
+    ),
+
+  getStudentAttendanceDetail: (enrollmentId: string, month: number, year: number) =>
+    apiClient.get<ApiResponse<StudentAttendanceDetail>>(
+      `/attendance/register/student/${enrollmentId}?month=${month}&year=${year}`,
+    ),
 }

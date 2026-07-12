@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar, DoorOpen, User } from "lucide-react"
+import { Users, Plus, MoreHorizontal, Eye, Pencil, Trash2, Calendar, DoorOpen, User, ListOrdered } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { DynamicDataTable, type ApiColumn } from "@/components/shared/dynamic-data-table"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -24,6 +24,7 @@ import { useGrades } from "@/hooks/use-grades"
 import { toast } from "@/components/ui/sonner"
 import { ViewSectionDialog } from "@/components/sections/view-section-dialog"
 import { DeleteSectionDialog } from "@/components/sections/delete-section-dialog"
+import { GenerateRollNumbersDialog } from "@/components/sections/generate-roll-numbers-dialog"
 import type { Section } from "@/lib/api/sections"
 
 export default function SectionsPage() {
@@ -39,6 +40,7 @@ export default function SectionsPage() {
 
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isRollNumbersOpen, setIsRollNumbersOpen] = useState(false)
   const [selectedSection, setSelectedSection] = useState<Section | null>(null)
 
   const courses: any[] = (coursesData as any)?.data?.rows || (coursesData as any)?.data || []
@@ -171,6 +173,17 @@ export default function SectionsPage() {
           Edit
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedSection(row)
+            setIsRollNumbersOpen(true)
+          }}
+          disabled={row.rollNumbersGenerated === true}
+        >
+          <ListOrdered className="mr-2 h-4 w-4" />
+          {row.rollNumbersGenerated ? "Roll Numbers Generated" : "Generate Roll Numbers"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(row)}>
           <Trash2 className="mr-2 h-4 w-4" />
           Delete
@@ -270,6 +283,7 @@ export default function SectionsPage() {
 
       <ViewSectionDialog open={isViewOpen} onOpenChange={setIsViewOpen} section={selectedSection} />
       <DeleteSectionDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} section={selectedSection} />
+      <GenerateRollNumbersDialog open={isRollNumbersOpen} onOpenChange={setIsRollNumbersOpen} section={selectedSection} />
     </motion.div>
   )
 }

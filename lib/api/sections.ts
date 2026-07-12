@@ -25,6 +25,7 @@ export interface Section {
   sectionName: string
   roomId?: string | null
   sectionInChargeId?: string | null
+  rollNumbersGenerated?: boolean
   createdAt: string
   updatedAt: string
   grade?: {
@@ -83,6 +84,12 @@ export interface SectionListData {
   }>
 }
 
+export interface RollNumbersResult {
+  success: boolean
+  count: number
+  message: string
+}
+
 export const sectionsApi = {
   list: (gradeId?: string, courseId?: string) => {
     const params = new URLSearchParams()
@@ -100,4 +107,7 @@ export const sectionsApi = {
   update: (id: string, data: UpdateSectionRequest) => apiClient.put<ApiResponse<Section>>(`/sections/${id}`, data),
 
   delete: (id: string) => apiClient.delete<ApiResponse<void>>(`/sections/${id}`),
+
+  generateRollNumbers: (id: string) =>
+    apiClient.post<ApiResponse<RollNumbersResult>>(`/sections/${id}/generate-roll-numbers`),
 }

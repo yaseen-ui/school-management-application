@@ -67,3 +67,20 @@ export function useDeleteSection() {
     },
   })
 }
+
+export function useGenerateRollNumbers() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (sectionId: string) => sectionsApi.generateRollNumbers(sectionId),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["sections"] })
+      toast.success(data?.data?.message || "Roll numbers generated successfully")
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to generate roll numbers", {
+        description: error.message,
+      })
+    },
+  })
+}
