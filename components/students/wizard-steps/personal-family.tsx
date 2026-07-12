@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function StudentPersonalFamily() {
   const { register, watch, setValue } = useFormContext()
@@ -70,7 +71,22 @@ export function StudentPersonalFamily() {
 
       {/* Father's Details */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Father's Details</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Father's Details</h3>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={watch("isFatherPrimary") || false}
+              onCheckedChange={(checked) => {
+                setValue("isFatherPrimary", checked)
+                if (checked) {
+                  setValue("isMotherPrimary", false)
+                  setValue("isGuardianPrimary", false)
+                }
+              }}
+            />
+            <span className="text-sm text-muted-foreground">Primary Parent</span>
+          </label>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="fatherName">Full Name</Label>
@@ -85,6 +101,10 @@ export function StudentPersonalFamily() {
             <Input id="fatherPhone" type="tel" {...register("fatherPhone")} />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="fatherEmail">Email</Label>
+            <Input id="fatherEmail" type="email" {...register("fatherEmail")} />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="fatherAadhaar">Aadhaar Number</Label>
             <Input id="fatherAadhaar" {...register("fatherAadhaar")} />
           </div>
@@ -93,7 +113,22 @@ export function StudentPersonalFamily() {
 
       {/* Mother's Details */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Mother's Details</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Mother's Details</h3>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={watch("isMotherPrimary") || false}
+              onCheckedChange={(checked) => {
+                setValue("isMotherPrimary", checked)
+                if (checked) {
+                  setValue("isFatherPrimary", false)
+                  setValue("isGuardianPrimary", false)
+                }
+              }}
+            />
+            <span className="text-sm text-muted-foreground">Primary Parent</span>
+          </label>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="motherName">Full Name</Label>
@@ -108,6 +143,10 @@ export function StudentPersonalFamily() {
             <Input id="motherPhone" type="tel" {...register("motherPhone")} />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="motherEmail">Email</Label>
+            <Input id="motherEmail" type="email" {...register("motherEmail")} />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="motherAadhaar">Aadhaar Number</Label>
             <Input id="motherAadhaar" {...register("motherAadhaar")} />
           </div>
@@ -116,7 +155,22 @@ export function StudentPersonalFamily() {
 
       {/* Guardian Details (Optional) */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Guardian Details (Optional)</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Guardian Details (Optional)</h3>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={watch("isGuardianPrimary") || false}
+              onCheckedChange={(checked) => {
+                setValue("isGuardianPrimary", checked)
+                if (checked) {
+                  setValue("isFatherPrimary", false)
+                  setValue("isMotherPrimary", false)
+                }
+              }}
+            />
+            <span className="text-sm text-muted-foreground">Primary Parent</span>
+          </label>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="guardianName">Full Name</Label>
@@ -129,6 +183,18 @@ export function StudentPersonalFamily() {
           <div className="space-y-2">
             <Label htmlFor="guardianContact">Phone Number</Label>
             <Input id="guardianContact" type="tel" {...register("guardianContact")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="guardianEmail">Email</Label>
+            <Input id="guardianEmail" type="email" {...register("guardianEmail")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="guardianOccupation">Occupation</Label>
+            <Input id="guardianOccupation" {...register("guardianOccupation")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="guardianAadhaar">Aadhaar Number</Label>
+            <Input id="guardianAadhaar" {...register("guardianAadhaar")} />
           </div>
         </div>
       </div>

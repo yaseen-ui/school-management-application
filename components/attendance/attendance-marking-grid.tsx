@@ -31,7 +31,7 @@ export function AttendanceMarkingGrid({ session }: AttendanceMarkingGridProps) {
 
   // Filter students by sectionId and include enrollments
   const students: any[] = useMemo(() => {
-    const allStudents: any[] = ((studentsData as any)?.data?.rows as any[]) || (studentsData as unknown as any[]) || []
+    const allStudents: any[] = ((studentsData as any)?.rows as any[]) || (Array.isArray(studentsData) ? studentsData as any[] : [])
     return allStudents.filter((s: any) => s.sectionId === session.sectionId)
   }, [studentsData, session.sectionId])
 

@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth-store"
 export function useUpload() {
   const queryClient = useQueryClient()
   const tenantInfo = useAuthStore((state) => state.tenantInfo)
+  const user = useAuthStore((state) => state.user)
 
   const uploadFile = useMutation({
     mutationFn: async ({
@@ -13,24 +14,34 @@ export function useUpload() {
       category,
       entityId,
       documentType,
+      uploadFor,
       onProgress,
     }: {
       file: File
       category: string
       entityId: string
       documentType: string
+      uploadFor?: "company"
       onProgress?: (progress: number) => void
     }) => {
-      if (!tenantInfo?.id) {
-        throw new Error("Tenant ID not found")
+      // Determine the upload context:
+      // 1. Explicit uploadFor="company" — company-level upload
+      // 2. user.userType === "company" — auto-detect company user (no tenant)
+      // 3. Otherwise — tenant upload, requires tenantInfo.id
+      const isCompanyUpload = uploadFor === "company" || user?.userType === "company"
+      const tenantId = isCompanyUpload ? undefined : tenantInfo?.id
+
+      if (!isCompanyUpload && !tenantId) {
+        throw new Error("Tenant ID not found. Provide uploadFor='company' for company-level uploads.")
       }
 
-      console.log("[v0] Starting upload process:", { category, entityId, documentType })
+      console.log("[v0] Starting upload process:", { category, entityId, documentType, uploadFor, isCompanyUpload })
 
       // Step 1: Get presigned URL
       onProgress?.(10)
       const { data: urlData } = await uploadsApi.getPresignedUrl({
-        tenantId: tenantInfo.id,
+        uploadFor: isCompanyUpload ? "company" : undefined,
+        tenantId: tenantId ?? undefined,
         category,
         path: file.name,
         mimeType: file.type,
@@ -47,7 +58,8 @@ export function useUpload() {
 
       // Step 3: Store metadata
       const { data: metadata } = await uploadsApi.storeMetadata({
-        tenantId: tenantInfo.id,
+        uploadFor: isCompanyUpload ? "company" : undefined,
+        tenantId: tenantId ?? undefined,
         category,
         entityId,
         documentType,
@@ -72,50 +84,61 @@ export function useUpload() {
   return { uploadFile }
 }
 
-export function useGetUploads(category: string, entityId: string) {
+export function useGetUploads(category: string, entityId: string, uploadFor?: "company") {
   const tenantInfo = useAuthStore((state) => state.tenantInfo)
+  const user = useAuthStore((state) => state.user)
+  const isCompanyUpload = uploadFor === "company" || user?.userType === "company"
+  const tenantId: string | null = isCompanyUpload ? null : (tenantInfo?.id ?? null)
 
   return useQuery({
-    queryKey: ["uploads", tenantInfo?.id, category, entityId],
+    queryKey: ["uploads", uploadFor || tenantId, category, entityId],
     queryFn: async () => {
-      if (!tenantInfo?.id) throw new Error("Tenant ID not found")
-      const response = await uploadsApi.getUploads(tenantInfo.id, category, entityId)
+      if (!isCompanyUpload && !tenantId) throw new Error("Tenant ID not found")
+      const response = await uploadsApi.getUploads(tenantId, category, entityId, uploadFor || (isCompanyUpload ? "company" : undefined))
       return response.data
     },
-    enabled: !!tenantInfo?.id && !!category && !!entityId,
+    enabled: (!!isCompanyUpload || !!tenantId) && !!category && !!entityId,
   })
 }
 
-export function useGetUpload(category: string, entityId: string, documentType: string) {
+export function useGetUpload(category: string, entityId: string, documentType: string, uploadFor?: "company") {
   const tenantInfo = useAuthStore((state) => state.tenantInfo)
+  const user = useAuthStore((state) => state.user)
+  const isCompanyUpload = uploadFor === "company" || user?.userType === "company"
+  const tenantId: string | null = isCompanyUpload ? null : (tenantInfo?.id ?? null)
 
   return useQuery({
-    queryKey: ["upload", tenantInfo?.id, category, entityId, documentType],
+    queryKey: ["upload", uploadFor || tenantId, category, entityId, documentType],
     queryFn: async () => {
-      if (!tenantInfo?.id) throw new Error("Tenant ID not found")
-      const response = await uploadsApi.getUpload(tenantInfo.id, category, entityId, documentType)
+      if (!isCompanyUpload && !tenantId) throw new Error("Tenant ID not found")
+      const response = await uploadsApi.getUpload(tenantId, category, entityId, documentType, uploadFor || (isCompanyUpload ? "company" : undefined))
       return response.data
     },
-    enabled: !!tenantInfo?.id && !!category && !!entityId && !!documentType,
+    enabled: (!!isCompanyUpload || !!tenantId) && !!category && !!entityId && !!documentType,
   })
 }
 
 export function useDeleteUpload() {
   const queryClient = useQueryClient()
   const tenantInfo = useAuthStore((state) => state.tenantInfo)
+  const user = useAuthStore((state) => state.user)
 
   return useMutation({
     mutationFn: async ({
       category,
       entityId,
       fileId,
+      uploadFor,
     }: {
       category: string
       entityId: string
       fileId: string
+      uploadFor?: "company"
     }) => {
-      if (!tenantInfo?.id) throw new Error("Tenant ID not found")
-      await uploadsApi.deleteUpload(tenantInfo.id, category, entityId, fileId)
+      const isCompanyUpload = uploadFor === "company" || user?.userType === "company"
+      const tenantId: string | null = isCompanyUpload ? null : (tenantInfo?.id ?? null)
+      if (!isCompanyUpload && !tenantId) throw new Error("Tenant ID not found")
+      await uploadsApi.deleteUpload(tenantId, category, entityId, fileId, uploadFor || (isCompanyUpload ? "company" : undefined))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["uploads"] })

@@ -10,8 +10,10 @@ import { accountCategoriesApi, accountTransactionsApi, accountSummaryApi } from 
 import type { AccountCategory, AccountTransaction, LedgerSummary } from "@/lib/api/accounts"
 import { teachersApi } from "@/lib/api/teachers"
 import { studentsApi } from "@/lib/api/students"
+import { parentsApi } from "@/lib/api/parents"
 import type { Teacher } from "@/lib/api/teachers"
 import type { Student } from "@/lib/api/students"
+import type { Parent } from "@/lib/api/parents"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -241,6 +243,7 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
   const [loading, setLoading] = useState(false)
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [students, setStudents] = useState<Student[]>([])
+  const [parents, setParents] = useState<Parent[]>([])
   const [loadingParty, setLoadingParty] = useState(false)
   const [form, setForm] = useState({
     categoryId: "",
@@ -275,9 +278,20 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
       }).finally(() => {
         setLoadingParty(false)
       })
+    } else if (form.partyType === "parent") {
+      setLoadingParty(true)
+      parentsApi.getAll().then((res) => {
+        const data = res.data as any
+        setParents(data || [])
+      }).catch(() => {
+        toast.error("Failed to load parents")
+      }).finally(() => {
+        setLoadingParty(false)
+      })
     } else {
       setTeachers([])
       setStudents([])
+      setParents([])
     }
     // Reset party name/id when party type changes
     setForm((prev) => ({ ...prev, partyName: "", partyId: "" }))
@@ -292,12 +306,19 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
         partyId: selectedId,
         partyName: teacher ? teacher.fullName : "",
       }))
-    } else if (form.partyType === "student") {
+      } else if (form.partyType === "student") {
       const student = students.find((s) => s.id === selectedId)
       setForm((prev) => ({
         ...prev,
         partyId: selectedId,
         partyName: student ? `${student.firstName} ${student.lastName}` : "",
+      }))
+    } else if (form.partyType === "parent") {
+      const parent = parents.find((p) => p.id === selectedId)
+      setForm((prev) => ({
+        ...prev,
+        partyId: selectedId,
+        partyName: parent ? parent.fullName : "",
       }))
     }
   }
@@ -437,9 +458,11 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
                     ? "Select Teacher"
                     : form.partyType === "student"
                     ? "Select Student"
+                    : form.partyType === "parent"
+                    ? "Select Parent"
                     : "Party Name"}
                 </label>
-                {form.partyType === "teacher" || form.partyType === "student" ? (
+                {(form.partyType === "teacher" || form.partyType === "student" || form.partyType === "parent") ? (
                   <select
                     className="w-full border rounded-md px-3 py-2 text-sm"
                     value={form.partyId}
@@ -459,6 +482,12 @@ function CreateTransactionDialog({ open, onClose, onSuccess, categories }: {
                       students.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.firstName} {s.lastName}
+                        </option>
+                      ))}
+                    {form.partyType === "parent" &&
+                      parents.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.fullName}
                         </option>
                       ))}
                   </select>

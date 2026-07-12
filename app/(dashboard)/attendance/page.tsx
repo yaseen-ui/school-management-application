@@ -36,8 +36,8 @@ export default function AttendancePage() {
   const { data: academicYearsData } = useAcademicYears()
   const deleteSession = useDeleteAttendanceSession()
 
-  const sections: any[] = ((sectionsData as any)?.data?.rows as any[]) || (sectionsData as unknown as any[]) || []
-  const academicYears: any[] = ((academicYearsData as any)?.data?.rows as any[]) || (academicYearsData as unknown as any[]) || []
+  const sections: any[] = ((sectionsData as any)?.data?.rows as any[]) || (Array.isArray(sectionsData) ? sectionsData as any[] : [])
+  const academicYears: any[] = ((academicYearsData as any)?.data?.rows as any[]) || (Array.isArray(academicYearsData) ? academicYearsData as any[] : [])
 
   const [selectedSectionId, setSelectedSectionId] = useState<string>("")
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>("")

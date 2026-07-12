@@ -40,6 +40,7 @@ import {
   CalendarDays,
   Tag,
   Clock,
+  Fingerprint,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -70,7 +71,10 @@ const companyNavGroups: NavGroup[] = [
   },
   {
     title: "System",
-    items: [{ title: "Settings", href: "/settings", icon: Settings }],
+    items: [
+      { title: "ID Sequences", href: "/settings/id-sequences", icon: Fingerprint },
+      { title: "Settings", href: "/settings", icon: Settings },
+    ],
   },
 ]
 
@@ -170,7 +174,10 @@ const tenantNavGroups: NavGroup[] = [
   },
   {
     title: "System",
-    items: [{ title: "Settings", href: "/settings", icon: Settings }],
+    items: [
+      { title: "ID Sequences", href: "/settings/id-sequences", icon: Fingerprint },
+      { title: "Settings", href: "/settings", icon: Settings },
+    ],
   },
 ]
 

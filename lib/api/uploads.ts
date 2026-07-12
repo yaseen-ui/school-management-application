@@ -1,7 +1,8 @@
 import { apiClient } from "./client"
 
 export interface PresignedUrlRequest {
-  tenantId: string
+  uploadFor?: "company"
+  tenantId?: string
   category: string
   path: string
   mimeType: string
@@ -13,7 +14,8 @@ export interface PresignedUrlResponse {
 }
 
 export interface StoreMetadataRequest {
-  tenantId: string
+  uploadFor?: "company"
+  tenantId?: string
   category: string
   entityId: string
   documentType: string
@@ -22,11 +24,12 @@ export interface StoreMetadataRequest {
 
 export interface Upload {
   id: string
-  tenantId: string
-  category: string
+  tenantId: string | null
+  entityType: string
   entityId: string
   documentType: string
-  s3Url: string
+  fileUrl: string
+  s3Url?: string
   uploadedAt: string
 }
 
@@ -71,17 +74,26 @@ export const uploadsApi = {
   },
 
   // Get all uploads for an entity
-  getUploads: async (tenantId: string, category: string, entityId: string) => {
-    return apiClient.get<GetUploadsResponse>(`/uploads/${tenantId}/${category}/${entityId}`)
+  getUploads: async (tenantId: string | null, category: string, entityId: string, uploadFor?: "company") => {
+    const params = new URLSearchParams()
+    if (uploadFor) params.set("uploadFor", uploadFor)
+    if (tenantId) params.set("tenantId", tenantId)
+    return apiClient.get<GetUploadsResponse>(`/uploads/${tenantId || uploadFor}/${category}/${entityId}?${params.toString()}`)
   },
 
   // Get specific upload by document type
-  getUpload: async (tenantId: string, category: string, entityId: string, documentType: string) => {
-    return apiClient.get<GetUploadResponse>(`/uploads/${tenantId}/${category}/${entityId}/${documentType}`)
+  getUpload: async (tenantId: string | null, category: string, entityId: string, documentType: string, uploadFor?: "company") => {
+    const params = new URLSearchParams()
+    if (uploadFor) params.set("uploadFor", uploadFor)
+    if (tenantId) params.set("tenantId", tenantId)
+    return apiClient.get<GetUploadResponse>(`/uploads/${tenantId || uploadFor}/${category}/${entityId}/${documentType}?${params.toString()}`)
   },
 
   // Delete upload
-  deleteUpload: async (tenantId: string, category: string, entityId: string, fileId: string) => {
-    return apiClient.delete(`/uploads/${tenantId}/${category}/${entityId}/${fileId}`)
+  deleteUpload: async (tenantId: string | null, category: string, entityId: string, fileId: string, uploadFor?: "company") => {
+    const params = new URLSearchParams()
+    if (uploadFor) params.set("uploadFor", uploadFor)
+    if (tenantId) params.set("tenantId", tenantId)
+    return apiClient.delete(`/uploads/${tenantId || uploadFor}/${category}/${entityId}/${fileId}?${params.toString()}`)
   },
 }

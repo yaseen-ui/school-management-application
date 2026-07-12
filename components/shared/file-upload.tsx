@@ -11,64 +11,17 @@ import { useUpload, useDeleteUpload } from "@/hooks/use-upload"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface FileUploadProps {
-  /**
-   * Category for organizing uploads (e.g., "students", "teachers", "tenants")
-   */
   category: string
-
-  /**
-   * Entity ID (e.g., student ID, teacher ID)
-   */
   entityId: string
-
-  /**
-   * Document type (e.g., "profile_picture", "birth_certificate")
-   */
   documentType: string
-
-  /**
-   * Existing file URL if already uploaded
-   */
   value?: string
-
-  /**
-   * Existing file ID for deletion
-   */
   fileId?: string
-
-  /**
-   * Callback when upload completes successfully
-   */
   onUploadComplete?: (url: string) => void
-
-  /**
-   * Callback when file is deleted
-   */
   onDelete?: () => void
-
-  /**
-   * Accepted file types (e.g., "image/*", "application/pdf")
-   */
   accept?: string
-
-  /**
-   * Maximum file size in bytes (default: 5MB)
-   */
   maxSize?: number
-
-  /**
-   * Custom className for styling
-   */
   className?: string
-
-  /**
-   * Show as compact mode (smaller upload area)
-   */
   compact?: boolean
-
-  /**
-   * Disable upload functionality
-   */
   disabled?: boolean
 }
 
@@ -81,7 +34,7 @@ export function FileUpload({
   onUploadComplete,
   onDelete,
   accept = "image/*,application/pdf",
-  maxSize = 5 * 1024 * 1024, // 5MB
+  maxSize = 5 * 1024 * 1024,
   className,
   compact = false,
   disabled = false,
@@ -99,14 +52,12 @@ export function FileUpload({
   const isDeleting = deleteUpload.isPending
 
   const handleFileSelect = async (file: File) => {
-    // Validate file size
     if (file.size > maxSize) {
       const sizeMB = (maxSize / (1024 * 1024)).toFixed(1)
       alert(`File size must be less than ${sizeMB}MB`)
       return
     }
 
-    // Validate file type
     const acceptedTypes = accept.split(",").map((t) => t.trim())
     const isValidType = acceptedTypes.some((type) => {
       if (type.endsWith("/*")) {
@@ -121,7 +72,6 @@ export function FileUpload({
       return
     }
 
-    // Upload file
     uploadFile.mutate(
       {
         file,
@@ -132,7 +82,7 @@ export function FileUpload({
       },
       {
         onSuccess: (data) => {
-          onUploadComplete?.(data.s3Url)
+          onUploadComplete?.(data.fileUrl)
           setUploadProgress(0)
         },
       },
@@ -142,7 +92,6 @@ export function FileUpload({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-
     const file = e.dataTransfer.files[0]
     if (file) {
       handleFileSelect(file)
@@ -158,7 +107,6 @@ export function FileUpload({
 
   const handleDelete = () => {
     if (!fileId) return
-
     if (confirm("Are you sure you want to delete this file?")) {
       deleteUpload.mutate(
         { category, entityId, fileId },
@@ -178,7 +126,6 @@ export function FileUpload({
   }
 
   if (value && !isUploading) {
-    // Show uploaded file preview
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -189,7 +136,6 @@ export function FileUpload({
           className,
         )}
       >
-        {/* Preview */}
         <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
           {isImage ? (
             <img src={value || "/placeholder.svg"} alt="Uploaded file" className="h-full w-full object-cover" />
@@ -199,8 +145,6 @@ export function FileUpload({
             <FileText className="h-12 w-12 text-muted-foreground" />
           )}
         </div>
-
-        {/* Actions overlay */}
         <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <Button type="button" size="icon" variant="secondary" onClick={handleView} disabled={isDeleting}>
             <Eye className="h-4 w-4" />
@@ -217,7 +161,6 @@ export function FileUpload({
 
   return (
     <div className={cn("space-y-2", className)}>
-      {/* Upload area */}
       <div
         onDrop={handleDrop}
         onDragOver={(e) => {
@@ -242,7 +185,6 @@ export function FileUpload({
           className="hidden"
           disabled={disabled || isUploading}
         />
-
         <AnimatePresence mode="wait">
           {isUploading ? (
             <motion.div
