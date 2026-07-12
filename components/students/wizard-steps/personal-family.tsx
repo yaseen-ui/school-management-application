@@ -21,6 +21,17 @@ export function StudentPersonalFamily() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="pen">PEN (Permanent Education Number)</Label>
+            <Input id="pen" placeholder="Enter PEN" {...register("pen")} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="apaarId">APAAR ID</Label>
+            <Input id="apaarId" placeholder="Enter APAAR ID" {...register("apaarId")} />
+            <p className="text-xs text-muted-foreground">Auto-generated lifelong identifier based on PEN</p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="casteCategory">Caste Category</Label>
             <Select
               value={watch("casteCategory")}

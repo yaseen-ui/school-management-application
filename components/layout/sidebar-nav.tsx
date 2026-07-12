@@ -41,6 +41,7 @@ import {
   Tag,
   Clock,
   Fingerprint,
+  Upload,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -87,6 +88,7 @@ const tenantNavGroups: NavGroup[] = [
     title: "Academics",
     items: [
       { title: "Students", href: "/students", icon: GraduationCap },
+      { title: "Import Data", href: "/imports", icon: Upload },
       { title: "Courses", href: "/courses", icon: BookOpen },
       { title: "Subjects", href: "/subjects", icon: Layers },
       { title: "Sections", href: "/sections", icon: ClipboardList },

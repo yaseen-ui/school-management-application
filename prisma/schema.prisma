@@ -1489,6 +1489,7 @@ model Parent {
 
   @@unique([userId, tenantId], name: "parent_user_tenant_unique")
   @@unique([id, tenantId], name: "parent_tenant_identity")
+  @@unique([tenantId, phone], name: "parent_phone_per_tenant")
   @@index([tenantId])
   @@index([tenantId, phone])
   @@index([tenantId, email])
@@ -1757,6 +1758,8 @@ model Student {
   id       String @id @default(uuid())
   tenantId String
   admissionNumber String?
+  pen               String? // Permanent Education Number — issued first, unique per tenant
+  apaarId           String? // APAAR ID — generated based on PEN, unique per tenant
   firstName   String
   middleName  String?
   lastName    String
@@ -1812,6 +1815,8 @@ model Student {
   leaveRequests LeaveRequest[]
   @@unique([tenantId, aadhaarNumber], name: "student_aadhaar_per_tenant")
   @@unique([tenantId, admissionNumber], name: "student_admission_per_tenant")
+  @@unique([tenantId, pen], name: "student_pen_per_tenant")
+  @@unique([tenantId, apaarId], name: "student_apaar_per_tenant")
   @@unique([id, tenantId], name: "student_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, gradeId])

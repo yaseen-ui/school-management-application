@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Check, X, User, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react"
+import { Check, X, User, Loader2, Send } from "lucide-react"
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -11,21 +11,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 
-import { attendanceApi, ATTENDANCE_TYPE_CATEGORIES, type AttendanceType, type AttendanceStatus } from "@/lib/api/attendance"
+import { attendanceApi, ATTENDANCE_TYPE_CATEGORIES, type AttendanceType } from "@/lib/api/attendance"
 import { useSections } from "@/hooks/use-sections"
 import { useAcademicYears } from "@/hooks/use-academic-years"
 import { useStudents } from "@/hooks/use-students"
+import { useCourses } from "@/hooks/use-courses"
+import { useGrades } from "@/hooks/use-grades"
 import { toast } from "@/components/ui/sonner"
-import { useQuery, useMutation } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
 export function AttendanceMarkingPage() {
+  const { data: coursesData } = useCourses()
+  const { data: gradesData } = useGrades()
   const { data: sectionsData } = useSections()
   const { data: academicYearsData } = useAcademicYears()
   const { data: studentsData } = useStudents()
 
-  const sections = ((sectionsData as any)?.data?.rows as any[]) || (Array.isArray(sectionsData) ? (sectionsData as any[]) : [])
+  const courses: any[] = ((coursesData as any)?.data?.rows as any[]) || (Array.isArray(coursesData) ? (coursesData as any[]) : [])
+  const grades: any[] = ((gradesData as any)?.data?.rows as any[]) || (Array.isArray(gradesData) ? (gradesData as any[]) : [])
+  const sections: any[] = ((sectionsData as any)?.data?.rows as any[]) || (Array.isArray(sectionsData) ? (sectionsData as any[]) : [])
   const academicYears: any[] = Array.isArray(academicYearsData) ? academicYearsData : ((academicYearsData as any)?.data as any)?.rows || (academicYearsData as any) || []
 
+  const [selectedCourseId, setSelectedCourseId] = useState("")
+  const [selectedGradeId, setSelectedGradeId] = useState("")
   const [selectedSectionId, setSelectedSectionId] = useState("")
   const [selectedTypeId, setSelectedTypeId] = useState("")
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"))
@@ -37,7 +45,16 @@ export function AttendanceMarkingPage() {
 
   const activeAcademicYear = useMemo(() => academicYears.find((y: any) => y.status === "active"), [academicYears])
 
-  // Fetch attendance types
+  const filteredGrades = useMemo(() => {
+    if (!selectedCourseId) return []
+    return grades.filter((g: any) => g.courseId === selectedCourseId)
+  }, [grades, selectedCourseId])
+
+  const filteredSections = useMemo(() => {
+    if (!selectedGradeId) return []
+    return sections.filter((s: any) => s.gradeId === selectedGradeId)
+  }, [sections, selectedGradeId])
+
   const { data: typesData } = useQuery({
     queryKey: ["attendance-types"],
     queryFn: async () => {
@@ -46,19 +63,15 @@ export function AttendanceMarkingPage() {
     },
   })
   const types: AttendanceType[] = Array.isArray(typesData) ? typesData : []
-
   const selectedType = types.find((t) => t.id === selectedTypeId)
 
-  // Fetch context options when period/exam type is selected
   const { data: contextOptions } = useQuery({
     queryKey: ["context-options", selectedSectionId, selectedTypeId],
     queryFn: () => attendanceApi.getContextOptions(selectedSectionId, selectedTypeId),
     enabled: !!selectedSectionId && !!selectedTypeId && (selectedType?.category === "period" || selectedType?.category === "exam"),
   })
-
   const options = (contextOptions as any)?.data?.options || (contextOptions as any)?.options || []
 
-  // Filter students by section
   const students = useMemo(() => {
     const all: any[] = ((studentsData as any)?.rows as any[]) || (Array.isArray(studentsData) ? (studentsData as any[]) : [])
     if (!selectedSectionId) return []
@@ -107,7 +120,6 @@ export function AttendanceMarkingPage() {
       }
       if (selectedPeriodId) payload.periodId = selectedPeriodId
       if (selectedExamScheduleId) payload.examScheduleId = selectedExamScheduleId
-
       await attendanceApi.markAttendance(payload)
       toast.success("Attendance submitted successfully")
       setMarks({})
@@ -124,35 +136,42 @@ export function AttendanceMarkingPage() {
 
   return (
     <div className="space-y-4 max-w-lg mx-auto">
-      {/* Selection Bar */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Course</label>
+              <Select value={selectedCourseId} onValueChange={(v) => { setSelectedCourseId(v); setSelectedGradeId(""); setSelectedSectionId(""); setCurrentIndex(0); setMarks({}) }}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Select course" /></SelectTrigger>
+                <SelectContent>
+                  {courses.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.courseName}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Grade</label>
+              <Select value={selectedGradeId} onValueChange={(v) => { setSelectedGradeId(v); setSelectedSectionId(""); setCurrentIndex(0); setMarks({}) }} disabled={!selectedCourseId}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder={selectedCourseId ? "Select grade" : "Select course first"} /></SelectTrigger>
+                <SelectContent>
+                  {filteredGrades.map((g: any) => (<SelectItem key={g.id} value={g.id}>{g.gradeName}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Section</label>
-              <Select value={selectedSectionId} onValueChange={(v) => { setSelectedSectionId(v); setCurrentIndex(0); setMarks({}) }}>
-                <SelectTrigger className="h-9 mt-1">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
+              <Select value={selectedSectionId} onValueChange={(v) => { setSelectedSectionId(v); setCurrentIndex(0); setMarks({}) }} disabled={!selectedGradeId}>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder={selectedGradeId ? "Select section" : "Select grade first"} /></SelectTrigger>
                 <SelectContent>
-                  {sections.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>{s.sectionName}</SelectItem>
-                  ))}
+                  {filteredSections.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.sectionName}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Type</label>
               <Select value={selectedTypeId} onValueChange={(v) => { setSelectedTypeId(v); setSelectedPeriodId(""); setSelectedExamScheduleId("") }}>
-                <SelectTrigger className="h-9 mt-1">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
+                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} ({ATTENDANCE_TYPE_CATEGORIES.find((c) => c.value === t.category)?.label || t.category})
-                    </SelectItem>
-                  ))}
+                  {types.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name} ({ATTENDANCE_TYPE_CATEGORIES.find((c) => c.value === t.category)?.label || t.category})</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -167,9 +186,7 @@ export function AttendanceMarkingPage() {
                 <label className="text-xs font-medium text-muted-foreground">Period</label>
                 <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
                   <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Select period" /></SelectTrigger>
-                  <SelectContent>
-                    {options.map((o: any) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}
-                  </SelectContent>
+                  <SelectContent>{options.map((o: any) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}</SelectContent>
                 </Select>
               </div>
             )}
@@ -178,9 +195,7 @@ export function AttendanceMarkingPage() {
                 <label className="text-xs font-medium text-muted-foreground">Exam</label>
                 <Select value={selectedExamScheduleId} onValueChange={setSelectedExamScheduleId}>
                   <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Select exam" /></SelectTrigger>
-                  <SelectContent>
-                    {options.map((o: any) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}
-                  </SelectContent>
+                  <SelectContent>{options.map((o: any) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}</SelectContent>
                 </Select>
               </div>
             )}
@@ -188,7 +203,6 @@ export function AttendanceMarkingPage() {
         </CardContent>
       </Card>
 
-      {/* Student Card */}
       {totalStudents === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -198,103 +212,54 @@ export function AttendanceMarkingPage() {
         </Card>
       ) : (
         <>
-          {/* Progress Dots */}
           <div className="flex justify-center gap-1.5 flex-wrap">
-            {students.map((s, i) => {
+            {students.map((s: any, i: number) => {
               const status = marks[s.enrollmentId]
               return (
-                <button
-                  key={s.enrollmentId}
-                  onClick={() => setCurrentIndex(i)}
-                  className={`w-3 h-3 rounded-full transition-all ${
-                    i === currentIndex ? "ring-2 ring-primary scale-125" : ""
-                  } ${status === "present" ? "bg-green-500" : status === "absent" ? "bg-red-500" : "bg-muted-foreground/30"}`}
+                <button key={s.enrollmentId} onClick={() => setCurrentIndex(i)}
+                  className={`w-3 h-3 rounded-full transition-all ${i === currentIndex ? "ring-2 ring-primary scale-125" : ""} ${status === "present" ? "bg-green-500" : status === "absent" ? "bg-red-500" : "bg-muted-foreground/30"}`}
                 />
               )
             })}
           </div>
-
-          {/* Card */}
           <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStudent?.enrollmentId}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card className={`overflow-hidden border-2 transition-colors ${
-                marks[currentStudent?.enrollmentId] === "present" ? "border-green-500" :
-                marks[currentStudent?.enrollmentId] === "absent" ? "border-red-500" : "border-transparent"
-              }`}>
+            <motion.div key={currentStudent?.enrollmentId} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.2 }}>
+              <Card className={`overflow-hidden border-2 transition-colors ${marks[currentStudent?.enrollmentId] === "present" ? "border-green-500" : marks[currentStudent?.enrollmentId] === "absent" ? "border-red-500" : "border-transparent"}`}>
                 <CardContent className="pt-8 pb-6 flex flex-col items-center">
-                  {/* Avatar */}
                   <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-4 overflow-hidden">
                     {currentStudent?.profilePhotoUrl ? (
                       <img src={currentStudent.profilePhotoUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-2xl font-bold text-muted-foreground">
-                        {currentStudent ? getInitials(currentStudent.firstName, currentStudent.lastName) : ""}
-                      </span>
+                      <span className="text-2xl font-bold text-muted-foreground">{currentStudent ? getInitials(currentStudent.firstName, currentStudent.lastName) : ""}</span>
                     )}
                   </div>
-
-                  <h3 className="text-lg font-bold">
-                    {currentStudent?.firstName} {currentStudent?.lastName}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Roll: {currentStudent?.rollNumber || "N/A"}
-                  </p>
-
-                  {/* Status Badge */}
+                  <h3 className="text-lg font-bold">{currentStudent?.firstName} {currentStudent?.lastName}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Roll: {currentStudent?.rollNumber || "N/A"}</p>
                   {marks[currentStudent?.enrollmentId] && (
                     <Badge className={`mb-3 ${marks[currentStudent.enrollmentId] === "present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                       {marks[currentStudent.enrollmentId] === "present" ? "Present" : "Absent"}
                     </Badge>
                   )}
-
-                  {/* Buttons */}
                   <div className="flex gap-6">
-                    <button
-                      onClick={() => setMark("absent")}
-                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${
-                        marks[currentStudent?.enrollmentId] === "absent"
-                          ? "bg-red-500 text-white border-red-500 scale-110"
-                          : "border-red-300 text-red-500 hover:bg-red-50"
-                      }`}
-                    >
+                    <button onClick={() => setMark("absent")}
+                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${marks[currentStudent?.enrollmentId] === "absent" ? "bg-red-500 text-white border-red-500 scale-110" : "border-red-300 text-red-500 hover:bg-red-50"}`}>
                       <X className="h-7 w-7" />
                     </button>
-                    <button
-                      onClick={() => setMark("present")}
-                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${
-                        marks[currentStudent?.enrollmentId] === "present"
-                          ? "bg-green-500 text-white border-green-500 scale-110"
-                          : "border-green-300 text-green-500 hover:bg-green-50"
-                      }`}
-                    >
+                    <button onClick={() => setMark("present")}
+                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${marks[currentStudent?.enrollmentId] === "present" ? "bg-green-500 text-white border-green-500 scale-110" : "border-green-300 text-green-500 hover:bg-green-50"}`}>
                       <Check className="h-7 w-7" />
                     </button>
                   </div>
-
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Student {currentIndex + 1} of {totalStudents}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-3">Student {currentIndex + 1} of {totalStudents}</p>
                 </CardContent>
               </Card>
             </motion.div>
           </AnimatePresence>
-
-          {/* Bottom Bar */}
           <Card>
             <CardContent className="py-3 flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm">
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-full bg-green-500 inline-block" /> Present: {presentCount}
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Absent: {absentCount}
-                </span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" /> Present: {presentCount}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Absent: {absentCount}</span>
                 <span className="text-muted-foreground">| Remaining: {totalStudents - presentCount - absentCount}</span>
               </div>
               <Button onClick={handleSubmit} disabled={isSubmitting || totalStudents === 0}>
