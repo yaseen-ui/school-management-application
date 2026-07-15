@@ -67,3 +67,43 @@ export async function importStudents(
 
   return data;
 }
+
+/**
+ * Upload an Excel/CSV file and import faculty/staff.
+ */
+export async function importFaculty(file: File): Promise<ImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = apiClient.getToken();
+  const tenantId = apiClient.getTenantId();
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (tenantId) {
+    headers["x-tenant-id"] = tenantId;
+  }
+
+  const baseUrl = apiClient["baseUrl"] || "/api";
+  const url = `${baseUrl}/imports/faculty`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const data: ImportResponse = await response.json();
+
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      data.errors?.[0]?.error || "Faculty import failed",
+      data
+    );
+  }
+
+  return data;
+}

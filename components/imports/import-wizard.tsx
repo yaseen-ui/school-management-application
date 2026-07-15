@@ -24,9 +24,12 @@ import { useCourses } from "@/hooks/use-courses";
 import { useGrades } from "@/hooks/use-grades";
 import { useSections } from "@/hooks/use-sections";
 import type { ImportError, ImportResponse } from "@/lib/api/imports";
-import { importStudents } from "@/lib/api/imports";
+import { importStudents, importFaculty } from "@/lib/api/imports";
+import { GraduationCap, Users } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type ImportMode = "students" | "faculty";
 
 interface SelectionState {
   academicYearId: string;
@@ -43,91 +46,68 @@ type WizardStep = "select" | "upload" | "result";
 
 // ─── Excel Template Columns ───────────────────────────────────────────────────
 
-const TEMPLATE_COLUMNS = [
-  "firstName",
-  "middleName",
-  "lastName",
-  "dateOfBirth",
-  "gender",
-  "admissionNumber",
-  "pen",
-  "apaarId",
-  "aadhaarNumber",
-  "casteCategory",
-  "subCaste",
-  "religion",
-  "motherTongue",
-  "bloodGroup",
-  "nationality",
-  "fatherName",
-  "fatherPhone",
-  "fatherOccupation",
-  "motherName",
-  "motherPhone",
-  "motherOccupation",
-  "guardianName",
-  "guardianRelation",
-  "guardianContact",
-  "permanentAddress",
-  "state",
-  "pincode",
-  "mediumOfInstruction",
-  "previousSchoolName",
-  "transferCertificateNo",
-  "dateOfIssueTC",
-  "modeOfTransport",
-  "feePaymentMode",
-  "midDayMealEligibility",
+const STUDENT_TEMPLATE_COLUMNS = [
+  "firstName", "middleName", "lastName", "dateOfBirth", "gender",
+  "admissionNumber", "pen", "apaarId", "aadhaarNumber",
+  "casteCategory", "subCaste", "religion", "motherTongue", "bloodGroup", "nationality",
+  "fatherName", "fatherPhone", "fatherOccupation",
+  "motherName", "motherPhone", "motherOccupation",
+  "guardianName", "guardianRelation", "guardianContact",
+  "permanentAddress", "state", "pincode",
+  "mediumOfInstruction", "previousSchoolName",
+  "transferCertificateNo", "dateOfIssueTC",
+  "modeOfTransport", "feePaymentMode", "midDayMealEligibility",
+];
+
+const FACULTY_TEMPLATE_COLUMNS = [
+  "fullName", "email", "phone", "gender", "employeeCode", "employeeType",
+  "dateOfBirth", "dateOfJoining", "yearsOfExperience",
+  "governmentIdType", "governmentIdNumber",
+  "drivingLicenseNumber", "drivingExperienceYears", "vehicleType", "licenseExpiryDate",
 ];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function downloadTemplate(selection: SelectionState) {
-  // Create CSV content
-  const header = TEMPLATE_COLUMNS.join(",");
-  const sampleRow = [
-    "John",
-    "",
-    "Doe",
-    "01/01/2015",
-    "Male",
-    "ADM-2024-001",
-    "",
-    "",
-    "123456789012",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "Indian",
-    "Robert Doe",
-    "+919876543210",
-    "Engineer",
-    "Jane Doe",
-    "+919876543211",
-    "Teacher",
-    "",
-    "",
-    "",
-    "123 Main St, City",
-    "Karnataka",
-    "560001",
-    "English",
-    "",
-    "",
-    "",
-    "Bus",
-    "Cash",
-    "false",
-  ];
+function downloadStudentTemplate(selection: SelectionState) {
+  const header = STUDENT_TEMPLATE_COLUMNS.join(",");
+  const sampleRow = STUDENT_TEMPLATE_COLUMNS.map((col) => {
+    if (col === "firstName") return "John";
+    if (col === "lastName") return "Doe";
+    if (col === "dateOfBirth") return "01/01/2015";
+    if (col === "gender") return "Male";
+    if (col === "admissionNumber") return "ADM-2024-001";
+    if (col === "nationality") return "Indian";
+    return "";
+  });
   const csv = [header, sampleRow.join(",")].join("\n");
-
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = `student-import-${selection.sectionName || "template"}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function downloadFacultyTemplate() {
+  const header = FACULTY_TEMPLATE_COLUMNS.join(",");
+  const sampleRow = FACULTY_TEMPLATE_COLUMNS.map((col) => {
+    if (col === "fullName") return "John Doe";
+    if (col === "email") return "john.doe@school.in";
+    if (col === "phone") return "+919876543210";
+    if (col === "employeeCode") return "EMP-001";
+    if (col === "employeeType") return "teacher";
+    if (col === "gender") return "Male";
+    return "";
+  });
+  const csv = [header, sampleRow.join(",")].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "faculty-import-template.csv";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -325,16 +305,20 @@ function SectionSelector({
 
 function FileUpload({
   selection,
+  mode,
   onBack,
   onResult,
 }: {
   selection: SelectionState;
-  onBack: () => void;
+  mode: ImportMode;
+  onBack?: () => void;
   onResult: (result: ImportResponse) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+
+  const isFaculty = mode === "faculty";
 
   const handleFile = (f: File | null) => {
     if (f) {
@@ -357,15 +341,16 @@ function FileUpload({
     setIsUploading(true);
 
     try {
-      const result = await importStudents(
-        file,
-        selection.academicYearId,
-        selection.gradeId,
-        selection.sectionId
-      );
+      const result = isFaculty
+        ? await importFaculty(file)
+        : await importStudents(
+            file,
+            selection.academicYearId,
+            selection.gradeId,
+            selection.sectionId
+          );
       onResult(result);
     } catch (err: any) {
-      // If the API returned validation errors in the response body
       if (err.data) {
         onResult(err.data);
       } else {
@@ -380,10 +365,17 @@ function FileUpload({
     <div className="space-y-6">
       <div className="text-center">
         <Upload className="mx-auto h-12 w-12 text-primary mb-3" />
-        <h2 className="text-xl font-semibold">Upload Student Data</h2>
+        <h2 className="text-xl font-semibold">
+          Upload {isFaculty ? "Faculty" : "Student"} Data
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload an Excel or CSV file with student information for{" "}
-          <Badge variant="secondary">{selection.sectionName}</Badge>.
+          {isFaculty
+            ? "Upload an Excel or CSV file with faculty/staff information."
+            : `Upload an Excel or CSV file with student information for `}
+          {!isFaculty && (
+            <Badge variant="secondary">{selection.sectionName}</Badge>
+          )}
+          {!isFaculty && "."}
         </p>
       </div>
 
@@ -392,7 +384,11 @@ function FileUpload({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => downloadTemplate(selection)}
+          onClick={() =>
+            isFaculty
+              ? downloadFacultyTemplate()
+              : downloadStudentTemplate(selection)
+          }
         >
           <Download className="mr-2 h-4 w-4" />
           Download Template CSV
@@ -458,7 +454,7 @@ function FileUpload({
 
       {/* Upload button */}
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack} disabled={isUploading}>
+        <Button variant="outline" onClick={onBack || (() => {})} disabled={isUploading}>
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
@@ -485,9 +481,11 @@ function FileUpload({
 function ImportResult({
   result,
   onReset,
+  entity = "records",
 }: {
   result: ImportResponse;
   onReset: () => void;
+  entity?: string;
 }) {
   const isSuccess = result.success;
   const errors = result.errors || [];
@@ -505,8 +503,8 @@ function ImportResult({
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           {isSuccess
-            ? `${result.summary.successful} of ${result.summary.totalRows} students imported successfully.`
-            : `${errors.length} error(s) found. No students were imported.`}
+            ? `${result.summary.successful} of ${result.summary.totalRows} ${entity} imported successfully.`
+            : `${errors.length} error(s) found. No ${entity} were imported.`}
         </p>
       </div>
 
@@ -592,6 +590,7 @@ function ImportResult({
 // ─── Main Wizard ───────────────────────────────────────────────────────────────
 
 export function ImportWizard() {
+  const [mode, setMode] = useState<ImportMode>("students");
   const [step, setStep] = useState<WizardStep>("select");
   const [selection, setSelection] = useState<SelectionState>({
     academicYearId: "",
@@ -605,26 +604,81 @@ export function ImportWizard() {
   });
   const [result, setResult] = useState<ImportResponse | null>(null);
 
+  const isFaculty = mode === "faculty";
+
   const handleReset = () => {
-    setStep("select");
+    setStep(isFaculty ? "upload" : "select");
     setResult(null);
   };
 
-  const steps: { key: WizardStep; label: string }[] = [
-    { key: "select", label: "Select Section" },
-    { key: "upload", label: "Upload File" },
-    { key: "result", label: "Result" },
+  const handleModeChange = (newMode: ImportMode) => {
+    setMode(newMode);
+    setResult(null);
+    setStep(newMode === "faculty" ? "upload" : "select");
+    setSelection({
+      academicYearId: "",
+      courseId: "",
+      gradeId: "",
+      sectionId: "",
+      academicYearName: "",
+      courseName: "",
+      gradeName: "",
+      sectionName: "",
+    });
+  };
+
+  const studentSteps = [
+    { key: "select" as WizardStep, label: "Select Section" },
+    { key: "upload" as WizardStep, label: "Upload File" },
+    { key: "result" as WizardStep, label: "Result" },
   ];
 
+  const facultySteps = [
+    { key: "upload" as WizardStep, label: "Upload File" },
+    { key: "result" as WizardStep, label: "Result" },
+  ];
+
+  const steps = isFaculty ? facultySteps : studentSteps;
   const currentIndex = steps.findIndex((s) => s.key === step);
 
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Import Students</CardTitle>
-        <CardDescription>
-          Bulk import students from an Excel or CSV file into a section.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Import Data</CardTitle>
+            <CardDescription>
+              Bulk import students or faculty from Excel/CSV files.
+            </CardDescription>
+          </div>
+        </div>
+
+        {/* Mode tabs */}
+        <div className="flex gap-1 rounded-lg bg-muted p-1 mt-3">
+          <button
+            onClick={() => handleModeChange("students")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              mode === "students"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <GraduationCap className="h-4 w-4" />
+            Students
+          </button>
+          <button
+            onClick={() => handleModeChange("faculty")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              mode === "faculty"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Faculty
+          </button>
+        </div>
+
         {/* Step indicators */}
         <div className="flex items-center gap-2 pt-2">
           {steps.map((s, i) => (
@@ -644,7 +698,9 @@ export function ImportWizard() {
               </div>
               <span
                 className={`text-xs ${
-                  i <= currentIndex ? "text-foreground font-medium" : "text-muted-foreground"
+                  i <= currentIndex
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground"
                 }`}
               >
                 {s.label}
@@ -663,13 +719,13 @@ export function ImportWizard() {
       <CardContent>
         <AnimatePresence mode="wait">
           <motion.div
-            key={step}
+            key={`${mode}-${step}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {step === "select" && (
+            {step === "select" && !isFaculty && (
               <SectionSelector
                 selection={selection}
                 setSelection={setSelection}
@@ -679,7 +735,10 @@ export function ImportWizard() {
             {step === "upload" && (
               <FileUpload
                 selection={selection}
-                onBack={() => setStep("select")}
+                mode={mode}
+                onBack={
+                  isFaculty ? undefined : () => setStep("select")
+                }
                 onResult={(res) => {
                   setResult(res);
                   setStep("result");
@@ -687,7 +746,11 @@ export function ImportWizard() {
               />
             )}
             {step === "result" && result && (
-              <ImportResult result={result} onReset={handleReset} />
+              <ImportResult
+                result={result}
+                onReset={handleReset}
+                entity={isFaculty ? "faculty" : "students"}
+              />
             )}
           </motion.div>
         </AnimatePresence>
