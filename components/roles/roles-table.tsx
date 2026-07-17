@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Shield, Key } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Shield, Key, Users, Tag, Copy } from "lucide-react"
 import { format } from "date-fns"
 
 import { DataTable } from "@/components/shared/data-table"
@@ -28,6 +28,7 @@ interface RolesTableProps {
 export function RolesTable({ roles, isLoading }: RolesTableProps) {
   const [editRole, setEditRole] = useState<Role | null>(null)
   const [deleteRole, setDeleteRole] = useState<Role | null>(null)
+  const [createRole, setCreateRole] = useState<{ duplicateFrom?: Role } | null>(null)
 
   const columns: ColumnDef<Role>[] = [
     {
@@ -41,10 +42,25 @@ export function RolesTable({ roles, isLoading }: RolesTableProps) {
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="font-medium text-foreground capitalize">{role.roleName.replace("_", " ")}</p>
+              <p className="font-medium text-foreground">{role.roleName}</p>
               <p className="text-sm text-muted-foreground line-clamp-1">{role.description}</p>
             </div>
           </div>
+        )
+      },
+    },
+    {
+      accessorKey: "groupName",
+      header: "Group",
+      cell: ({ row }) => {
+        const groupName = row.original.groupName
+        return groupName ? (
+          <Badge variant="outline" className="gap-1">
+            <Tag className="h-3 w-3" />
+            {groupName}
+          </Badge>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
         )
       },
     },
@@ -59,6 +75,19 @@ export function RolesTable({ roles, isLoading }: RolesTableProps) {
             <Key className="mr-1 h-3 w-3" />
             {count} permission{count !== 1 ? "s" : ""}
           </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: "userCount",
+      header: "Users",
+      cell: ({ row }) => {
+        const count = row.original.userCount ?? 0
+        return (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            <span>{count}</span>
+          </div>
         )
       },
     },
@@ -90,9 +119,14 @@ export function RolesTable({ roles, isLoading }: RolesTableProps) {
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setCreateRole({ duplicateFrom: role }); setEditRole(null) }}>
+                <Copy className="mr-2 h-4 w-4" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setDeleteRole(role)} className="text-destructive focus:text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                Delete {role.userCount ? `(${role.userCount} users)` : ""}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -111,9 +145,18 @@ export function RolesTable({ roles, isLoading }: RolesTableProps) {
         isLoading={isLoading}
       />
 
-      <RoleDialog open={!!editRole} onOpenChange={(open) => !open && setEditRole(null)} role={editRole} mode="edit" />
+      <RoleDialog
+        open={!!editRole}
+        onOpenChange={(open) => !open && setEditRole(null)}
+        role={editRole}
+        mode="edit"
+      />
 
-      <DeleteRoleDialog open={!!deleteRole} onOpenChange={(open) => !open && setDeleteRole(null)} role={deleteRole} />
+      <DeleteRoleDialog
+        open={!!deleteRole}
+        onOpenChange={(open) => !open && setDeleteRole(null)}
+        role={deleteRole}
+      />
     </>
   )
 }

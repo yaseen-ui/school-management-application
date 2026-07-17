@@ -22,7 +22,8 @@ interface DecodedJwt {
   userId: string
   userType: 'company' | 'tenant'
   tenantId: string | null
-  role: unknown
+  roleIds?: string[]
+  permVersion?: number
   iat?: number
   exp?: number
 }
@@ -76,9 +77,31 @@ const createMockReq = async (nextReq: NextRequest, params: any = {}, query: any 
   // When no JWT is present, fall back to the x-tenant-id header value.
   // Also map userId -> id for controllers that destructure { id } from req.user
   // (e.g. staff-attendance, leave, payroll).
+  //
+  // RBAC v2: JWT now carries roleIds[] + permVersion instead of old role object.
+  // Include both for backward compatibility with older JWTs that may still have "role".
   const safeUser = user
-    ? { ...user, id: user.userId }
-    : (tenantId ? { tenantId, userId: null, userType: 'tenant' as const, role: null, id: null } : null)
+    ? {
+        ...user,
+        id: user.userId,
+        // Forward-compat: ensure roleIds is always an array for the RBAC engine
+        roleIds: user.roleIds ?? [],
+        permVersion: user.permVersion ?? 0,
+        // Backward-compat: if an old JWT had "role" (one-to-one), expose it so
+        // controllers that still access req.user.role don't break.
+        role: (user as any).role ?? null,
+      }
+    : (tenantId
+        ? {
+            tenantId,
+            userId: null,
+            userType: 'tenant' as const,
+            roleIds: [],
+            permVersion: 0,
+            role: null,
+            id: null,
+          }
+        : null)
 
   return {
     body: nextReq.method !== 'GET' ? await nextReq.json().catch(() => ({})) : {},

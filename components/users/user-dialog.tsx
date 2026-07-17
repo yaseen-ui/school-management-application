@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useCreateUser, useUpdateUser } from "@/hooks/use-users"
 import { useRoles } from "@/hooks/use-roles"
 import type { User } from "@/lib/api/types"
@@ -27,7 +27,7 @@ const userSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
-  roleId: z.string().min(1, "Role is required"),
+  roleIds: z.array(z.string()).min(1, "Select at least one role"),
 })
 
 type UserFormValues = z.infer<typeof userSchema>
@@ -43,7 +43,7 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
   const [showPassword, setShowPassword] = useState(false)
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
-  const { data: rolesData } = useRoles()
+  const { data: rolesData } = useRoles() as { data: any }
 
   const roles = Array.isArray(rolesData) ? rolesData : rolesData?.data || []
 
@@ -54,6 +54,8 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<UserFormValues>({
     resolver: zodResolver(
@@ -66,9 +68,11 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
       fullName: "",
       phone: "",
       password: "",
-      roleId: "",
+      roleIds: [],
     },
   })
+
+  const selectedRoleIds = watch("roleIds")
 
   useEffect(() => {
     if (isEditing && user) {
@@ -77,7 +81,8 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
         fullName: user.fullName || "",
         phone: user.phone || "",
         password: "",
-        roleId: user.roleId || "",
+        // RBAC v2: user now has multiple roles; legacy fallback to single roleId
+        roleIds: (user as any).roleIds ?? (user.roleId ? [user.roleId] : []),
       })
     } else {
       reset({
@@ -85,18 +90,26 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
         fullName: "",
         phone: "",
         password: "",
-        roleId: "",
+        roleIds: [],
       })
     }
   }, [user, isEditing, reset])
 
+  const toggleRole = (roleId: string) => {
+    const current = selectedRoleIds || []
+    const updated = current.includes(roleId)
+      ? current.filter((id) => id !== roleId)
+      : [...current, roleId]
+    setValue("roleIds", updated)
+  }
+
   const onSubmit = (data: UserFormValues) => {
     if (isEditing && user) {
-      const updateData: Partial<UserFormValues> = {
+      const updateData: any = {
         email: data.email,
         fullName: data.fullName,
         phone: data.phone,
-        roleId: data.roleId,
+        roleIds: data.roleIds,
       }
       if (data.password) {
         updateData.password = data.password
@@ -111,7 +124,7 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
         },
       )
     } else {
-      createUser.mutate(data as Required<UserFormValues>, {
+      createUser.mutate(data as any, {
         onSuccess: () => {
           onOpenChange(false)
           reset()
@@ -124,7 +137,7 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit User" : "Create User"}</DialogTitle>
           <DialogDescription>
@@ -171,30 +184,33 @@ export function UserDialog({ open, onOpenChange, user, mode }: UserDialogProps) 
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
 
+          {/* ── RBAC v2: Multi-Role Picker ── */}
           <div className="space-y-2">
-            <Label htmlFor="roleId">Role</Label>
-            <Controller
-              name="roleId"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {role.roleName}
-                      </SelectItem>
-                    ))}
-                    {roles.length === 0 && (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No roles available</div>
-                    )}
-                  </SelectContent>
-                </Select>
+            <Label>Roles</Label>
+            {errors.roleIds && <p className="text-sm text-destructive">{errors.roleIds.message}</p>}
+            <div className="rounded-lg border border-border p-3 space-y-2 max-h-[200px] overflow-y-auto">
+              {roles.length === 0 && (
+                <p className="text-sm text-muted-foreground">No roles available</p>
               )}
-            />
-            {errors.roleId && <p className="text-sm text-destructive">{errors.roleId.message}</p>}
+              {roles.map((role: any) => (
+                <div key={role.id} className="flex items-start gap-2">
+                  <Checkbox
+                    id={`role-${role.id}`}
+                    checked={selectedRoleIds?.includes(role.id)}
+                    onCheckedChange={() => toggleRole(role.id)}
+                  />
+                  <label htmlFor={`role-${role.id}`} className="text-sm cursor-pointer leading-tight">
+                    <span className="font-medium">{role.roleName}</span>
+                    {role.description && (
+                      <span className="text-muted-foreground ml-1">— {role.description}</span>
+                    )}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Users can have multiple roles. Permissions are the union of all assigned roles.
+            </p>
           </div>
 
           <DialogFooter>

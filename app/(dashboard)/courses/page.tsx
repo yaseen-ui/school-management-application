@@ -21,9 +21,14 @@ import { CreateCourseDialog } from "@/components/courses/create-course-dialog"
 import { ViewCourseDialog } from "@/components/courses/view-course-dialog"
 import { EditCourseDialog } from "@/components/courses/edit-course-dialog"
 import { DeleteCourseDialog } from "@/components/courses/delete-course-dialog"
+import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
+import { ForbiddenPage } from "@/components/shared/forbidden-page"
 import type { Course } from "@/lib/api/courses"
 
 export default function CoursesPage() {
+  const canAccess = usePermission('courses:read')
+  const isLoaded = usePermissionsLoaded()
+  if (!canAccess && isLoaded) return <ForbiddenPage />
   const { data, isLoading } = useCourses()
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)

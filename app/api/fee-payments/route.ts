@@ -1,12 +1,15 @@
-import { NextRequest } from "next/server"
-import { invokeBackendController } from "@/lib/api/server-adapter"
+import { NextRequest, NextResponse } from 'next/server'
+import { invokeBackendController } from '@/lib/api/server-adapter'
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 export async function GET(req: NextRequest) {
-  const Controller = (await import("@/lib/backend/modules/fees/fee.controller.js")).default
-  return invokeBackendController(Controller, "getAllPayments", req)
+  await Guard.action(req, 'fee-payments:read');
+  const FeeController = (await import('@backend/modules/fees/fee.controller.js')).default
+  return invokeBackendController(FeeController, 'getAllFeePayments', req)
 }
 
 export async function POST(req: NextRequest) {
-  const Controller = (await import("@/lib/backend/modules/fees/fee.controller.js")).default
-  return invokeBackendController(Controller, "createPayment", req)
+  await Guard.action(req, 'fee-payments:collect');
+  const FeeController = (await import('@backend/modules/fees/fee.controller.js')).default
+  return invokeBackendController(FeeController, 'createFeePayment', req)
 }

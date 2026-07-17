@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { invokeBackendController } from '@/lib/api/server-adapter'
-
-// Thin adapter for /api/teachers/[id]
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await Guard.action(req, 'teachers:read');
   const TeacherController = (await import('@backend/modules/teachers/teachers.controller.js')).default
   return invokeBackendController(TeacherController, 'getTeacherById', req, params)
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await Guard.action(req, 'teachers:edit');
   const TeacherController = (await import('@backend/modules/teachers/teachers.controller.js')).default
   return invokeBackendController(TeacherController, 'updateTeacher', req, params)
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await Guard.action(req, 'teachers:delete');
   const TeacherController = (await import('@backend/modules/teachers/teachers.controller.js')).default
   return invokeBackendController(TeacherController, 'deleteTeacher', req, params)
 }

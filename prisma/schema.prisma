@@ -422,6 +422,9 @@ model Tenant {
   idSequencePatterns IdSequencePattern[]
   idSequenceLogs     IdSequenceLog[]
 
+  // RBAC v2
+  groups Group[]
+
   @@map("tenants")
 }
 
@@ -432,7 +435,6 @@ model User {
   email    String
   password String
   userType UserType @default(tenant)
-  roleId   String?
 
   // OTP fields (consider extracting to dedicated OtpToken table later)
   otp          String?
@@ -441,6 +443,9 @@ model User {
   isFirstLogin Boolean   @default(true)
 
   phone String?
+
+  // RBAC v2: permission version counter (bumped when user's roles/permissions change)
+  permVersion Int @default(0)
 
   status    EntityStatus @default(active)
   deletedAt DateTime?
@@ -451,7 +456,9 @@ model User {
   updatedAt   DateTime @updatedAt
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  role   Role?   @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  // RBAC v2: multiple roles per user (replaces old roleId + role relation)
+  userRoles UserRole[]
 
   // optional domain mappings
   teacher Teacher?
@@ -504,20 +511,117 @@ model Role {
   tenantId    String
   roleName    String
   description String?
-  permissions Json
+  isDefault   Boolean @default(false)
 
   createdById String?
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  users  User[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  roleGroups      RoleGroup[]
 
   @@unique([id, tenantId], name: "role_tenant_identity")
   @@unique([tenantId, roleName], name: "uniqueRoleNamePerTenant")
   @@index([tenantId])
   @@map("roles")
+}
+
+// --- New: Canonical Permission catalog (seeded by application, not tenant-editable) ---
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  module      String
+  action      String
+  scope       String?
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  @@map("permissions")
+}
+
+// --- New: Many-to-many Role ↔ Permission (tenant-scoped) ---
+model RolePermission {
+  roleId       String
+  permissionId String
+  tenantId     String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([roleId, permissionId, tenantId])
+  @@map("role_permissions")
+}
+
+// --- New: Many-to-many User ↔ Role (replaces user.roleId, allows multiple roles per user) ---
+model UserRole {
+  userId    String
+  roleId    String
+  tenantId  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role Role @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([userId, roleId, tenantId])
+  @@map("user_roles")
+}
+
+// --- New: Group model (organizational bucket for roles) ---
+model Group {
+  id          String   @id @default(uuid())
+  tenantId    String
+  groupName   String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  roleGroups RoleGroup[]
+
+  @@unique([id, tenantId], name: "group_tenant_identity")
+  @@unique([tenantId, groupName], name: "uniqueGroupNamePerTenant")
+  @@index([tenantId])
+  @@map("groups")
+}
+
+// --- New: Many-to-many Role ↔ Group ---
+model RoleGroup {
+  roleId    String
+  groupId   String
+  tenantId  String
+  createdAt DateTime @default(now())
+
+  role  Role  @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  group Group @relation(fields: [groupId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([roleId, groupId, tenantId])
+  @@map("role_groups")
+}
+
+// --- New: Audit Trail for authorization changes and critical actions ---
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String?
+  actorId    String?
+  actorEmail String?
+  action     String
+  targetType String?
+  targetId   String?
+  details    Json?
+  ipAddress  String?
+  level      String   @default("info")
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([actorId])
+  @@index([action])
+  @@map("audit_logs")
 }
 
 // ---------------- Academics: Courses, Grades, Sections, Subjects, SectionSubjects ----------------
@@ -827,6 +931,7 @@ model Teacher {
   updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  // Note: User model no longer has roleId, but this relation existed for userId. Keeping as-is.
   user   User?  @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
 
   assignments       TeacherAssignment[]

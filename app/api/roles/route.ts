@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { invokeBackendController } from '@/lib/api/server-adapter'
-
-// Thin adapter for /api/roles (collection)
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 export async function GET(req: NextRequest) {
-  const RoleController = (await import('@backend/modules/roles/roles.controller.js')).default
-  return invokeBackendController(RoleController, 'getAllRoles', req)
+  await Guard.action(req, 'roles:read');
+  const RolesController = (await import('@backend/modules/roles/roles.controller.js')).default
+  return invokeBackendController(RolesController, 'getAllRoles', req)
 }
 
 export async function POST(req: NextRequest) {
-  const RoleController = (await import('@backend/modules/roles/roles.controller.js')).default
-  return invokeBackendController(RoleController, 'createRole', req)
+  await Guard.action(req, 'roles:write');
+  const RolesController = (await import('@backend/modules/roles/roles.controller.js')).default
+  return invokeBackendController(RolesController, 'createRole', req)
 }

@@ -13,6 +13,8 @@ import { DeleteExamDialog } from "@/components/exams/delete-exam-dialog"
 import { format } from "date-fns"
 import { MoreVertical } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
+import { ForbiddenPage } from "@/components/shared/forbidden-page"
 import type { Exam } from "@/lib/api/exams"
 import Link from "next/link"
 
@@ -40,6 +42,9 @@ const statusColors: Record<string, string> = {
 }
 
 export default function ExamsPage() {
+  const canAccess = usePermission('exams:read')
+  const isLoaded = usePermissionsLoaded()
+  if (!canAccess && isLoaded) return <ForbiddenPage />
   const { data, isLoading } = useExams()
   const deleteExam = useDeleteExam()
 

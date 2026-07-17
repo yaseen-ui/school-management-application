@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { MobileSidebar } from "@/components/layout/mobile-sidebar"
 import { AuthGuard } from "@/components/auth/auth-guard"
+import { PermissionProvider } from "@/components/providers/permission-provider"
 import { useUIStore } from "@/stores/ui-store"
 import { cn } from "@/lib/utils"
 
@@ -18,26 +19,28 @@ export default function DashboardLayout({
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background bg-ambient-glow">
-        <Sidebar />
-        <MobileSidebar />
-        <div
-          className={cn(
-            "transition-all duration-200 min-h-screen",
-            sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]",
-          )}
-        >
-          <Header />
-          <motion.main
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="p-6"
+      <PermissionProvider>
+        <div className="min-h-screen bg-background bg-ambient-glow">
+          <Sidebar />
+          <MobileSidebar />
+          <div
+            className={cn(
+              "transition-all duration-200 min-h-screen",
+              sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]",
+            )}
           >
-            {children}
-          </motion.main>
+            <Header />
+            <motion.main
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="p-6"
+            >
+              {children}
+            </motion.main>
+          </div>
         </div>
-      </div>
+      </PermissionProvider>
     </AuthGuard>
   )
 }

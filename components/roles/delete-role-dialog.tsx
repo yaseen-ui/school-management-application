@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useDeleteRole } from "@/hooks/use-roles"
-import type { Role } from "@/lib/api/types"
+import type { Role } from "@/lib/api/roles"
 
 interface DeleteRoleDialogProps {
   open: boolean
@@ -34,6 +34,8 @@ export function DeleteRoleDialog({ open, onOpenChange, role }: DeleteRoleDialogP
     }
   }
 
+  const userCount = role?.userCount ?? 0
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -45,8 +47,14 @@ export function DeleteRoleDialog({ open, onOpenChange, role }: DeleteRoleDialogP
             <div>
               <AlertDialogTitle>Delete Role</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete the <strong>{role?.name}</strong> role? Users with this role will lose
-                their permissions.
+                Are you sure you want to delete{" "}
+                <strong>{role?.roleName}</strong>?
+                {userCount > 0 && (
+                  <span className="block mt-1 text-destructive font-medium">
+                    ⚠ {userCount} user{userCount !== 1 ? "s" : ""} will lose this role and its permissions.
+                    Please reassign them first or confirm deletion.
+                  </span>
+                )}
               </AlertDialogDescription>
             </div>
           </div>
@@ -59,7 +67,7 @@ export function DeleteRoleDialog({ open, onOpenChange, role }: DeleteRoleDialogP
             disabled={deleteRole.isPending}
           >
             {deleteRole.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
+            {userCount > 0 ? "Delete Anyway" : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

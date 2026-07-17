@@ -22,10 +22,16 @@ import { toast } from "@/components/ui/sonner"
 import { CreateStudentWizard } from "@/components/students/create-student-wizard"
 import { ViewStudentDialog } from "@/components/students/view-student-dialog"
 import { DeleteStudentDialog } from "@/components/students/delete-student-dialog"
+import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
+import { ForbiddenPage } from "@/components/shared/forbidden-page"
 import type { Student } from "@/lib/api/students"
 
 export default function StudentsPage() {
+  const canAccess = usePermission('students:read')
+  const isLoaded = usePermissionsLoaded()
   const { data, isLoading } = useStudents()
+
+  if (!canAccess && isLoaded) return <ForbiddenPage />
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)

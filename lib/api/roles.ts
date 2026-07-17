@@ -5,6 +5,9 @@ export interface Role {
   roleName: string
   description: string
   permissions: string[]
+  groupId?: string
+  groupName?: string
+  userCount?: number
   tenantId: string
   createdAt: string
   updatedAt: string

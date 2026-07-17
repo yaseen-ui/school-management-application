@@ -14,6 +14,8 @@ import { CreatePaymentDialog } from "@/components/fees/create-payment-dialog"
 import { format } from "date-fns"
 import { MoreVertical } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
+import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
+import { ForbiddenPage } from "@/components/shared/forbidden-page"
 import type { FeePayment } from "@/lib/api/fees"
 
 const paymentMethodIcons: Record<string, React.ReactNode> = {
@@ -33,6 +35,13 @@ const paymentMethodColors: Record<string, string> = {
 }
 
 export default function FeePaymentsPage() {
+  const canAccess = usePermission('fee-payments:read')
+  const isLoaded = usePermissionsLoaded()
+  if (!canAccess && isLoaded) return <ForbiddenPage />
+  return <FeePaymentsContent />
+}
+
+function FeePaymentsContent() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const { data: paymentsData, isLoading } = usePayments()
   const deletePayment = useDeletePayment()
@@ -79,7 +88,6 @@ export default function FeePaymentsPage() {
           </Button>
         </PageHeader>
 
-        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border-l-4 border-l-emerald-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -92,9 +100,6 @@ export default function FeePaymentsPage() {
               <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 ₹{totalCollected.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                From {payments.filter((p) => p.status === "paid" || p.status === "partial").length} completed payments
-              </p>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-blue-500">
@@ -106,12 +111,11 @@ export default function FeePaymentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{payments.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">All payment records</p>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-amber-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
                 <IndianRupee className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
@@ -120,7 +124,6 @@ export default function FeePaymentsPage() {
               <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                 {payments.filter((p) => p.status === "pending").length}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Awaiting confirmation</p>
             </CardContent>
           </Card>
         </div>
@@ -131,103 +134,27 @@ export default function FeePaymentsPage() {
           isLoading={isLoading}
           onBulkDelete={handleBulkDelete}
           idField="id"
-          searchPlaceholder="Search by student name, transaction ID, or method..."
+          searchPlaceholder="Search payments..."
           renderCell={({ row, field }: CellRendererProps<FeePayment>) => {
-            if (field === "student") {
-              return (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20">
-                    <span className="text-xs font-bold text-primary">
-                      {row.studentFee?.enrollment?.student?.firstName?.[0]}
-                      {row.studentFee?.enrollment?.student?.lastName?.[0]}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium leading-none">
-                      {row.studentFee?.enrollment?.student?.firstName}{" "}
-                      {row.studentFee?.enrollment?.student?.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Roll: {row.studentFee?.enrollment?.rollNumber}
-                    </p>
-                  </div>
-                </div>
-              )
-            }
-
-            if (field === "amountPaid") {
-              return (
-                <span className="text-sm font-semibold">
-                  ₹{row.amountPaid?.toLocaleString()}
-                </span>
-              )
-            }
-
-            if (field === "paymentMethod") {
-              return (
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${paymentMethodColors[row.paymentMethod] || "bg-gray-100 text-gray-700"}`}>
-                  {paymentMethodIcons[row.paymentMethod] || null}
-                  {row.paymentMethod?.replace("_", " ")}
-                </span>
-              )
-            }
-
-            if (field === "paymentDate") {
-              return (
-                <span className="text-sm text-muted-foreground">
-                  {row.paymentDate
-                    ? format(new Date(row.paymentDate), "MMM d, yyyy")
-                    : "—"}
-                </span>
-              )
-            }
-
-            if (field === "status") {
-              const statusStyles: Record<string, string> = {
-                paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
-                partial: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800",
-                pending: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700",
-                failed: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
-              }
-              return (
-                <Badge variant="outline" className={`font-medium ${statusStyles[row.status] || ""}`}>
-                  {row.status}
-                </Badge>
-              )
-            }
-
-            if (field === "transactionId") {
-              return (
-                <span className="text-sm font-mono text-muted-foreground">
-                  {row.transactionId || "—"}
-                </span>
-              )
-            }
-
+            if (field === "student") return <div><p className="text-sm font-medium">{row.studentFee?.enrollment?.student?.firstName} {row.studentFee?.enrollment?.student?.lastName}</p></div>
+            if (field === "amountPaid") return <span className="text-sm font-semibold">₹{row.amountPaid?.toLocaleString()}</span>
+            if (field === "paymentMethod") return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${paymentMethodColors[row.paymentMethod] || "bg-gray-100"}`}>{paymentMethodIcons[row.paymentMethod]}{row.paymentMethod?.replace("_", " ")}</span>
+            if (field === "paymentDate") return <span className="text-sm text-muted-foreground">{row.paymentDate ? format(new Date(row.paymentDate), "MMM d, yyyy") : "—"}</span>
+            if (field === "status") { const s: Record<string, string> = { paid: "bg-emerald-100 text-emerald-700", partial: "bg-amber-100 text-amber-700", pending: "bg-gray-100 text-gray-600" }; return <Badge variant="outline" className={s[row.status] || ""}>{row.status}</Badge> }
+            if (field === "transactionId") return <span className="text-sm font-mono">{row.transactionId || "—"}</span>
             return undefined
           }}
           renderActions={(row: FeePayment) => (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="sm"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {}}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDelete(row)} className="text-destructive focus:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {}}><Eye className="mr-2 h-4 w-4" />View</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDelete(row)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
         />
       </motion.div>
-
       <CreatePaymentDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
     </>
   )

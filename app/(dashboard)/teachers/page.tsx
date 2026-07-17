@@ -23,154 +23,155 @@ import { InviteStaffButton } from "@/components/teachers/invite-staff-button"
 import { format } from "date-fns"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
+import { ForbiddenPage } from "@/components/shared/forbidden-page"
 
 const EMPLOYEE_TYPES = [
   { value: "all", label: "All Types" },
   { value: "teacher", label: "Teacher" },
   { value: "driver", label: "Driver" },
   { value: "clerk", label: "Clerk" },
-  { value: "office_boy", label: "Office Boy" },
   { value: "admin", label: "Admin" },
   { value: "accountant", label: "Accountant" },
+  { value: "office_boy", label: "Office Boy" },
   { value: "security", label: "Security" },
   { value: "cleaner", label: "Cleaner" },
   { value: "other", label: "Other" },
 ]
 
-export default function StaffPage() {
+export default function TeachersPage() {
+  const canAccess = usePermission('teachers:read')
+  const isLoaded = usePermissionsLoaded()
+  if (!canAccess && isLoaded) return <ForbiddenPage />
+
   const router = useRouter()
-  const [viewTeacher, setViewTeacher] = useState<Teacher | null>(null)
-  const [deleteTeacher, setDeleteTeacher] = useState<Teacher | null>(null)
+  const { data: teacherData, isLoading } = useTeachers()
+
+  const teachers: Teacher[] = teacherData?.rows ?? teacherData ?? []
+
+  const [isViewOpen, setIsViewOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState("all")
 
-  const { data: teachers, isLoading } = useTeachers()
+  const filteredTeachers = employeeTypeFilter === "all"
+    ? teachers
+    : teachers.filter((t) => t.employeeType === employeeTypeFilter)
 
-  const filteredTeachers = useMemo(() => {
-    if (!teachers) return []
-    if (employeeTypeFilter === "all") return teachers
-    return teachers.filter((t) => t.employeeType === employeeTypeFilter)
-  }, [teachers, employeeTypeFilter])
+  const handleView = (teacher: Teacher) => {
+    setSelectedTeacher(teacher)
+    setIsViewOpen(true)
+  }
+
+  const handleEdit = (teacher: Teacher) => {
+    router.push(`/teachers/${teacher.id}`)
+  }
+
+  const handleDelete = (teacher: Teacher) => {
+    setSelectedTeacher(teacher)
+    setIsDeleteOpen(true)
+  }
 
   const columns: ColumnDef<Teacher>[] = [
     {
-      header: "Name",
       accessorKey: "fullName",
+      header: "Staff Name",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          <span>{row.original.fullName}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+            <GraduationCap className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium">{row.original.fullName}</p>
+            <p className="text-sm text-muted-foreground">{row.original.email}</p>
+          </div>
         </div>
       ),
     },
     {
-      header: "Email",
-      accessorKey: "email",
-    },
-    {
-      header: "Phone",
-      accessorKey: "phone",
-    },
-    {
-      header: "Employee Code",
       accessorKey: "employeeCode",
+      header: "Employee Code",
+      cell: ({ row }) => <span className="text-sm font-mono">{row.original.employeeCode || "—"}</span>,
     },
     {
-      header: "Employee Type",
       accessorKey: "employeeType",
-      cell: ({ row }) => {
-        const type = row.original.employeeType
-        if (!type) return "—"
-        return (
-          <span className="capitalize">{type.replace(/_/g, " ")}</span>
-        )
-      },
+      header: "Type",
+      cell: ({ row }) => <span className="text-sm capitalize">{row.original.employeeType?.replace("_", " ")}</span>,
     },
     {
-      header: "Gender",
-      accessorKey: "gender",
-    },
-    {
+      accessorKey: "status",
       header: "Status",
-      accessorKey: "isRegistered",
-      cell: ({ row }) => <StaffStatusBadge isRegistered={(row.original as any).isRegistered ?? !!row.original.userId} />,
+      cell: ({ row }) => <StaffStatusBadge teacher={row.original} />,
     },
     {
-      header: "Date of Joining",
-      accessorKey: "dateOfJoining",
-      cell: ({ row }) => (row.original.dateOfJoining ? format(new Date(row.original.dateOfJoining), "MMM dd, yyyy") : "—"),
-    },
-    {
-      header: "",
       id: "actions",
-      cell: ({ row }) => {
-        const teacher = row.original as any
-        if (teacher.isRegistered || teacher.userId) return null
-        return <InviteStaffButton teacherId={teacher.id} teacherName={teacher.fullName} />
-      },
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleView(row.original)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleDelete(row.original)} className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Staff" }]} />
-      <PageHeader title="Staff" description="Manage all employees and their profiles">
-        <Button onClick={() => router.push("/teachers/create")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Staff
-        </Button>
+    <div className="space-y-6">
+      <Breadcrumbs />
+      <PageHeader title="Staff & Teachers" description="Manage staff, teachers, and other employees">
+        <div className="flex gap-2">
+          <InviteStaffButton />
+          <Button onClick={() => router.push("/teachers/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Staff
+          </Button>
+        </div>
       </PageHeader>
 
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-4">
         <Select value={employeeTypeFilter} onValueChange={setEmployeeTypeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by type" />
+          <SelectTrigger className="w-[200px]">
+            <Filter className="mr-2 h-4 w-4" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {EMPLOYEE_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
+              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <span className="text-sm text-muted-foreground">
+          {filteredTeachers.length} staff member{filteredTeachers.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
-      <DynamicDataTable<Teacher>
+      <DynamicDataTable
         data={filteredTeachers}
-        columns={columns}
+        apiColumns={[]}
         isLoading={isLoading}
-        renderActions={(teacher) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewTeacher(teacher)}>
-                <Eye className="h-4 w-4 mr-2" />
-                View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/teachers/${teacher.id}/edit`)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTeacher(teacher)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
         idField="id"
-        searchPlaceholder="Search staff..."
+        searchPlaceholder="Search staff by name or email..."
       />
 
-      {viewTeacher && <ViewTeacherDialog teacher={viewTeacher} onClose={() => setViewTeacher(null)} />}
-
-      {deleteTeacher && <DeleteTeacherDialog teacher={deleteTeacher} onClose={() => setDeleteTeacher(null)} />}
+      <ViewTeacherDialog open={isViewOpen} onOpenChange={setIsViewOpen} teacher={selectedTeacher} />
+      <DeleteTeacherDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} teacher={selectedTeacher} />
     </div>
   )
 }
