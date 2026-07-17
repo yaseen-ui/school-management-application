@@ -75,7 +75,7 @@ export default function ResultsPage() {
         const subjectMark = r.subjectMarks.find((sm) => sm.paperId === paper.paperId)
         row.push(subjectMark?.isAbsent ? "AB" : (subjectMark?.marksObtained?.toString() ?? "-"))
       }
-      row.push(String(r.totalMarks), r.percentage.toFixed(2) + "%", r.isPassed ? "Pass" : "Fail")
+      row.push(String(r.totalMarks), r.percentage != null ? r.percentage.toFixed(2) + "%" : "-", r.isPassed ? "Pass" : "Fail")
       return row
     })
 
@@ -301,9 +301,13 @@ export default function ResultsPage() {
                         })}
                         <TableCell className="text-center font-semibold">{student.totalMarks}</TableCell>
                         <TableCell className="text-center">
-                          <span className={student.percentage >= 35 ? "text-green-600" : "text-red-600"}>
-                            {student.percentage.toFixed(2)}%
-                          </span>
+                          {student.percentage != null ? (
+                            <span className={student.percentage >= 35 ? "text-green-600" : "text-red-600"}>
+                              {student.percentage.toFixed(2)}%
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {student.isPassed ? (

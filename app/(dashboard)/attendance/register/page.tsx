@@ -1,31 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { format } from "date-fns"
 import { Loader2, Table, User, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { StudentAttendanceDrawer } from "@/components/attendance/student-attendance-drawer"
-import { toast } from "@/components/ui/sonner"
 
 import { attendanceApi } from "@/lib/api/attendance"
-import { useSections } from "@/hooks/use-sections"
+import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { useQuery } from "@tanstack/react-query"
 
 export default function AttendanceRegisterPage() {
-  const { data: sectionsData } = useSections()
-  const sections = ((sectionsData as any)?.data?.rows as any[]) || (Array.isArray(sectionsData) ? (sectionsData as any[]) : [])
-
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const now = new Date()
-  const [selectedSectionId, setSelectedSectionId] = useState("")
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [year, setYear] = useState(now.getFullYear())
-  const [selectedEnrollment, setSelectedEnrollment] = useState<string | null>(null)
+
+  const [selectedCourseId, setSelectedCourseId] = useState(searchParams.get("courseId") || "")
+  const [selectedGradeId, setSelectedGradeId] = useState(searchParams.get("gradeId") || "")
+  const [selectedSectionId, setSelectedSectionId] = useState(searchParams.get("sectionId") || "")
+  const [month, setMonth] = useState(() => {
+    const m = searchParams.get("month")
+    return m ? parseInt(m) : now.getMonth() + 1
+  })
+  const [year, setYear] = useState(() => {
+    const y = searchParams.get("year")
+    return y ? parseInt(y) : now.getFullYear()
+  })
   const [view, setView] = useState<"month" | "week">("month")
 
   const { data: registerData, isLoading } = useQuery({
@@ -70,15 +75,19 @@ export default function AttendanceRegisterPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">
-            <div className="w-48">
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Section</label>
-              <Select value={selectedSectionId} onValueChange={setSelectedSectionId}>
-                <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
-                <SelectContent>
-                  {sections.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.sectionName}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
+            <HierarchicalFilter
+              filters={["courses", "grades", "sections"]}
+              values={{
+                courseId: selectedCourseId || undefined,
+                gradeId: selectedGradeId || undefined,
+                sectionId: selectedSectionId || undefined,
+              }}
+              onChange={({ courseId, gradeId, sectionId }) => {
+                setSelectedCourseId(courseId || "")
+                setSelectedGradeId(gradeId || "")
+                setSelectedSectionId(sectionId || "")
+              }}
+            />
 
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
@@ -139,7 +148,15 @@ export default function AttendanceRegisterPage() {
                     <tr
                       key={e.enrollmentId}
                       className="border-b hover:bg-muted/50 cursor-pointer"
-                      onClick={() => setSelectedEnrollment(e.enrollmentId)}
+                      onClick={() => {
+                        const sp = new URLSearchParams()
+                        sp.set("month", String(month))
+                        sp.set("year", String(year))
+                        if (selectedCourseId) sp.set("courseId", selectedCourseId)
+                        if (selectedGradeId) sp.set("gradeId", selectedGradeId)
+                        if (selectedSectionId) sp.set("sectionId", selectedSectionId)
+                        router.push(`/attendance/register/student/${e.enrollmentId}?${sp.toString()}`)
+                      }}
                     >
                       <td className="sticky left-0 bg-background z-10 py-2 px-2 border-b">
                         <div className="font-medium truncate max-w-[130px]">{e.studentName}</div>
@@ -174,11 +191,6 @@ export default function AttendanceRegisterPage() {
         </CardContent>
       </Card>
 
-      <StudentAttendanceDrawer
-        open={!!selectedEnrollment}
-        onOpenChange={(v) => { if (!v) setSelectedEnrollment(null) }}
-        enrollmentId={selectedEnrollment}
-      />
     </motion.div>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Check, X, User, Loader2, Send } from "lucide-react"
 import { format } from "date-fns"
@@ -12,24 +12,17 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 
 import { attendanceApi, ATTENDANCE_TYPE_CATEGORIES, type AttendanceType } from "@/lib/api/attendance"
-import { useSections } from "@/hooks/use-sections"
 import { useAcademicYears } from "@/hooks/use-academic-years"
 import { useStudents } from "@/hooks/use-students"
-import { useCourses } from "@/hooks/use-courses"
-import { useGrades } from "@/hooks/use-grades"
 import { toast } from "@/components/ui/sonner"
 import { useQuery } from "@tanstack/react-query"
+import { enrollmentsApi, type Enrollment } from "@/lib/api/enrollments"
+import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 
 export function AttendanceMarkingPage() {
-  const { data: coursesData } = useCourses()
-  const { data: gradesData } = useGrades()
-  const { data: sectionsData } = useSections()
   const { data: academicYearsData } = useAcademicYears()
   const { data: studentsData } = useStudents()
 
-  const courses: any[] = ((coursesData as any)?.data?.rows as any[]) || (Array.isArray(coursesData) ? (coursesData as any[]) : [])
-  const grades: any[] = ((gradesData as any)?.data?.rows as any[]) || (Array.isArray(gradesData) ? (gradesData as any[]) : [])
-  const sections: any[] = ((sectionsData as any)?.data?.rows as any[]) || (Array.isArray(sectionsData) ? (sectionsData as any[]) : [])
   const academicYears: any[] = Array.isArray(academicYearsData) ? academicYearsData : ((academicYearsData as any)?.data as any)?.rows || (academicYearsData as any) || []
 
   const [selectedCourseId, setSelectedCourseId] = useState("")
@@ -42,18 +35,9 @@ export function AttendanceMarkingPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [marks, setMarks] = useState<Record<string, "present" | "absent">>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   const activeAcademicYear = useMemo(() => academicYears.find((y: any) => y.status === "active"), [academicYears])
-
-  const filteredGrades = useMemo(() => {
-    if (!selectedCourseId) return []
-    return grades.filter((g: any) => g.courseId === selectedCourseId)
-  }, [grades, selectedCourseId])
-
-  const filteredSections = useMemo(() => {
-    if (!selectedGradeId) return []
-    return sections.filter((s: any) => s.gradeId === selectedGradeId)
-  }, [sections, selectedGradeId])
 
   const { data: typesData } = useQuery({
     queryKey: ["attendance-types"],
@@ -72,21 +56,44 @@ export function AttendanceMarkingPage() {
   })
   const options = (contextOptions as any)?.data?.options || (contextOptions as any)?.options || []
 
+  const { data: enrollmentsData } = useQuery({
+    queryKey: ["enrollments", selectedSectionId, activeAcademicYear?.id],
+    queryFn: async () => {
+      const filters: Record<string, string> = { sectionId: selectedSectionId }
+      if (activeAcademicYear?.id) filters.academicYearId = activeAcademicYear.id
+      const res = await enrollmentsApi.getEnrollments(filters)
+      return ((res as any)?.data?.data || (res as any)?.data || []) as Enrollment[]
+    },
+    enabled: !!selectedSectionId && !!activeAcademicYear?.id,
+  })
+
   const students = useMemo(() => {
     const all: any[] = ((studentsData as any)?.rows as any[]) || (Array.isArray(studentsData) ? (studentsData as any[]) : [])
     if (!selectedSectionId) return []
-    return all.filter((s: any) => s.sectionId === selectedSectionId).map((s: any) => {
-      const enrollment = s.enrollments?.[0]
-      return {
-        id: s.id,
-        enrollmentId: enrollment?.id,
-        firstName: s.firstName,
-        lastName: s.lastName,
-        rollNumber: enrollment?.rollNumber || s.admissionNumber,
-        profilePhotoUrl: s.profilePhotoUrl || null,
-      }
-    })
-  }, [studentsData, selectedSectionId])
+
+    const enrollments: Enrollment[] = Array.isArray(enrollmentsData) ? enrollmentsData : []
+    const enrollmentByStudent = new Map(enrollments.map((e: any) => [e.studentId, e]))
+
+    return all
+      .filter((s: any) => s.sectionId === selectedSectionId)
+      .map((s: any) => {
+        const enrollment = enrollmentByStudent.get(s.id)
+        return {
+          id: s.id,
+          enrollmentId: enrollment?.id || null,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          rollNumber: enrollment?.rollNumber || s.admissionNumber || "N/A",
+          profilePhotoUrl: s.profilePhotoUrl || null,
+        }
+      })
+      .sort((a, b) => {
+        const aNum = parseInt(a.rollNumber, 10)
+        const bNum = parseInt(b.rollNumber, 10)
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum
+        return a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true })
+      })
+  }, [studentsData, selectedSectionId, enrollmentsData])
 
   const currentStudent = students[currentIndex]
   const totalStudents = students.length
@@ -97,18 +104,20 @@ export function AttendanceMarkingPage() {
     if (!currentStudent) return
     setMarks((prev) => ({
       ...prev,
-      [currentStudent.enrollmentId]: status,
+      [currentStudent.id]: status,
     }))
     if (currentIndex < totalStudents - 1) {
-      setTimeout(() => setCurrentIndex((i) => i + 1), 200)
+      setCurrentIndex((i) => i + 1)
     }
-  }, [currentStudent, currentIndex, totalStudents])
+  }, [currentStudent?.id, currentIndex, totalStudents])
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return
     if (!activeAcademicYear || !selectedSectionId || !selectedTypeId) {
       toast.error("Please select section and attendance type")
       return
     }
+    submittingRef.current = true
     setIsSubmitting(true)
     try {
       const payload: any = {
@@ -116,7 +125,12 @@ export function AttendanceMarkingPage() {
         sectionId: selectedSectionId,
         attendanceTypeId: selectedTypeId,
         date: selectedDate,
-        marks: Object.entries(marks).map(([enrollmentId, status]) => ({ enrollmentId, status })),
+        marks: Object.entries(marks)
+          .map(([studentId, status]) => {
+            const student = students.find((s) => s.id === studentId)
+            return student?.enrollmentId ? { enrollmentId: student.enrollmentId, status } : null
+          })
+          .filter(Boolean),
       }
       if (selectedPeriodId) payload.periodId = selectedPeriodId
       if (selectedExamScheduleId) payload.examScheduleId = selectedExamScheduleId
@@ -127,6 +141,7 @@ export function AttendanceMarkingPage() {
     } catch (e: any) {
       toast.error(e.message || "Failed to submit attendance")
     } finally {
+      submittingRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -138,34 +153,22 @@ export function AttendanceMarkingPage() {
     <div className="space-y-4 max-w-lg mx-auto">
       <Card>
         <CardContent className="pt-4 pb-4">
+          <HierarchicalFilter
+            filters={["courses", "grades", "sections"]}
+            values={{
+              courseId: selectedCourseId || undefined,
+              gradeId: selectedGradeId || undefined,
+              sectionId: selectedSectionId || undefined,
+            }}
+            onChange={({ courseId, gradeId, sectionId }) => {
+              setSelectedCourseId(courseId || "")
+              setSelectedGradeId(gradeId || "")
+              setSelectedSectionId(sectionId || "")
+              setCurrentIndex(0)
+              setMarks({})
+            }}
+          />
           <div className="space-y-2">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Course</label>
-              <Select value={selectedCourseId} onValueChange={(v) => { setSelectedCourseId(v); setSelectedGradeId(""); setSelectedSectionId(""); setCurrentIndex(0); setMarks({}) }}>
-                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder="Select course" /></SelectTrigger>
-                <SelectContent>
-                  {courses.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.courseName}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Grade</label>
-              <Select value={selectedGradeId} onValueChange={(v) => { setSelectedGradeId(v); setSelectedSectionId(""); setCurrentIndex(0); setMarks({}) }} disabled={!selectedCourseId}>
-                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder={selectedCourseId ? "Select grade" : "Select course first"} /></SelectTrigger>
-                <SelectContent>
-                  {filteredGrades.map((g: any) => (<SelectItem key={g.id} value={g.id}>{g.gradeName}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Section</label>
-              <Select value={selectedSectionId} onValueChange={(v) => { setSelectedSectionId(v); setCurrentIndex(0); setMarks({}) }} disabled={!selectedGradeId}>
-                <SelectTrigger className="h-9 mt-1"><SelectValue placeholder={selectedGradeId ? "Select section" : "Select grade first"} /></SelectTrigger>
-                <SelectContent>
-                  {filteredSections.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.sectionName}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Type</label>
               <Select value={selectedTypeId} onValueChange={(v) => { setSelectedTypeId(v); setSelectedPeriodId(""); setSelectedExamScheduleId("") }}>
@@ -214,17 +217,17 @@ export function AttendanceMarkingPage() {
         <>
           <div className="flex justify-center gap-1.5 flex-wrap">
             {students.map((s: any, i: number) => {
-              const status = marks[s.enrollmentId]
+              const status = marks[s.id]
               return (
-                <button key={s.enrollmentId} onClick={() => setCurrentIndex(i)}
+                <button key={s.id} onClick={() => setCurrentIndex(i)}
                   className={`w-3 h-3 rounded-full transition-all ${i === currentIndex ? "ring-2 ring-primary scale-125" : ""} ${status === "present" ? "bg-green-500" : status === "absent" ? "bg-red-500" : "bg-muted-foreground/30"}`}
                 />
               )
             })}
           </div>
           <AnimatePresence mode="wait">
-            <motion.div key={currentStudent?.enrollmentId} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.2 }}>
-              <Card className={`overflow-hidden border-2 transition-colors ${marks[currentStudent?.enrollmentId] === "present" ? "border-green-500" : marks[currentStudent?.enrollmentId] === "absent" ? "border-red-500" : "border-transparent"}`}>
+            <motion.div key={currentStudent?.id} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.2 }}>
+              <Card className={`overflow-hidden border-2 transition-colors ${marks[currentStudent?.id] === "present" ? "border-green-500" : marks[currentStudent?.id] === "absent" ? "border-red-500" : "border-transparent"}`}>
                 <CardContent className="pt-8 pb-6 flex flex-col items-center">
                   <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-4 overflow-hidden">
                     {currentStudent?.profilePhotoUrl ? (
@@ -235,18 +238,18 @@ export function AttendanceMarkingPage() {
                   </div>
                   <h3 className="text-lg font-bold">{currentStudent?.firstName} {currentStudent?.lastName}</h3>
                   <p className="text-sm text-muted-foreground mb-4">Roll: {currentStudent?.rollNumber || "N/A"}</p>
-                  {marks[currentStudent?.enrollmentId] && (
-                    <Badge className={`mb-3 ${marks[currentStudent.enrollmentId] === "present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {marks[currentStudent.enrollmentId] === "present" ? "Present" : "Absent"}
+                  {marks[currentStudent?.id] && (
+                    <Badge className={`mb-3 ${marks[currentStudent.id] === "present" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {marks[currentStudent.id] === "present" ? "Present" : "Absent"}
                     </Badge>
                   )}
                   <div className="flex gap-6">
                     <button onClick={() => setMark("absent")}
-                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${marks[currentStudent?.enrollmentId] === "absent" ? "bg-red-500 text-white border-red-500 scale-110" : "border-red-300 text-red-500 hover:bg-red-50"}`}>
+                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${marks[currentStudent?.id] === "absent" ? "bg-red-500 text-white border-red-500 scale-110" : "border-red-300 text-red-500 hover:bg-red-50"}`}>
                       <X className="h-7 w-7" />
                     </button>
                     <button onClick={() => setMark("present")}
-                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${marks[currentStudent?.enrollmentId] === "present" ? "bg-green-500 text-white border-green-500 scale-110" : "border-green-300 text-green-500 hover:bg-green-50"}`}>
+                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${marks[currentStudent?.id] === "present" ? "bg-green-500 text-white border-green-500 scale-110" : "border-green-300 text-green-500 hover:bg-green-50"}`}>
                       <Check className="h-7 w-7" />
                     </button>
                   </div>

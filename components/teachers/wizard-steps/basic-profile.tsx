@@ -1,8 +1,10 @@
 "use client"
 
+import { useEffect } from "react"
 import { useFormContext } from "react-hook-form"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileUpload } from "@/components/shared/file-upload"
 import { useUsers } from "@/hooks/use-users"
@@ -56,6 +58,23 @@ export function TeacherBasicProfile() {
   const licenseExpiryDate = watch("licenseExpiryDate")
 
   const { data: users, isLoading: isLoadingUsers } = useUsers()
+  const linkToUser = watch("linkToUser")
+  const selectedUserId = watch("userId")
+
+  // Filter unlinked users (users that don't have a teacher linked yet)
+  const unlinkedUsers = users?.filter((u: any) => !u.teacher) || []
+
+  // When a user is selected, auto-populate email and disable it
+  useEffect(() => {
+    if (linkToUser && selectedUserId) {
+      const selectedUser = users?.find((u: any) => u.id === selectedUserId)
+      if (selectedUser) {
+        setValue("email", selectedUser.email || "", { shouldValidate: true })
+        setValue("fullName", selectedUser.fullName || "", { shouldValidate: true })
+        setValue("phone", selectedUser.phone || "", { shouldValidate: true })
+      }
+    }
+  }, [linkToUser, selectedUserId, users, setValue])
 
   const isNonTeaching = employeeType && employeeType !== "teacher"
   const isDriver = employeeType === "driver"
@@ -79,6 +98,50 @@ export function TeacherBasicProfile() {
         </div>
       )}
 
+      {/* Link to User Account - Checkbox */}
+      <div className="flex items-center space-x-3">
+        <Checkbox
+          id="linkToUser"
+          checked={linkToUser || false}
+          onCheckedChange={(checked) => {
+            setValue("linkToUser", !!checked)
+            if (!checked) {
+              setValue("userId", undefined)
+            }
+          }}
+        />
+        <Label htmlFor="linkToUser" className="cursor-pointer text-sm font-medium">
+          Link to existing User Account
+        </Label>
+      </div>
+
+      {/* User selection dropdown - only visible when checkbox is checked */}
+      {linkToUser && (
+        <div className="space-y-2 pl-7">
+          <Label htmlFor="userId">Select User</Label>
+          <Select
+            value={selectedUserId || undefined}
+            onValueChange={(value) => setValue("userId", value === "none" ? undefined : value)}
+            disabled={isLoadingUsers}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select a user to link"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {unlinkedUsers.map((user: any) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.fullName} ({user.email})
+                </SelectItem>
+              ))}
+              {unlinkedUsers.length === 0 && !isLoadingUsers && (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">No unlinked users available</div>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4">
         {/* Full Name */}
         <div className="space-y-2">
@@ -89,6 +152,7 @@ export function TeacherBasicProfile() {
             id="fullName"
             {...register("fullName", { required: "Full name is required" })}
             placeholder="Enter full name"
+            disabled={!!linkToUser}
           />
           {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message as string}</p>}
         </div>
@@ -108,6 +172,7 @@ export function TeacherBasicProfile() {
               pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
             })}
             placeholder="employee@example.com"
+            disabled={!!linkToUser}
           />
           {errors.email && <p className="text-sm text-destructive">{errors.email.message as string}</p>}
         </div>
@@ -121,6 +186,7 @@ export function TeacherBasicProfile() {
             id="phone"
             {...register("phone", { required: "Phone is required" })}
             placeholder="Enter phone number"
+            disabled={!!linkToUser}
           />
           {errors.phone && <p className="text-sm text-destructive">{errors.phone.message as string}</p>}
         </div>
@@ -183,13 +249,11 @@ export function TeacherBasicProfile() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Employee Code */}
         <div className="space-y-2">
-          <Label htmlFor="employeeCode">
-            Employee Code <span className="text-destructive">*</span>
-          </Label>
+          <Label htmlFor="employeeCode">Employee Code (auto-generated if blank)</Label>
           <Input
             id="employeeCode"
-            {...register("employeeCode", { required: "Employee code is required" })}
-            placeholder="Enter employee code"
+            {...register("employeeCode")}
+            placeholder="Leave blank to auto-generate"
           />
           {errors.employeeCode && <p className="text-sm text-destructive">{errors.employeeCode.message as string}</p>}
         </div>
@@ -217,27 +281,6 @@ export function TeacherBasicProfile() {
           {errors.employeeType && <p className="text-sm text-destructive">{errors.employeeType.message as string}</p>}
         </div>
 
-        {/* User Linking */}
-        <div className="space-y-2">
-          <Label htmlFor="userId">Link to User Account (Optional)</Label>
-          <Select
-            value={watch("userId") || undefined}
-            onValueChange={(value) => setValue("userId", value === "none" ? undefined : value)}
-            disabled={isLoadingUsers}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select user"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {users?.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.fullName} ({user.email})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Government ID Section - For all non-teaching staff */}

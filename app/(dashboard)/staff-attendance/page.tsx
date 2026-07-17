@@ -91,7 +91,7 @@ export default function StaffAttendancePage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Request failed");
-      return json.data ?? json;
+      return ('data' in json) ? json.data : json;
     },
     [token, tenantId],
   );

@@ -74,7 +74,11 @@ const createMockReq = async (nextReq: NextRequest, params: any = {}, query: any 
 
   // Ensure req.user is never null — controllers destructure req.user.tenantId.
   // When no JWT is present, fall back to the x-tenant-id header value.
-  const safeUser = user ?? (tenantId ? { tenantId, userId: null, userType: 'tenant' as const, role: null } : null)
+  // Also map userId -> id for controllers that destructure { id } from req.user
+  // (e.g. staff-attendance, leave, payroll).
+  const safeUser = user
+    ? { ...user, id: user.userId }
+    : (tenantId ? { tenantId, userId: null, userType: 'tenant' as const, role: null, id: null } : null)
 
   return {
     body: nextReq.method !== 'GET' ? await nextReq.json().catch(() => ({})) : {},

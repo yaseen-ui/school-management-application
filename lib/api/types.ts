@@ -153,6 +153,7 @@ export interface CreateUserRequest {
   phone: string
   password: string
   roleId: string
+  teacherId?: string | null
 }
 
 export interface CreateCompanyUserRequest {
