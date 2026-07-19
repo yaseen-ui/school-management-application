@@ -42,6 +42,7 @@ import {
   Clock,
   Fingerprint,
   Upload,
+  Sparkles,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -63,7 +64,10 @@ interface NavGroup {
 const companyNavGroups: NavGroup[] = [
   {
     title: "Overview",
-    items: [{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: 'dashboard:view' }],
+    items: [
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: 'dashboard:view' },
+      { title: "AI Assistant", href: "/zai", icon: Sparkles, permission: 'query-bot:ask' },
+    ],
   },
   {
     title: "Management",
@@ -94,7 +98,10 @@ const companyNavGroups: NavGroup[] = [
 const tenantNavGroups: NavGroup[] = [
   {
     title: "Overview",
-    items: [{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: 'dashboard:view' }],
+    items: [
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: 'dashboard:view' },
+      { title: "AI Assistant", href: "/zai", icon: Sparkles, permission: 'query-bot:ask' },
+    ],
   },
   {
     title: "Academics",

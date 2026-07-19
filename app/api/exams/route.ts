@@ -5,7 +5,7 @@ import { Guard } from '@/lib/backend/rbac/guards.js'
 export async function GET(req: NextRequest) {
   await Guard.action(req, 'exams:read');
   const ExamController = (await import('@backend/modules/exams/exam.controller.js')).default
-  return invokeBackendController(ExamController, 'getAllExams', req)
+  return invokeBackendController(ExamController, 'getExams', req)
 }
 
 export async function POST(req: NextRequest) {

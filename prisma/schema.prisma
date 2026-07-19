@@ -425,6 +425,9 @@ model Tenant {
   // RBAC v2
   groups Group[]
 
+  // AI query bot
+  zaiChats ZaiChat[]
+
   @@map("tenants")
 }
 
@@ -497,6 +500,9 @@ model User {
   visitorApproved       Visitor[]                @relation("visitorApprovedBy")
   visitorCreated        Visitor[]                @relation("visitorCreatedBy")
   visitorNotifications  VisitorNotification[]
+
+  // AI query bot chats
+  zaiChats ZaiChat[]
   
   @@unique([tenantId, email], name: "user_email_per_tenant")
   @@unique([email, userType], name: "user_email_per_type")
@@ -3084,4 +3090,46 @@ model IdSequenceLog {
   @@index([tenantId, entityId])
   @@index([tenantId, createdAt])
   @@map("id_sequence_logs")
+}
+
+// ---------------- AI Query Bot: Chat History ----------------
+/// Represents a single ZAI chat conversation session.
+model ZaiChat {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  title     String   @default("New Chat")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user     User         @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  messages ZaiMessage[]
+
+  @@unique([id, tenantId], name: "zai_chat_tenant_identity")
+  @@index([tenantId, userId])
+  @@index([tenantId, updatedAt])
+  @@map("zai_chats")
+}
+
+/// Individual messages within a ZAI chat session.
+model ZaiMessage {
+  id        String   @id @default(uuid())
+  chatId    String
+  tenantId  String
+  role      String   // "user" | "assistant"
+  content   String   // The text content (question or natural language answer)
+
+  // Only for assistant messages (the bot's response)
+  queryUsed   Json?    // The Prisma query params that were generated & executed
+  resultData  Json?    // The raw data returned from the DB (truncated if >500 rows)
+  resultCount Int?     // Total row count
+  error       String?  // Error message if query failed
+
+  createdAt DateTime @default(now())
+
+  chat ZaiChat @relation(fields: [chatId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([chatId, createdAt])
+  @@map("zai_messages")
 }
