@@ -201,7 +201,6 @@ export default function VisitorsPage() {
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search visitors..."
-        renderActions={(row) => null}
       />
 
       {showCreate && <CreateVisitorDialog open={showCreate} onOpenChange={setShowCreate} />}

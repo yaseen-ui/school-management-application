@@ -47,7 +47,7 @@ export default function TeachersPage() {
   const router = useRouter()
   const { data: teacherData, isLoading } = useTeachers()
 
-  const teachers: Teacher[] = teacherData?.rows ?? teacherData ?? []
+  const teachers: Teacher[] = teacherData ?? []
 
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -164,14 +164,18 @@ export default function TeachersPage() {
 
       <DynamicDataTable
         data={filteredTeachers}
-        apiColumns={[]}
+        columns={columns}
         isLoading={isLoading}
         idField="id"
         searchPlaceholder="Search staff by name or email..."
       />
 
-      <ViewTeacherDialog open={isViewOpen} onOpenChange={setIsViewOpen} teacher={selectedTeacher} />
-      <DeleteTeacherDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} teacher={selectedTeacher} />
+      {selectedTeacher && (
+        <ViewTeacherDialog open={isViewOpen} onOpenChange={setIsViewOpen} teacher={selectedTeacher} />
+      )}
+      {selectedTeacher && (
+        <DeleteTeacherDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} teacher={selectedTeacher} />
+      )}
     </div>
   )
 }

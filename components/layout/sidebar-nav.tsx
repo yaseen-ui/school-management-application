@@ -170,6 +170,17 @@ const tenantNavGroups: NavGroup[] = [
     ],
   },
   {
+    title: "Hostel Management",
+    items: [
+      { title: "Hostel Blocks", href: "/hostel/blocks", icon: Building2, permission: 'hostel:read' },
+      { title: "Room Types", href: "/hostel/room-types", icon: Tag, permission: 'hostel:read' },
+      { title: "Rooms", href: "/hostel/rooms", icon: DoorOpen, permission: 'hostel:read' },
+      { title: "Sections", href: "/hostel/sections", icon: Layers, permission: 'hostel:read' },
+      { title: "Staff Assignments", href: "/hostel/staff", icon: Users, permission: 'hostel:read' },
+      { title: "Student Allocations", href: "/hostel/allocations", icon: GraduationCap, permission: 'hostel:allocate' },
+    ],
+  },
+  {
     title: "Leave Management",
     items: [
       { title: "Leave Dashboard", href: "/leave", icon: CalendarClock, permission: 'leave:read' },

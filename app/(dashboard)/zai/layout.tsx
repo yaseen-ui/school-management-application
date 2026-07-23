@@ -14,7 +14,7 @@ export default function ZaiLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
       <PermissionProvider>
-        <div className="h-[calc(100vh-0px)] flex flex-col overflow-hidden bg-background">
+        <div className="h-[calc(100vh-7rem)] flex flex-col overflow-hidden bg-background">
           {children}
         </div>
       </PermissionProvider>

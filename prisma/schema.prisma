@@ -193,6 +193,15 @@ enum RoomCategory {
   deluxe
 }
 
+enum HostelStaffRole {
+  warden
+  in_charge
+  cook
+  mate
+  cleaner
+  other
+}
+
 enum VehicleCategoryType {
   bus
   van
@@ -424,6 +433,16 @@ model Tenant {
 
   // RBAC v2
   groups Group[]
+
+  // hostel management
+  hostelBlocks            HostelBlock[]
+  hostelFloors            HostelFloor[]
+  hostelRoomTypes         HostelRoomType[]
+  hostelRooms             HostelRoom[]
+  hostelSections          HostelSection[]
+  hostelSectionRooms      HostelSectionRoom[]
+  hostelStaffAssignments  HostelStaffAssignment[]
+  studentHostelAllocations StudentHostelAllocation[]
 
   // AI query bot
   zaiChats ZaiChat[]
@@ -721,6 +740,9 @@ model Section {
   examSchedules      ExamSchedule[]
   examTargetSections ExamTargetSection[]
 
+  // hostel management
+  hostelSections HostelSection[]
+
   @@unique([id, tenantId], name: "section_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, gradeId])
@@ -813,6 +835,9 @@ model AcademicYear {
   // leave management
   leaveBalances EmployeeLeaveBalance[]
 
+  // hostel management
+  hostelAllocations StudentHostelAllocation[]
+
   // id sequence
   idSequencePatterns IdSequencePattern[]
 
@@ -859,6 +884,9 @@ model StudentEnrollment {
 
   // transportation
   transportAssignments StudentTransportAssignment[]
+
+  // hostel management
+  hostelAllocations StudentHostelAllocation[]
 
   // leave management
   leaveRequests LeaveRequest[]
@@ -961,6 +989,9 @@ model Teacher {
 
   // staff attendance
   attendances StaffAttendance[]
+
+  // hostel staff assignments
+  hostelStaffAssignments HostelStaffAssignment[]
 
   // leave management
   leaveRequests        LeaveRequest[]
@@ -1256,6 +1287,222 @@ model Room {
   @@index([tenantId, floorId])
   @@index([tenantId, status])
   @@map("rooms")
+}
+
+// ---------------- Hostel Management Module ----------------
+
+/// Hostel blocks/buildings — separate from academic buildings
+model HostelBlock {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String?
+  description String?
+  gender      Gender?
+  status      EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  floors    HostelFloor[]
+  staffAssignments HostelStaffAssignment[]
+
+  @@unique([id, tenantId], name: "hostel_block_tenant_identity")
+  @@unique([tenantId, name], name: "uniqueHostelBlockNamePerTenant")
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("hostel_blocks")
+}
+
+/// Floors under a hostel block — optional gender override at floor level
+model HostelFloor {
+  id          String   @id @default(uuid())
+  tenantId    String
+  blockId     String
+  floorNumber Int
+  name        String?
+  gender      Gender?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  block  HostelBlock @relation(fields: [blockId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  rooms  HostelRoom[]
+
+  @@unique([id, tenantId], name: "hostel_floor_tenant_identity")
+  @@unique([tenantId, blockId, floorNumber], name: "uniqueHostelFloorPerBlock")
+  @@index([tenantId])
+  @@index([tenantId, blockId])
+  @@map("hostel_floors")
+}
+
+/// Tenant-configurable room types for hostels
+model HostelRoomType {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  description     String?
+  defaultCapacity Int      @default(1)
+  amenities       Json?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  rooms  HostelRoom[]
+  feeHeads FeeHead[]
+
+  @@unique([id, tenantId], name: "hostel_room_type_tenant_identity")
+  @@unique([tenantId, name], name: "uniqueHostelRoomTypePerTenant")
+  @@index([tenantId])
+  @@map("hostel_room_types")
+}
+
+/// Individual hostel rooms — occupancy derived from active allocations
+model HostelRoom {
+  id          String       @id @default(uuid())
+  tenantId    String
+  floorId     String
+  roomTypeId  String
+  roomNumber  String
+  capacity    Int
+  status      EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  floor    HostelFloor    @relation(fields: [floorId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  roomType HostelRoomType @relation(fields: [roomTypeId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  sectionRooms     HostelSectionRoom[]
+  studentAllocations StudentHostelAllocation[]
+
+  @@unique([id, tenantId], name: "hostel_room_tenant_identity")
+  @@unique([tenantId, floorId, roomNumber], name: "uniqueHostelRoomPerFloor")
+  @@index([tenantId])
+  @@index([tenantId, floorId])
+  @@index([tenantId, roomTypeId])
+  @@index([tenantId, status])
+  @@map("hostel_rooms")
+}
+
+/// Sections for grouping rooms — references academic Section from Courses → Grades
+/// No blockId — rooms from any block can be assigned to the same academic section
+model HostelSection {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectionId   String
+  description String?
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  section    Section @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  sectionRooms     HostelSectionRoom[]
+  studentAllocations StudentHostelAllocation[]
+
+  @@unique([id, tenantId], name: "hostel_section_tenant_identity")
+  @@unique([tenantId, sectionId], name: "uniqueHostelSection")
+  @@index([tenantId])
+  @@index([tenantId, sectionId])
+  @@map("hostel_sections")
+}
+
+/// Maps rooms to sections — establishes the default grouping
+model HostelSectionRoom {
+  id        String   @id @default(uuid())
+  tenantId  String
+  sectionId String
+  roomId    String
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  section HostelSection @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  room    HostelRoom    @relation(fields: [roomId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "hostel_section_room_tenant_identity")
+  @@unique([tenantId, sectionId, roomId], name: "uniqueSectionRoomMapping")
+  @@index([tenantId, sectionId])
+  @@index([tenantId, roomId])
+  @@map("hostel_section_rooms")
+}
+
+/// Staff assignments to hostel blocks — multiple wardens allowed, one incharge enforced at app level
+model HostelStaffAssignment {
+  id        String          @id @default(uuid())
+  tenantId  String
+  blockId   String
+  teacherId String
+  role      HostelStaffRole
+  fromDate  DateTime        @default(now())
+  toDate    DateTime?
+  status    EntityStatus    @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  block   HostelBlock @relation(fields: [blockId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  teacher Teacher     @relation(fields: [teacherId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "hostel_staff_assignment_tenant_identity")
+  @@unique([tenantId, blockId, teacherId, role, fromDate], name: "uniqueHostelStaffAssignment")
+  @@index([tenantId, blockId])
+  @@index([tenantId, teacherId])
+  @@index([tenantId, role])
+  @@index([tenantId, status])
+  @@map("hostel_staff_assignments")
+}
+
+/// Student hostel allocations — links enrollment to a hostel room, with optional section override
+model StudentHostelAllocation {
+  id             String       @id @default(uuid())
+  tenantId       String
+  enrollmentId   String
+  roomId         String
+  sectionId      String?
+  academicYearId String
+  fromDate       DateTime     @default(now())
+  toDate         DateTime?
+  status         EntityStatus @default(active)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  enrollment   StudentEnrollment @relation(fields: [enrollmentId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  room         HostelRoom        @relation(fields: [roomId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  section      HostelSection?    @relation(fields: [sectionId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  academicYear AcademicYear      @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "student_hostel_allocation_tenant_identity")
+  @@unique([tenantId, enrollmentId, academicYearId], name: "oneHostelAllocationPerYear")
+  @@index([tenantId, enrollmentId])
+  @@index([tenantId, roomId])
+  @@index([tenantId, sectionId])
+  @@index([tenantId, academicYearId])
+  @@index([tenantId, status])
+  @@map("student_hostel_allocations")
 }
 
 // ---------------- Transportation Module ----------------
@@ -2015,23 +2262,26 @@ model Upload {
 }
 
 model FeeHead {
-  id          String  @id @default(uuid())
-  tenantId    String
-  name        String
-  description String?
-  isOptional  Boolean @default(false)
-  sortOrder   Int     @default(0)
-  createdById String?
-  updatedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id              String  @id @default(uuid())
+  tenantId        String
+  name            String
+  description     String?
+  isOptional      Boolean @default(false)
+  hostelRoomTypeId String?
+  sortOrder       Int     @default(0)
+  createdById     String?
+  updatedById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  hostelRoomType HostelRoomType? @relation(fields: [hostelRoomTypeId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
   sectionFeeHeads SectionFeeHead[]
   studentFeeHeads StudentFeeHead[]
   feePayments     FeePayment[]
   @@unique([tenantId, name], name: "uniqueFeeHeadPerTenant")
   @@unique([id, tenantId], name: "fee_head_tenant_identity")
   @@index([tenantId])
+  @@index([tenantId, hostelRoomTypeId])
   @@map("fee_heads")
 }
 

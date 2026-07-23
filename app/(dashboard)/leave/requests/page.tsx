@@ -84,7 +84,7 @@ export default function LeaveRequestsPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
                       <span className="font-semibold">
-                        {req.employee?.fullName || req.student?.firstName + " " + req.student?.lastName || "Unknown"}
+                        {req.employee?.fullName || (req.student ? req.student.firstName + " " + req.student.lastName : null) || "Unknown"}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[req.status] || "bg-gray-100"}`}>
                         {req.status.replace("_", " ")}
