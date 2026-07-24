@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { useAuthStore } from "@/stores/auth-store"
 import { authApi } from "@/lib/api/auth"
 import { config } from "@/lib/config"
+import { hasRole } from "@/hooks/use-nav-groups"
 import type { LoginRequest } from "@/lib/api/types"
 
 export function useLogin() {
@@ -17,16 +18,14 @@ export function useLogin() {
     onSuccess: (response) => {
       setAuth(response.data?.user, response.data?.token)
       toast.success("Login successful", {
-        description: `Welcome back, ${response.data?.user.firstName || response.data?.user.fullName || "User"}!`,
+        description: `Welcome back, ${response.data?.user.fullName || "User"}!`,
       })
 
-      // Redirect based on host type and user type
+      // Redirect based on host type and user role
       if (config.isCompanyHost) {
         router.push("/tenants")
-      } else if (response.data?.user?.userType === "parent") {
+      } else if (hasRole(response.data?.user as any, "Parent")) {
         router.push("/parent-portal")
-      } else if (response.data?.user?.userType === "staff") {
-        router.push("/staff-portal")
       } else {
         router.push("/dashboard")
       }

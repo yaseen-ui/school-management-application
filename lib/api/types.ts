@@ -16,9 +16,10 @@ export interface User {
   email: string
   fullName: string
   phone: string
-  userType: "tenant" | "company" | "parent" | "staff"
+  userType: "tenant" | "company"
   tenantId?: string
-  roleId: string
+  roleId?: string
+  roles?: { id: string; name: string }[]
   otp?: string | null
   isFirstLogin: boolean
   createdAt: string

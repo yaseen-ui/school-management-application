@@ -25,6 +25,14 @@ function buildRegisterSchema(missingFields: string[]) {
     shape.email = z.string().email("Please enter a valid email address")
   }
 
+  if (missingFields.includes("phone")) {
+    shape.phone = z
+      .string()
+      .min(10, "Phone number must be at least 10 digits")
+      .max(15, "Phone number must not exceed 15 digits")
+      .regex(/^\+?[0-9\s\-()]+$/, "Please enter a valid phone number")
+  }
+
   return z.object(shape).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
@@ -51,6 +59,9 @@ export default function ParentRegisterPage() {
   if (missingFields.includes("email")) {
     defaultValues.email = ""
   }
+  if (missingFields.includes("phone")) {
+    defaultValues.phone = ""
+  }
 
   const {
     register,
@@ -66,6 +77,9 @@ export default function ParentRegisterPage() {
     const payload: any = { token, password: data.password }
     if (missingFields.includes("email")) {
       payload.email = (data as any).email
+    }
+    if (missingFields.includes("phone")) {
+      payload.phone = (data as any).phone
     }
     registerMutation.mutate(payload, {
       onSuccess: () => {
@@ -225,6 +239,26 @@ export default function ParentRegisterPage() {
                   </div>
                   {errors.email && (
                     <p className="text-sm text-destructive">{(errors.email as any)?.message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Phone field — shown when missing */}
+              {missingFields.includes("phone") && (
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      className="pl-10"
+                      {...register("phone")}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{(errors.phone as any)?.message}</p>
                   )}
                 </div>
               )}

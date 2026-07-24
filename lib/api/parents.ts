@@ -60,6 +60,37 @@ export interface RegisterParentResponse {
 }
 
 export const parentsApi = {
+  // Parent: Get own profile with children
+  getMyProfile: () => apiClient.get<ApiResponse<Parent>>("/parent/me"),
+
+  // Parent: Get children attendance for a month
+  getMyChildrenAttendance: (month: number, year: number) =>
+    apiClient.get<ApiResponse<any[]>>(`/parent/attendance?month=${month}&year=${year}`),
+
+  // Parent: Get children exam results
+  getMyChildrenResults: (examId?: string) =>
+    apiClient.get<ApiResponse<any[]>>(`/parent/results${examId ? `?examId=${examId}` : ""}`),
+
+  // Parent: Get children store orders
+  getMyChildrenStoreOrders: () => apiClient.get<ApiResponse<any[]>>("/parent/store/orders"),
+
+  // Parent: Get children leave requests
+  getMyChildrenLeave: () => apiClient.get<ApiResponse<any[]>>("/parent/leave"),
+
+  // Parent: Submit leave for child
+  submitLeaveForChild: (data: {
+    studentId: string
+    leaveCategoryId: string
+    startDate: string
+    endDate: string
+    startFraction?: string
+    endFraction?: string
+    reason: string
+  }) => apiClient.post<ApiResponse<any>>("/parent/leave", data),
+
+  // Parent: Get children fee details
+  getMyChildrenFees: () => apiClient.get<ApiResponse<any[]>>("/parent/fees"),
+
   // Admin: List all parents
   getAll: () => apiClient.get<ApiResponse<Parent[]>>("/parents"),
 
