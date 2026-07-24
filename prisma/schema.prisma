@@ -288,6 +288,63 @@ enum LeaveAllocationMethod {
   accrued_monthly
 }
 
+// ---------------- Communication Module Enums ----------------
+enum CommunicationType {
+  notification
+  alert
+  reminder
+  action_required
+  emergency
+}
+
+enum PublicationType {
+  circular
+  announcement
+  notice_board
+  holiday_notice
+  event_notice
+  academic_notice
+}
+
+enum CommunicationStatus {
+  draft
+  sent
+  scheduled
+  cancelled
+}
+
+enum PublicationStatus {
+  draft
+  pending_approval
+  approved
+  rejected
+  published
+  expired
+  archived
+  withdrawn
+}
+
+enum CommunicationChannel {
+  in_app
+  email
+  sms
+  push
+}
+
+enum DeliveryStatus {
+  pending
+  sent
+  delivered
+  failed
+  viewed
+  acknowledged
+}
+
+enum SenderType {
+  user
+  system
+}
+
 // ---------------- Core: Tenants, Users, Roles ----------------
 model Tenant {
   id               String           @id @default(uuid())
@@ -444,6 +501,15 @@ model Tenant {
   hostelStaffAssignments  HostelStaffAssignment[]
   studentHostelAllocations StudentHostelAllocation[]
 
+  // communication module
+  communications          Communication[]
+  communicationRecipients CommunicationRecipient[]
+  publications            Publication[]
+  publicationRevisions    PublicationRevision[]
+  notificationTemplates   NotificationTemplate[]
+  automationRules         AutomationRule[]
+  channelConfigurations   ChannelConfiguration[]
+
   // AI query bot
   zaiChats ZaiChat[]
 
@@ -520,6 +586,14 @@ model User {
   visitorCreated        Visitor[]                @relation("visitorCreatedBy")
   visitorNotifications  VisitorNotification[]
 
+  // communication module
+  communications          Communication[]
+  communicationRecipients CommunicationRecipient[]
+  publicationsSubmitted   Publication[]        @relation("publicationSubmittedBy")
+  publicationsApproved    Publication[]        @relation("publicationApprovedBy")
+  publicationsRejected    Publication[]        @relation("publicationRejectedBy")
+  publicationRevisions    PublicationRevision[]
+
   // AI query bot chats
   zaiChats ZaiChat[]
   
@@ -528,6 +602,7 @@ model User {
   @@unique([id, tenantId], name: "user_tenant_identity")
   @@index([tenantId])
   @@index([tenantId, status])
+
   @@map("users")
 }
 
@@ -3382,4 +3457,232 @@ model ZaiMessage {
 
   @@index([chatId, createdAt])
   @@map("zai_messages")
+}
+
+// ---------------- Communication Module ----------------
+
+model Communication {
+  id            String              @id @default(uuid())
+  tenantId      String
+  type          CommunicationType
+  senderType    SenderType          @default(user)
+  senderId      String?             // userId (null when system)
+  title         String
+  message       String
+  priority      Int                 @default(0)  // 0=normal, 1=high, 2=urgent
+  actionButton  Json?               // { label: "Approve", link: "/leave/123" }
+  scheduledAt   DateTime?
+  expiresAt     DateTime?
+  status        CommunicationStatus @default(draft)
+
+  // Audience criteria (all nullable — empty = entire tenant)
+  targetUserIds       Json?   // [{ userId: "..." }]
+  targetRoles         Json?   // [{ roleId: "..." }]
+  targetGroups        Json?   // [{ groupId: "..." }]
+  targetGrades        Json?   // [{ gradeId: "..." }]
+  targetSections      Json?   // [{ sectionId: "..." }]
+  targetEmployeeTypes Json?   // ["teacher", "driver", ...]
+  targetAudience      Json?   // ["student", "parent", "employee"]
+
+  // For automated notifications
+  automationRuleId String?
+  sourceModule     String?   // "attendance", "leave", etc.
+  sourceEvent      String?   // "student_absent", etc.
+  sourceReference  Json?     // { entityType, entityId }
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tenant        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sender        User?                      @relation(fields: [senderId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  automationRule AutomationRule?           @relation(fields: [automationRuleId, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  recipients    CommunicationRecipient[]
+
+  @@unique([id, tenantId], name: "communication_tenant_identity")
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@index([tenantId, senderId])
+  @@index([tenantId, createdAt])
+  @@map("communications")
+}
+
+model CommunicationRecipient {
+  id              String            @id @default(uuid())
+  tenantId        String
+  communicationId String
+  userId          String
+  channel         CommunicationChannel
+  deliveryStatus  DeliveryStatus    @default(pending)
+  viewedAt        DateTime?
+  acknowledgedAt  DateTime?
+  retryCount      Int               @default(0)
+  lastError       String?
+  deliveredAt     DateTime?
+  providerMessageId String?         // external provider's message ID
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  communication Communication @relation(fields: [communicationId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  user          User          @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "communication_recipient_tenant_identity")
+  @@unique([tenantId, communicationId, userId, channel], name: "uniqueRecipientPerChannel")
+  @@index([tenantId, userId])
+  @@index([tenantId, deliveryStatus])
+  @@map("communication_recipients")
+}
+
+model Publication {
+  id                String            @id @default(uuid())
+  tenantId          String
+  type              PublicationType
+  title             String
+  content           String            // rich text / HTML
+  circularNumber    String?           // only for Circular type
+  attachments       Json?             // [{ name, url, size, type }]
+  
+  // Audience (same pattern as Communication)
+  targetUserIds       Json?
+  targetRoles         Json?
+  targetGroups        Json?
+  targetGrades        Json?
+  targetSections      Json?
+  targetEmployeeTypes Json?
+  targetAudience      Json?
+
+  publishDate       DateTime?
+  expiryDate        DateTime?
+  priority          Int               @default(0)
+  isPinned          Boolean           @default(false)
+  requireAcknowledgement Boolean       @default(false)
+  sendNotification  Boolean           @default(false) // also send as notification
+
+  // Status workflow
+  status            PublicationStatus @default(draft)
+  submittedAt       DateTime?
+  submittedById     String?
+  approvedAt        DateTime?
+  approvedById      String?
+  approvalRemarks   String?
+  rejectedAt        DateTime?
+  rejectedById      String?
+  rejectionReason   String?
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  withdrawnAt       DateTime?
+
+  // Revision tracking (for circulars)
+  revision          Int               @default(0)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  tenant        Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  submittedBy   User?                        @relation("publicationSubmittedBy", fields: [submittedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  approvedBy    User?                        @relation("publicationApprovedBy", fields: [approvedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  rejectedBy    User?                        @relation("publicationRejectedBy", fields: [rejectedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+  revisions     PublicationRevision[]
+
+  @@unique([id, tenantId], name: "publication_tenant_identity")
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@index([tenantId, publishDate])
+  @@index([tenantId, expiryDate])
+  @@map("publications")
+}
+
+model PublicationRevision {
+  id            String   @id @default(uuid())
+  tenantId      String
+  publicationId String
+  revision      Int
+  title         String
+  content       String
+  changedById   String?
+  changeSummary String?
+  createdAt     DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  publication Publication @relation(fields: [publicationId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  changedBy   User?       @relation(fields: [changedById, tenantId], references: [id, tenantId], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([id, tenantId], name: "publication_revision_tenant_identity")
+  @@unique([tenantId, publicationId, revision], name: "uniqueRevisionPerPublication")
+  @@index([tenantId, publicationId])
+  @@map("publication_revisions")
+}
+
+model NotificationTemplate {
+  id              String              @id @default(uuid())
+  tenantId        String
+  name            String
+  description     String?
+  type            CommunicationType
+  subject         String              // supports {{placeholders}}
+  body            String              // supports {{placeholders}}
+  defaultChannel  CommunicationChannel @default(in_app)
+  defaultPriority Int                 @default(0)
+  isSystem        Boolean             @default(false)  // true = only for automation use
+  isActive        Boolean             @default(true)
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  automationRules AutomationRule[]
+
+  @@unique([id, tenantId], name: "notification_template_tenant_identity")
+  @@unique([tenantId, name], name: "uniqueTemplateNamePerTenant")
+  @@map("notification_templates")
+}
+
+model AutomationRule {
+  id              String              @id @default(uuid())
+  tenantId        String
+  name            String
+  description     String?
+  sourceModule    String              // "attendance", "leave", "exam", "fee", "visitor", "transport", "library", "inventory", "result"
+  event           String              // "student_absent", "leave_submitted", "exam_scheduled", etc.
+  templateId      String
+  channels        CommunicationChannel[] @default([in_app])
+  isEnabled       Boolean             @default(true)
+  cooldownMinutes Int?                // min interval between same event for same target
+  filterCriteria  Json?               // optional: { gradeIds: [...], sectionIds: [...] } to narrow scope
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  template NotificationTemplate @relation(fields: [templateId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  communications Communication[]
+
+  @@unique([id, tenantId], name: "automation_rule_tenant_identity")
+  @@unique([tenantId, sourceModule, event], name: "uniqueRulePerEvent")
+  @@index([tenantId, sourceModule])
+  @@index([tenantId, isEnabled])
+  @@map("automation_rules")
+}
+
+model ChannelConfiguration {
+  id        String              @id @default(uuid())
+  tenantId  String
+  channel   CommunicationChannel
+  provider  String?             // "sendgrid", "twilio", "firebase", null for in_app
+  config    Json                // { apiKey, fromAddress, fromNumber, serverKey, ... }
+  isEnabled Boolean             @default(false)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([tenantId, channel], name: "uniqueChannelPerTenant")
+  @@unique([id, tenantId], name: "channel_configuration_tenant_identity")
+  @@map("channel_configurations")
 }

@@ -43,6 +43,12 @@ import {
   Fingerprint,
   Upload,
   Sparkles,
+  Bell,
+  History,
+  Inbox,
+  FileEdit,
+  Zap,
+  FileType,
 } from "lucide-react"
 
 import { config } from "@/lib/config"
@@ -178,6 +184,20 @@ const tenantNavGroups: NavGroup[] = [
       { title: "Sections", href: "/hostel/sections", icon: Layers, permission: 'hostel:read' },
       { title: "Staff Assignments", href: "/hostel/staff", icon: Users, permission: 'hostel:read' },
       { title: "Student Allocations", href: "/hostel/allocations", icon: GraduationCap, permission: 'hostel:allocate' },
+    ],
+  },
+  {
+    title: "Communication",
+    items: [
+      { title: "Notifications", href: "/communications/notifications", icon: Bell, permission: 'communication:notifications:write' },
+      { title: "History", href: "/communications/notifications/history", icon: History, permission: 'communication:notifications:write' },
+      { title: "Inbox", href: "/communications/notifications/inbox", icon: Inbox, permission: 'communication:notifications:write' },
+      { title: "Publications", href: "/communications/publications", icon: FileText, permission: 'communication:publications:write' },
+      { title: "Drafts", href: "/communications/publications/drafts", icon: FileEdit, permission: 'communication:publications:write' },
+      { title: "Pending Approval", href: "/communications/publications/pending", icon: Clock, permission: 'communication:publications:approve' },
+      { title: "Automation", href: "/communications/automation", icon: Zap, permission: 'communication:automation:manage' },
+      { title: "Templates", href: "/communications/automation/templates", icon: FileType, permission: 'communication:templates:manage' },
+      { title: "Channels", href: "/communications/automation/channels", icon: Settings, permission: 'communication:automation:manage' },
     ],
   },
   {

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
-import { invokeBacimport { NextRequest } from "next/server";
-import { invokeBackendCoolimport { invokeBackendController } from "veimport LeaveController from "@/lib/backend/modules/leave/leave.conms
-export async function POST(req: NextRequest, { params }: { params: Promisr(L  return invokeBackendController(LeaveController, "withdrawRequest", req, params);
+import { invokeBackendController } from "@/lib/api/server-adapter";
+import LeaveController from "@/lib/backend/modules/leave/leave.controller";
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return invokeBackendController(LeaveController, "rejectRequest", req, params);
 }
-ENDOFFILE]/}
