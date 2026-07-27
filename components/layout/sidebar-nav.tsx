@@ -8,7 +8,7 @@ import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 import { usePermissionStore } from "@/stores/permission-store"
-import { useNavGroups } from "@/hooks/use-nav-groups"
+import { useNavGroups, NAV_REGISTRY } from "@/hooks/use-nav-groups"
 
 interface SidebarNavProps {
   collapsed?: boolean
@@ -31,9 +31,17 @@ export function SidebarNav({ collapsed = false }: SidebarNavProps) {
         }))
         .filter((group) => group.items.length > 0)
     : navGroups
+
+  // Safety net: if after permission filtering the sidebar is empty,
+  // the user might be a parent whose role wasn't detected. Fall back
+  // to the parent nav (which has no permission-gated items).
+  const finalGroups = isLoaded && visibleGroups.length === 0
+    ? NAV_REGISTRY.parent
+    : visibleGroups
+
   return (
     <nav className="flex-1 space-y-6 px-3 py-4 overflow-y-auto scrollbar-thin">
-      {visibleGroups.map((group) => (
+      {finalGroups.map((group) => (
         <div key={group.title} className="space-y-1">
           {!collapsed && (
             <h4 className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">

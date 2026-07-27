@@ -24,6 +24,9 @@ export interface Teacher {
   vehicleType?: string
   licenseExpiryDate?: string
   medicalCertificateUrl?: string
+  isRegistered?: boolean
+  registrationToken?: string
+  registrationTokenExp?: string
   createdAt: string
   updatedAt: string
   qualifications?: TeacherQualification[]

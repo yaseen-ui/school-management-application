@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, GraduationCap, MoreHorizontal, Eye, Pencil, Trash2, Filter } from "lucide-react"
+import { Plus, GraduationCap, MoreHorizontal, Eye, Pencil, Trash2, Filter, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -53,6 +53,7 @@ export default function TeachersPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState("all")
+  const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([])
 
   const filteredTeachers = employeeTypeFilter === "all"
     ? teachers
@@ -71,6 +72,10 @@ export default function TeachersPage() {
     setSelectedTeacher(teacher)
     setIsDeleteOpen(true)
   }
+
+  const handleSelectionChange = useCallback((rows: Teacher[]) => {
+    setSelectedTeachers(rows)
+  }, [])
 
   const columns: ColumnDef<Teacher>[] = [
     {
@@ -101,7 +106,7 @@ export default function TeachersPage() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => <StaffStatusBadge teacher={row.original} />,
+      cell: ({ row }) => <StaffStatusBadge isRegistered={row.original.isRegistered} />,
     },
     {
       id: "actions",
@@ -122,6 +127,12 @@ export default function TeachersPage() {
               Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <InviteStaffButton
+              teacherId={row.original.id}
+              teacherName={row.original.fullName}
+              variant="dropdown-item"
+            />
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => handleDelete(row.original)} className="text-destructive">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
@@ -137,7 +148,7 @@ export default function TeachersPage() {
       <Breadcrumbs />
       <PageHeader title="Staff & Teachers" description="Manage staff, teachers, and other employees">
         <div className="flex gap-2">
-          <InviteStaffButton />
+          <InviteStaffButton selectedTeachers={selectedTeachers} />
           <Button onClick={() => router.push("/teachers/new")}>
             <Plus className="mr-2 h-4 w-4" />
             Add Staff
@@ -168,6 +179,8 @@ export default function TeachersPage() {
         isLoading={isLoading}
         idField="id"
         searchPlaceholder="Search staff by name or email..."
+        selectable={true}
+        onSelectionChange={handleSelectionChange}
       />
 
       {selectedTeacher && (

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Clock } from "lucide-react"
 
 interface StaffStatusBadgeProps {
-  isRegistered: boolean
+  isRegistered?: boolean
 }
 
 export function StaffStatusBadge({ isRegistered }: StaffStatusBadgeProps) {

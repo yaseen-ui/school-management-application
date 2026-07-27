@@ -1,6 +1,8 @@
 "use client"
 
 import { useAuthStore } from "@/stores/auth-store"
+import { usePermissionStore } from "@/stores/permission-store"
+import { usePathname } from "next/navigation"
 import { config } from "@/lib/config"
 import type React from "react"
 import {
@@ -280,13 +282,29 @@ function hasRole(user: { roles?: UserRole[]; userType?: string } | null, roleNam
 // ─────────────────────────────────────────────────────────────────────
 export function useNavGroups(): NavGroup[] {
   const user = useAuthStore((s) => s.user) as { roles?: UserRole[]; userType?: string } | null
+  const pathname = usePathname()
+
+  // Subscribe to isLoaded so we re-render when permissions load, but read
+  // permissions imperatively via getState() to avoid creating a new value
+  // on every snapshot (which would cause an infinite loop).
+  const isLoaded = usePermissionStore((s) => s.isLoaded)
 
   // Company host → always company nav
   if (config.isCompanyHost) return NAV_REGISTRY.company
 
   // Tenant host → resolve by role (not userType — all tenant users have userType: "tenant")
-  // Check for Parent role first, default to staff nav
+  // Check for Parent role first
   if (hasRole(user, "Parent")) return NAV_REGISTRY.parent
+
+  // Fallback: if permissions are loaded and include parent-portal:access,
+  // treat this user as a parent. We read imperatively to avoid re-render
+  // loops; isLoaded already triggers a render when permissions arrive.
+  if (isLoaded && usePermissionStore.getState().permissions.has("parent-portal:access")) {
+    return NAV_REGISTRY.parent
+  }
+
+  // Fallback: if user is on a parent-portal route, show parent nav.
+  if (pathname?.startsWith("/parent-portal")) return NAV_REGISTRY.parent
 
   return NAV_REGISTRY.staff
 }

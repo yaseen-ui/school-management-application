@@ -380,10 +380,16 @@ export function DynamicDataTable<TData>({
     return table.getFilteredSelectedRowModel().rows.map((row) => row.original)
   }, [table.getFilteredSelectedRowModel().rows])
 
-  // Notify parent of selection changes
+  // Track previous selection IDs to avoid infinite re-render loops
+  const prevSelectionRef = React.useRef<string | null>(null)
+
+  // Notify parent of selection changes (only when selection actually changes)
   React.useEffect(() => {
+    const currentIds = selectedRows.map((row) => String((row as Record<string, unknown>)[idField])).sort().join(",")
+    if (currentIds === prevSelectionRef.current) return // no change, skip
+    prevSelectionRef.current = currentIds
     onSelectionChange?.(selectedRows)
-  }, [selectedRows, onSelectionChange])
+  }, [selectedRows, onSelectionChange, idField])
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
