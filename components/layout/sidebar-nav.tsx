@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
+import { LayoutDashboard } from "lucide-react"
 import { usePermissionStore } from "@/stores/permission-store"
 import { useNavGroups, NAV_REGISTRY } from "@/hooks/use-nav-groups"
 
@@ -19,6 +20,7 @@ export function SidebarNav({ collapsed = false }: SidebarNavProps) {
   const navGroups = useNavGroups()
   const hasPermission = usePermissionStore((s) => s.hasPermission)
   const isLoaded = usePermissionStore((s) => s.isLoaded)
+  const scopes = usePermissionStore((s) => s.scopes)
 
   // Filter groups and items based on user permissions.
   // While permissions are still loading, show items without filtering
@@ -33,11 +35,29 @@ export function SidebarNav({ collapsed = false }: SidebarNavProps) {
     : navGroups
 
   // Safety net: if after permission filtering the sidebar is empty,
-  // the user might be a parent whose role wasn't detected. Fall back
-  // to the parent nav (which has no permission-gated items).
-  const finalGroups = isLoaded && visibleGroups.length === 0
-    ? NAV_REGISTRY.parent
-    : visibleGroups
+  // determine the correct nav based on user context:
+  //   - User has parent-portal:access permission → show parent nav
+  //   - User has staff scopes (sections/subjects) but no roles → show minimal nav (Dashboard only)
+  //   - Neither → show minimal nav (Dashboard only)
+  // This prevents showing a full menu of links that all return 403 errors.
+  const finalGroups = (() => {
+    if (!isLoaded || visibleGroups.length > 0) return visibleGroups
+
+    const permissions = usePermissionStore.getState().permissions
+    const isParentUser = permissions.has("parent-portal:access")
+
+    if (isParentUser) return NAV_REGISTRY.parent
+
+    // User has no usable permissions — show a minimal sidebar with just Dashboard
+    return [
+      {
+        title: "Overview",
+        items: [
+          { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, badge: undefined },
+        ],
+      },
+    ]
+  })()
 
   return (
     <nav className="flex-1 space-y-6 px-3 py-4 overflow-y-auto scrollbar-thin">

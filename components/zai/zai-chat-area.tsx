@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Table, ChevronDown, Copy, Check, Loader2 } from "lucide-react";
+import { Send, Sparkles, Table, ChevronDown, Copy, Check, Loader2, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,10 @@ interface ZaiChatAreaProps {
   error: string | null;
   onSend: (content: string) => Promise<void>;
   hasActiveChat: boolean;
+  /** Optional back button for mobile view — shown at the top on mobile only */
+  onBack?: () => void;
+  /** Optional title to show in the mobile header */
+  title?: string;
 }
 
 export function ZaiChatArea({
@@ -34,6 +38,8 @@ export function ZaiChatArea({
   error,
   onSend,
   hasActiveChat,
+  onBack,
+  title,
 }: ZaiChatAreaProps) {
   const [input, setInput] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -79,6 +85,24 @@ export function ZaiChatArea({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
+      {/* Mobile header with back button (WhatsApp-style) */}
+      {onBack && (
+        <div className="lg:hidden flex items-center gap-3 px-3 py-2.5 bg-emerald-600 text-white flex-shrink-0 shadow-sm">
+          <button
+            onClick={onBack}
+            className="p-1.5 -ml-1 rounded-full hover:bg-white/10 transition-colors active:bg-white/20"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">
+              {title || "Chat"}
+            </p>
+          </div>
+          <Sparkles className="h-4 w-4 opacity-70 flex-shrink-0" />
+        </div>
+      )}
+
       {/* Ambient background orb */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
@@ -426,4 +450,3 @@ function formatCellValue(val: any): string {
   if (typeof val === "object") return JSON.stringify(val).substring(0, 30);
   return String(val);
 }
-
