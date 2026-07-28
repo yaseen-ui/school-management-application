@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { useBuildings } from "@/hooks/use-buildings"
 import type { Building, Floor, Room } from "@/lib/api/buildings"
+import { cn } from "@/lib/utils"
 
 interface SelectedRoomInfo {
   roomId: string
@@ -35,6 +36,8 @@ interface RoomSelectorDialogProps {
   triggerLabel?: string
   /** Dialog title */
   title?: string
+  /** Optional trigger button styling */
+  triggerClassName?: string
 }
 
 export function RoomSelectorDialog({
@@ -42,6 +45,7 @@ export function RoomSelectorDialog({
   onRoomSelect,
   triggerLabel = "Select Room",
   title = "Select Classroom",
+  triggerClassName,
 }: RoomSelectorDialogProps) {
   const [open, setOpen] = useState(false)
   const { data: buildingsData, isLoading: buildingsLoading } = useBuildings()
@@ -111,7 +115,11 @@ export function RoomSelectorDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 w-full justify-start text-left font-normal">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn("h-8 w-full justify-start text-left font-normal", triggerClassName)}
+        >
           {selectedRoomId ? (
             <span className="truncate text-xs">
               <SelectedRoomDisplay roomId={selectedRoomId} />

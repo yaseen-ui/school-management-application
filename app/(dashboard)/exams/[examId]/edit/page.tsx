@@ -1,18 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Loader2, FileText, Plus, Trash2, ArrowLeft } from "lucide-react"
+import {
+  ArrowLeft,
+  CalendarDays,
+  FileText,
+  GraduationCap,
+  Loader2,
+  Plus,
+  Target,
+  Trash2,
+} from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DatePickerInput } from "@/components/ui/date-picker"
 import { useExam, useUpdateExam } from "@/hooks/use-exams"
-import { useAcademicYears } from "@/hooks/use-academic-years"
 import { useCourses } from "@/hooks/use-courses"
 import { useGrades } from "@/hooks/use-grades"
 import { useSections } from "@/hooks/use-sections"
@@ -36,6 +47,21 @@ const statusOptions: { value: ExamStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ]
 
+function parseDateValue(value: string): Date | undefined {
+  if (!value) return undefined
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
+}
+
+function toDateValue(date: Date | null): string {
+  if (!date) return ""
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function EditExamPage() {
   const router = useRouter()
   const params = useParams()
@@ -44,10 +70,9 @@ export default function EditExamPage() {
   const { data: examData, isLoading: isLoadingExam } = useExam(examId)
   const updateExam = useUpdateExam()
 
-  const { data: academicYearsData } = useAcademicYears()
   const { data: coursesData } = useCourses()
-  const { data: gradesData } = useGrades()
-  const { data: sectionsData } = useSections()
+  const { data: gradesData, isLoading: isLoadingGrades } = useGrades()
+  const { data: sectionsData, isLoading: isLoadingSections } = useSections()
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -59,19 +84,29 @@ export default function EditExamPage() {
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
   const [audienceRows, setAudienceRows] = useState<TargetAudienceRow[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const initializedExamIdRef = useRef<string | null>(null)
 
   const exam = (examData as any)?.data || examData
 
-  const courses = (coursesData as any)?.data?.rows || (coursesData as any)?.rows || []
-  const grades = (gradesData as any)?.rows || []
-  const sections = (sectionsData as any)?.data?.rows || (sectionsData as any)?.rows || []
-  const activeAcademicYears = ((academicYearsData as any)?.data?.rows || (academicYearsData as any)?.rows || []).filter(
-    (ay: any) => ay.status === "active"
+  const courses = useMemo(
+    () => (coursesData as any)?.data?.rows || (coursesData as any)?.rows || [],
+    [coursesData]
+  )
+  const grades = useMemo(() => (gradesData as any)?.rows || [], [gradesData])
+  const sections = useMemo(
+    () => (sectionsData as any)?.data?.rows || (sectionsData as any)?.rows || [],
+    [sectionsData]
   )
 
   // Populate form when exam data loads
   useEffect(() => {
-    if (exam) {
+    if (
+      exam &&
+      !isLoadingGrades &&
+      !isLoadingSections &&
+      initializedExamIdRef.current !== exam.id
+    ) {
+      initializedExamIdRef.current = exam.id
       setName(exam.name)
       setDescription(exam.description || "")
       setExamType(exam.examType)
@@ -129,9 +164,13 @@ export default function EditExamPage() {
         })
 
         setAudienceRows(rows)
+      } else {
+        setIsCommon(false)
+        setSelectedCourseIds([])
+        setAudienceRows([])
       }
     }
-  }, [exam, grades, sections])
+  }, [exam, grades, sections, isLoadingGrades, isLoadingSections])
 
   // Filter grades by selected course for each row
   const getGradesByCourse = (courseId: string) => {
@@ -221,9 +260,10 @@ export default function EditExamPage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <PageHeader title={`Edit: ${exam.name}`} description="Update exam details and target audience">
-        <Button variant="outline" asChild>
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <Breadcrumbs items={[{ label: "Exams", href: "/exams" }, { label: "Edit Exam" }]} />
+      <PageHeader title={`Edit ${exam.name}`} description="Update exam details and target audience">
+        <Button variant="outline" size="sm" asChild>
           <Link href="/exams">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Exams
@@ -231,243 +271,266 @@ export default function EditExamPage() {
         </Button>
       </PageHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Info Section */}
-        <div className="rounded-lg border bg-card p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
-              <FileText className="h-4 w-4 text-primary" />
-            </div>
-            <h2 className="text-lg font-semibold">Basic Information</h2>
-          </div>
+      <form onSubmit={handleSubmit} className="max-w-6xl space-y-4">
+        <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+          <Card className="h-full gap-0 overflow-hidden border-border/70 py-0 shadow-sm">
+            <div className="h-0.5 bg-gradient-to-r from-blue-500 to-indigo-500" />
+            <CardHeader className="border-b border-border/60 bg-gradient-to-r from-blue-50/70 to-transparent px-5 py-4 dark:from-blue-950/20">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 ring-1 ring-blue-200/70 dark:from-blue-950/70 dark:to-indigo-950/60 dark:text-blue-400">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Exam Information</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs">Update the exam name and description.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 px-5 py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs">
+                  Exam Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Quarterly Examination 2026"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="description" className="text-xs">Description</Label>
+                  <span className="text-[10px] text-muted-foreground">Optional</span>
+                </div>
+                <Textarea
+                  id="description"
+                  rows={3}
+                  placeholder="Add a short note about this exam"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  className="min-h-[82px] resize-none"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                Exam Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="name"
-                placeholder="e.g., Quarterly 2026"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="examType">
-                Exam Type <span className="text-destructive">*</span>
-              </Label>
-              <Select value={examType} onValueChange={(value) => setExamType(value as ExamType)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select exam type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {examTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Optional description for this exam"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">
-                From Date <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="endDate">
-                To Date <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as ExamStatus)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Card className="h-full gap-0 overflow-hidden border-border/70 py-0 shadow-sm">
+            <div className="h-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+            <CardHeader className="border-b border-border/60 bg-gradient-to-r from-violet-50/70 to-transparent px-5 py-4 dark:from-violet-950/20">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-fuchsia-100 text-violet-600 ring-1 ring-violet-200/70 dark:from-violet-950/70 dark:to-fuchsia-950/60 dark:text-violet-400">
+                  <CalendarDays className="h-4 w-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Exam Settings</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs">Type, status, and examination period.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3.5 px-5 py-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="examType" className="text-xs">
+                    Exam Type <span className="text-destructive">*</span>
+                  </Label>
+                  <Select value={examType} onValueChange={(value) => setExamType(value as ExamType)}>
+                    <SelectTrigger id="examType" className="w-full">
+                      <SelectValue placeholder="Select exam type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {examTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="status" className="text-xs">Status</Label>
+                  <Select value={status} onValueChange={(value) => setStatus(value as ExamStatus)}>
+                    <SelectTrigger id="status" className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">From <span className="text-destructive">*</span></Label>
+                  <DatePickerInput
+                    value={parseDateValue(startDate)}
+                    onChange={(date) => setStartDate(toDateValue(date))}
+                    maxDate={parseDateValue(endDate)}
+                    placeholder="Select start date"
+                    buttonClassName="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">To <span className="text-destructive">*</span></Label>
+                  <DatePickerInput
+                    value={parseDateValue(endDate)}
+                    onChange={(date) => setEndDate(toDateValue(date))}
+                    minDate={parseDateValue(startDate)}
+                    placeholder="Select end date"
+                    buttonClassName="h-9 text-xs"
+                  />
+                </div>
+              </div>
+              {exam.academicYear?.name && (
+                <div className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Academic Year</p>
+                  <p className="mt-0.5 text-xs font-medium">{exam.academicYear.name}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Target Audience Section */}
-        <div className="rounded-lg border bg-card p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
-                <FileText className="h-4 w-4 text-primary" />
-              </div>
-              <h2 className="text-lg font-semibold">Target Audience</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="isCommon" className="text-sm cursor-pointer">
-                Common Exam (all grades under selected courses)
-              </Label>
-              <Checkbox
-                id="isCommon"
-                checked={isCommon}
-                onCheckedChange={(checked) => setIsCommon(checked === true)}
-              />
-            </div>
-          </div>
-
-          {isCommon ? (
-            /* Common Mode: Select Courses */
-            <div className="space-y-2 pt-2">
-              <Label>Select Courses</Label>
-              <MultiSelect
-                options={courses.map((c: any) => ({ label: c.courseName, value: c.id }))}
-                selected={selectedCourseIds}
-                onChange={setSelectedCourseIds}
-                placeholder="Select courses..."
-              />
-              <p className="text-xs text-muted-foreground">
-                All grades under the selected courses and their sections will be targeted.
-              </p>
-            </div>
-          ) : (
-            /* Table Mode: Course > Grade > Sections rows */
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Add rows to specify which grades and sections to target.
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={addRow}>
-                  <Plus className="mr-1 h-3 w-3" />
-                  Add Row
-                </Button>
-              </div>
-
-              {audienceRows.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg">
-                  No rows added yet. Click "Add Row" to define target audience.
+        <Card className="gap-0 overflow-hidden border-border/70 py-0 shadow-sm">
+          <div className="h-0.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+          <CardHeader className="border-b border-border/60 bg-gradient-to-r from-emerald-50/60 to-transparent px-5 py-4 dark:from-emerald-950/20">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-cyan-100 text-emerald-600 ring-1 ring-emerald-200/70 dark:from-emerald-950/70 dark:to-cyan-950/60 dark:text-emerald-400">
+                  <Target className="h-4 w-4" />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {/* Header */}
-                  <div className="grid grid-cols-12 gap-3 px-2">
-                    <div className="col-span-3 text-xs font-medium text-muted-foreground">Course</div>
-                    <div className="col-span-3 text-xs font-medium text-muted-foreground">Grade</div>
-                    <div className="col-span-5 text-xs font-medium text-muted-foreground">Sections</div>
-                    <div className="col-span-1" />
-                  </div>
+                <div>
+                  <CardTitle className="text-base">Target Audience</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs">Choose who should take this exam.</CardDescription>
+                </div>
+              </div>
+              <label
+                htmlFor="isCommon"
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 py-2 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id="isCommon"
+                  checked={isCommon}
+                  onCheckedChange={(checked) => setIsCommon(checked === true)}
+                />
+                <span>
+                  <span className="block text-xs font-medium">Common exam</span>
+                  <span className="block text-[10px] text-muted-foreground">All grades in selected courses</span>
+                </span>
+              </label>
+            </div>
+          </CardHeader>
+          <CardContent className="px-5 py-4">
+            {isCommon ? (
+              <div className="max-w-2xl space-y-1.5">
+                <Label className="text-xs">Courses</Label>
+                <MultiSelect
+                  options={courses.map((course: any) => ({ label: course.courseName, value: course.id }))}
+                  selected={selectedCourseIds}
+                  onChange={setSelectedCourseIds}
+                  placeholder="Select one or more courses"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Every grade and section under these courses will be included.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Add one compact row for each course and grade combination.
+                  </p>
+                  <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-8">
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Add target
+                  </Button>
+                </div>
 
-                  {audienceRows.map((row, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-3 items-start">
-                      <div className="col-span-3">
-                        <Select
-                          value={row.courseId}
-                          onValueChange={(value) => updateRow(index, "courseId", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select course" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {courses.map((c: any) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.courseName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="col-span-3">
-                        <Select
-                          value={row.gradeId}
-                          onValueChange={(value) => updateRow(index, "gradeId", value)}
-                          disabled={!row.courseId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getGradesByCourse(row.courseId).map((g: any) => (
-                              <SelectItem key={g.id} value={g.id}>
-                                {g.gradeName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="col-span-5">
-                        <MultiSelect
-                          options={getSectionsByGrade(row.gradeId).map((s: any) => ({
-                            label: s.sectionName,
-                            value: s.id,
-                          }))}
-                          selected={row.sectionIds}
-                          onChange={(values) => updateRow(index, "sectionIds", values)}
-                          placeholder="Select sections"
-                          disabled={!row.gradeId}
-                        />
-                      </div>
-
-                      <div className="col-span-1 pt-1">
+                {audienceRows.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={addRow}
+                    className="flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-border px-4 py-5 text-center transition-colors hover:border-primary/40 hover:bg-primary/[0.025]"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <GraduationCap className="h-4 w-4" />
+                    </div>
+                    <span className="mt-2 text-xs font-medium">Add the first target</span>
+                    <span className="mt-0.5 text-[10px] text-muted-foreground">
+                      Select a course, grade, and optional sections.
+                    </span>
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    {audienceRows.map((row, index) => (
+                      <div
+                        key={index}
+                        className="grid items-end gap-2 rounded-xl border border-border/60 bg-muted/15 p-2.5 md:grid-cols-[minmax(140px,0.8fr)_minmax(130px,0.65fr)_minmax(200px,1.35fr)_32px]"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Course</Label>
+                          <Select value={row.courseId} onValueChange={(value) => updateRow(index, "courseId", value)}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Select course" /></SelectTrigger>
+                            <SelectContent>
+                              {courses.map((course: any) => (
+                                <SelectItem key={course.id} value={course.id}>{course.courseName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="min-w-0 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Grade</Label>
+                          <Select
+                            value={row.gradeId}
+                            onValueChange={(value) => updateRow(index, "gradeId", value)}
+                            disabled={!row.courseId}
+                          >
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Select grade" /></SelectTrigger>
+                            <SelectContent>
+                              {getGradesByCourse(row.courseId).map((grade: any) => (
+                                <SelectItem key={grade.id} value={grade.id}>{grade.gradeName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="min-w-0 space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Sections</Label>
+                          <MultiSelect
+                            options={getSectionsByGrade(row.gradeId).map((section: any) => ({
+                              label: section.sectionName,
+                              value: section.id,
+                            }))}
+                            selected={row.sectionIds}
+                            onChange={(values) => updateRow(index, "sectionIds", values)}
+                            placeholder="All sections"
+                            disabled={!row.gradeId}
+                          />
+                        </div>
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => removeRow(index)}
-                          className="text-destructive hover:text-destructive"
+                          className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          aria-label="Remove target"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Submit */}
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" asChild>
+        <div className="flex justify-end gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-3 shadow-sm">
+          <Button type="button" variant="outline" size="sm" asChild>
             <Link href="/exams">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" size="sm" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>

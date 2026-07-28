@@ -17,6 +17,7 @@ interface DatePickerProps {
   showYearDropdown?: boolean
   showMonthDropdown?: boolean
   className?: string
+  buttonClassName?: string
 }
 
 export function DatePickerInput({
@@ -29,6 +30,7 @@ export function DatePickerInput({
   showYearDropdown = true,
   showMonthDropdown = true,
   className,
+  buttonClassName,
 }: DatePickerProps) {
   return (
     <div className={cn("relative", className)}>
@@ -48,7 +50,11 @@ export function DatePickerInput({
             type="button"
             variant="outline"
             disabled={disabled}
-            className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground")}
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !value && "text-muted-foreground",
+              buttonClassName
+            )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {value ? format(value, "PPP") : <span>{placeholder}</span>}
@@ -59,20 +65,6 @@ export function DatePickerInput({
         calendarClassName="shadow-lg border rounded-lg"
         popperClassName="z-[9999]"
         popperPlacement="bottom-start"
-        popperModifiers={[
-          {
-            name: "offset",
-            options: {
-              offset: [0, 8],
-            },
-          },
-          {
-            name: "preventOverflow",
-            options: {
-              padding: 8,
-            },
-          },
-        ]}
       />
     </div>
   )

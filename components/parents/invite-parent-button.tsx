@@ -14,14 +14,21 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface InviteParentButtonProps {
   parentId: string
   parentName: string
   isRegistered: boolean
+  className?: string
 }
 
-export function InviteParentButton({ parentId, parentName, isRegistered }: InviteParentButtonProps) {
+export function InviteParentButton({
+  parentId,
+  parentName,
+  isRegistered,
+  className,
+}: InviteParentButtonProps) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const sendInvite = useSendInvite()
@@ -50,7 +57,7 @@ export function InviteParentButton({ parentId, parentName, isRegistered }: Invit
         size="sm"
         onClick={handleSendInvite}
         disabled={sendInvite.isPending}
-        className="gap-1.5"
+        className={cn("gap-1.5", className)}
       >
         {sendInvite.isPending ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />

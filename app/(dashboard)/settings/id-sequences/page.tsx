@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { PageHeader } from "@/components/shared/page-header";
 import idSequencesApi, {
   IdSequencePattern,
   IdSequenceLog,
@@ -97,15 +99,20 @@ export default function IdSequencesPage() {
   const activePattern = patterns.find((p) => p.isActive);
 
   return (
-    <div className="container max-w-4xl py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">ID Sequence Configuration</h1>
-        <p className="text-muted-foreground mt-2">
-          Define auto-increment patterns for admission numbers and employee codes. Use {"{SEQ:N}"} as a placeholder where N is the number of digits.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <Breadcrumbs
+        items={[
+          { label: "System Grouping", href: "/settings" },
+          { label: "ID Grouping" },
+        ]}
+      />
+      <PageHeader
+        title="ID Grouping"
+        description='Define automatic admission number and employee ID patterns using the {SEQ:N} placeholder'
+      />
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "admission" | "employee_code")}>
+      <div className="max-w-5xl space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "admission" | "employee_code")}>
         <TabsList className="w-full max-w-md">
           <TabsTrigger value="admission" className="flex-1">Student Admission Pattern</TabsTrigger>
           <TabsTrigger value="employee_code" className="flex-1">Employee ID Pattern</TabsTrigger>
@@ -140,49 +147,50 @@ export default function IdSequencesPage() {
             onSave={handleSave}
           />
         </TabsContent>
-      </Tabs>
+        </Tabs>
 
-      {/* Recent generations log */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Generated IDs</CardTitle>
-          <CardDescription>Last 20 IDs generated for {entityLabel.toLowerCase()}s</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No IDs generated yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium">Generated ID</th>
-                    <th className="py-2 pr-4 font-medium">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr key={log.id} className="border-b last:border-0">
-                      <td className="py-2 pr-4 font-mono">{log.generatedValue}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">
-                        {new Date(log.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
+        {/* Recent generations log */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Generated IDs</CardTitle>
+            <CardDescription>Last 20 IDs generated for {entityLabel.toLowerCase()}s</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : logs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No IDs generated yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="py-2 pr-4 font-medium">Generated ID</th>
+                      <th className="py-2 pr-4 font-medium">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <tr key={log.id} className="border-b last:border-0">
+                        <td className="py-2 pr-4 font-mono">{log.generatedValue}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">
+                          {new Date(log.createdAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

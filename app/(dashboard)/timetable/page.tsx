@@ -8,7 +8,6 @@ import {
   Trash2,
   BookOpen,
   User,
-  MapPin,
   Loader2,
   LayoutTemplate,
 } from "lucide-react"
@@ -361,12 +360,6 @@ export default function TimetablePage() {
                                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                       <User className="h-3 w-3 shrink-0" />
                                       <span className="truncate">{entry.teacherAssignment.teacher.fullName}</span>
-                                    </div>
-                                  )}
-                                  {entry.room && (
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <MapPin className="h-3 w-3 shrink-0" />
-                                      <span className="truncate">{entry.room}</span>
                                     </div>
                                   )}
                                 </div>
