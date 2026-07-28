@@ -65,7 +65,7 @@ export default function TeachersPage() {
   }
 
   const handleEdit = (teacher: Teacher) => {
-    router.push(`/teachers/${teacher.id}`)
+    router.push(`/teachers/${teacher.id}/edit`)
   }
 
   const handleDelete = (teacher: Teacher) => {
@@ -149,7 +149,7 @@ export default function TeachersPage() {
       <PageHeader title="Staff & Teachers" description="Manage staff, teachers, and other employees">
         <div className="flex gap-2">
           <InviteStaffButton selectedTeachers={selectedTeachers} />
-          <Button onClick={() => router.push("/teachers/new")}>
+          <Button onClick={() => router.push("/teachers/create")}>
             <Plus className="mr-2 h-4 w-4" />
             Add Staff
           </Button>

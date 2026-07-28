@@ -83,9 +83,13 @@ export default function TeacherCapabilitiesPage() {
     }
   }
 
+  const handleAddForTeacher = (row: any) => {
+    router.push(`/teachers/capabilities/create?teacherId=${encodeURIComponent(row.teacherId)}`)
+  }
+
   const handleEdit = (row: any) => {
     // Navigate to the create page with teacher pre-selected
-    router.push(`/teachers/capabilities/create?teacherId=${row.teacherId}`)
+    handleAddForTeacher(row)
   }
 
   const handleDelete = (row: any) => {
@@ -120,17 +124,26 @@ export default function TeacherCapabilitiesPage() {
   const renderCell = ({ row, field }: { row: any; field: string; value: unknown }) => {
     if (field === "teacherName") {
       return (
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+        <button
+          type="button"
+          onClick={() => handleAddForTeacher(row)}
+          className="group/teacher -m-1 flex max-w-full items-center gap-2 rounded-lg p-1 text-left transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label={`Add capability for ${row.teacherName}`}
+          title={`Add capability for ${row.teacherName}`}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 transition-transform duration-200 group-hover/teacher:scale-105">
             <GitBranch className="h-4 w-4 text-primary" />
           </div>
-          <div>
-            <span className="font-medium">{row.teacherName}</span>
+          <div className="min-w-0">
+            <span className="block truncate font-medium transition-colors group-hover/teacher:text-primary">
+              {row.teacherName}
+            </span>
             {row.employeeCode && (
               <p className="text-xs text-muted-foreground">{row.employeeCode}</p>
             )}
           </div>
-        </div>
+          <Plus className="ml-1 h-3.5 w-3.5 shrink-0 text-primary opacity-0 transition-opacity group-hover/teacher:opacity-100 group-focus-visible/teacher:opacity-100" />
+        </button>
       )
     }
 

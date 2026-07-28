@@ -13,7 +13,6 @@ import {
   BookOpen,
   Layers,
   ClipboardList,
-  Shield,
   Calendar,
   CalendarClock,
   ClipboardCheck,
@@ -21,7 +20,6 @@ import {
   DollarSign,
   Receipt,
   CreditCard,
-  ListOrdered,
   Store,
   BookCheck,
   Bus,
@@ -31,7 +29,6 @@ import {
   CalendarDays,
   Tag,
   Clock,
-  Fingerprint,
   Upload,
   Sparkles,
   Bell,
@@ -132,8 +129,7 @@ const companyNavGroups: NavGroup[] = [
   {
     title: "System",
     items: [
-      { title: "ID Sequences", href: "/settings/id-sequences", icon: Fingerprint, permission: "settings:read" },
-      { title: "Settings", href: "/settings", icon: Shield, permission: "settings:read" },
+      { title: "System Grouping", href: "/settings", icon: Settings2, permission: "settings:read" },
     ],
   },
 ]
@@ -280,8 +276,7 @@ const staffNavGroups: NavGroup[] = [
     title: "System",
     icon: Settings2,
     items: [
-      { title: "Institute Settings", href: "/settings", icon: Settings2, permission: "settings:read" },
-      { title: "ID Sequences", href: "/settings/id-sequences", icon: ListOrdered, permission: "settings:read" },
+      { title: "System Grouping", href: "/settings", icon: Settings2, permission: "settings:read" },
       { title: "Import Data", href: "/imports", icon: FileUp, permission: "imports:execute" },
     ],
   },

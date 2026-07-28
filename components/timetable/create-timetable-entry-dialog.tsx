@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSection } from "@/hooks/use-sections"
@@ -21,7 +20,6 @@ import { Badge } from "@/components/ui/badge"
 const formSchema = z.object({
   subjectId: z.string().min(1, "Subject is required"),
   teacherAssignmentId: z.string().optional(),
-  room: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -71,7 +69,6 @@ export function CreateTimetableEntryDialog({
     defaultValues: {
       subjectId: "",
       teacherAssignmentId: "",
-      room: "",
     },
   })
 
@@ -96,14 +93,12 @@ export function CreateTimetableEntryDialog({
       form.reset({
         subjectId: entry.sectionSubject?.subject?.id || "",
         teacherAssignmentId: entry.teacherAssignmentId || "",
-        room: entry.room || "",
       })
       setSelectedSubjectId(entry.sectionSubject?.subject?.id || "")
     } else {
       form.reset({
         subjectId: "",
         teacherAssignmentId: "",
-        room: "",
       })
       setSelectedSubjectId("")
     }
@@ -134,7 +129,6 @@ export function CreateTimetableEntryDialog({
         periodId,
         sectionSubjectId: "",
         teacherAssignmentId: data.teacherAssignmentId === "none" ? null : data.teacherAssignmentId || null,
-        room: data.room || null,
       }
 
       // Find the sectionSubjectId from the section's sectionSubjects
@@ -179,7 +173,7 @@ export function CreateTimetableEntryDialog({
           <DialogTitle>{isEditing ? "Edit Timetable Entry" : "Add Timetable Entry"}</DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Update the subject, teacher, or room for this period"
+              ? "Update the subject or teacher for this period"
               : "Assign a subject and teacher to this period"}
           </DialogDescription>
         </DialogHeader>
@@ -268,27 +262,13 @@ export function CreateTimetableEntryDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="room">Room (Optional)</Label>
-            <Input
-              id="room"
-              placeholder="e.g., Room 101, Lab A"
-              {...form.register("room")}
-            />
-          </div>
-
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {isClassType ? "Cancel" : "Close"}
             </Button>
             {isClassType && (
               <Button type="submit" disabled={createEntry.isPending || updateEntry.isPending}>
                 {isEditing ? "Update" : "Create"}
-              </Button>
-            )}
-            {!isClassType && (
-              <Button type="submit" disabled={createEntry.isPending || updateEntry.isPending}>
-                {isEditing ? "Update" : "Save Room"}
               </Button>
             )}
           </div>

@@ -74,6 +74,9 @@ CREATE TYPE "PeriodType" AS ENUM ('class', 'break', 'lunch', 'sports', 'leisure'
 CREATE TYPE "RoomCategory" AS ENUM ('ac', 'non_ac', 'deluxe');
 
 -- CreateEnum
+CREATE TYPE "HostelStaffRole" AS ENUM ('warden', 'in_charge', 'cook', 'mate', 'cleaner', 'other');
+
+-- CreateEnum
 CREATE TYPE "VehicleCategoryType" AS ENUM ('bus', 'van', 'car', 'auto');
 
 -- CreateEnum
@@ -106,6 +109,27 @@ CREATE TYPE "LeaveApplicantType" AS ENUM ('student', 'employee');
 -- CreateEnum
 CREATE TYPE "LeaveAllocationMethod" AS ENUM ('annual', 'prorated', 'accrued_monthly');
 
+-- CreateEnum
+CREATE TYPE "CommunicationType" AS ENUM ('notification', 'alert', 'reminder', 'action_required', 'emergency');
+
+-- CreateEnum
+CREATE TYPE "PublicationType" AS ENUM ('circular', 'announcement', 'notice_board', 'holiday_notice', 'event_notice', 'academic_notice');
+
+-- CreateEnum
+CREATE TYPE "CommunicationStatus" AS ENUM ('draft', 'sent', 'scheduled', 'cancelled');
+
+-- CreateEnum
+CREATE TYPE "PublicationStatus" AS ENUM ('draft', 'pending_approval', 'approved', 'rejected', 'published', 'expired', 'archived', 'withdrawn');
+
+-- CreateEnum
+CREATE TYPE "CommunicationChannel" AS ENUM ('in_app', 'email', 'sms', 'push');
+
+-- CreateEnum
+CREATE TYPE "DeliveryStatus" AS ENUM ('pending', 'sent', 'delivered', 'failed', 'viewed', 'acknowledged');
+
+-- CreateEnum
+CREATE TYPE "SenderType" AS ENUM ('user', 'system');
+
 -- CreateTable
 CREATE TABLE "tenants" (
     "id" TEXT NOT NULL,
@@ -134,12 +158,12 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "userType" "UserType" NOT NULL DEFAULT 'tenant',
-    "roleId" TEXT,
     "otp" TEXT,
     "otpExpiresAt" TIMESTAMP(3),
     "otpPurpose" TEXT,
     "isFirstLogin" BOOLEAN NOT NULL DEFAULT true,
     "phone" TEXT,
+    "permVersion" INTEGER NOT NULL DEFAULT 0,
     "status" "EntityStatus" NOT NULL DEFAULT 'active',
     "deletedAt" TIMESTAMP(3),
     "createdById" TEXT,
@@ -156,13 +180,86 @@ CREATE TABLE "roles" (
     "tenantId" TEXT NOT NULL,
     "roleName" TEXT NOT NULL,
     "description" TEXT,
-    "permissions" JSONB NOT NULL,
+    "isDefault" BOOLEAN NOT NULL DEFAULT false,
     "createdById" TEXT,
     "updatedById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "permissions" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "module" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "scope" TEXT,
+    "description" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "role_permissions" (
+    "roleId" TEXT NOT NULL,
+    "permissionId" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("roleId","permissionId","tenantId")
+);
+
+-- CreateTable
+CREATE TABLE "user_roles" (
+    "userId" TEXT NOT NULL,
+    "roleId" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_roles_pkey" PRIMARY KEY ("userId","roleId","tenantId")
+);
+
+-- CreateTable
+CREATE TABLE "groups" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "groupName" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "groups_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "role_groups" (
+    "roleId" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "role_groups_pkey" PRIMARY KEY ("roleId","groupId","tenantId")
+);
+
+-- CreateTable
+CREATE TABLE "audit_logs" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT,
+    "actorId" TEXT,
+    "actorEmail" TEXT,
+    "action" TEXT NOT NULL,
+    "targetType" TEXT,
+    "targetId" TEXT,
+    "details" JSONB,
+    "ipAddress" TEXT,
+    "level" TEXT NOT NULL DEFAULT 'info',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -496,6 +593,136 @@ CREATE TABLE "rooms" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "rooms_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_blocks" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT,
+    "description" TEXT,
+    "gender" "Gender",
+    "status" "EntityStatus" NOT NULL DEFAULT 'active',
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_blocks_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_floors" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "blockId" TEXT NOT NULL,
+    "floorNumber" INTEGER NOT NULL,
+    "name" TEXT,
+    "gender" "Gender",
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_floors_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_room_types" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "defaultCapacity" INTEGER NOT NULL DEFAULT 1,
+    "amenities" JSONB,
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_room_types_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_rooms" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "floorId" TEXT NOT NULL,
+    "roomTypeId" TEXT NOT NULL,
+    "roomNumber" TEXT NOT NULL,
+    "capacity" INTEGER NOT NULL,
+    "status" "EntityStatus" NOT NULL DEFAULT 'active',
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_rooms_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_sections" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "sectionId" TEXT NOT NULL,
+    "description" TEXT,
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_sections_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_section_rooms" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "sectionId" TEXT NOT NULL,
+    "roomId" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_section_rooms_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hostel_staff_assignments" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "blockId" TEXT NOT NULL,
+    "teacherId" TEXT NOT NULL,
+    "role" "HostelStaffRole" NOT NULL,
+    "fromDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "toDate" TIMESTAMP(3),
+    "status" "EntityStatus" NOT NULL DEFAULT 'active',
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hostel_staff_assignments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "student_hostel_allocations" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "enrollmentId" TEXT NOT NULL,
+    "roomId" TEXT NOT NULL,
+    "sectionId" TEXT,
+    "academicYearId" TEXT NOT NULL,
+    "fromDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "toDate" TIMESTAMP(3),
+    "status" "EntityStatus" NOT NULL DEFAULT 'active',
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "student_hostel_allocations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -905,6 +1132,8 @@ CREATE TABLE "students" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "admissionNumber" TEXT,
+    "pen" TEXT,
+    "apaarId" TEXT,
     "firstName" TEXT NOT NULL,
     "middleName" TEXT,
     "lastName" TEXT NOT NULL,
@@ -1032,6 +1261,7 @@ CREATE TABLE "fee_heads" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "isOptional" BOOLEAN NOT NULL DEFAULT false,
+    "hostelRoomTypeId" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "createdById" TEXT,
     "updatedById" TEXT,
@@ -1794,6 +2024,199 @@ CREATE TABLE "id_sequence_logs" (
     CONSTRAINT "id_sequence_logs_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "zai_chats" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "title" TEXT NOT NULL DEFAULT 'New Chat',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "zai_chats_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "zai_messages" (
+    "id" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "queryUsed" JSONB,
+    "resultData" JSONB,
+    "resultCount" INTEGER,
+    "error" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "zai_messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "communications" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "type" "CommunicationType" NOT NULL,
+    "senderType" "SenderType" NOT NULL DEFAULT 'user',
+    "senderId" TEXT,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "actionButton" JSONB,
+    "scheduledAt" TIMESTAMP(3),
+    "expiresAt" TIMESTAMP(3),
+    "status" "CommunicationStatus" NOT NULL DEFAULT 'draft',
+    "targetUserIds" JSONB,
+    "targetRoles" JSONB,
+    "targetGroups" JSONB,
+    "targetGrades" JSONB,
+    "targetSections" JSONB,
+    "targetEmployeeTypes" JSONB,
+    "targetAudience" JSONB,
+    "automationRuleId" TEXT,
+    "sourceModule" TEXT,
+    "sourceEvent" TEXT,
+    "sourceReference" JSONB,
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "communications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "communication_recipients" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "communicationId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "channel" "CommunicationChannel" NOT NULL,
+    "deliveryStatus" "DeliveryStatus" NOT NULL DEFAULT 'pending',
+    "viewedAt" TIMESTAMP(3),
+    "acknowledgedAt" TIMESTAMP(3),
+    "retryCount" INTEGER NOT NULL DEFAULT 0,
+    "lastError" TEXT,
+    "deliveredAt" TIMESTAMP(3),
+    "providerMessageId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "communication_recipients_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "publications" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "type" "PublicationType" NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "circularNumber" TEXT,
+    "attachments" JSONB,
+    "targetUserIds" JSONB,
+    "targetRoles" JSONB,
+    "targetGroups" JSONB,
+    "targetGrades" JSONB,
+    "targetSections" JSONB,
+    "targetEmployeeTypes" JSONB,
+    "targetAudience" JSONB,
+    "publishDate" TIMESTAMP(3),
+    "expiryDate" TIMESTAMP(3),
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "isPinned" BOOLEAN NOT NULL DEFAULT false,
+    "requireAcknowledgement" BOOLEAN NOT NULL DEFAULT false,
+    "sendNotification" BOOLEAN NOT NULL DEFAULT false,
+    "status" "PublicationStatus" NOT NULL DEFAULT 'draft',
+    "submittedAt" TIMESTAMP(3),
+    "submittedById" TEXT,
+    "approvedAt" TIMESTAMP(3),
+    "approvedById" TEXT,
+    "approvalRemarks" TEXT,
+    "rejectedAt" TIMESTAMP(3),
+    "rejectedById" TEXT,
+    "rejectionReason" TEXT,
+    "publishedAt" TIMESTAMP(3),
+    "archivedAt" TIMESTAMP(3),
+    "withdrawnAt" TIMESTAMP(3),
+    "revision" INTEGER NOT NULL DEFAULT 0,
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "publications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "publication_revisions" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "publicationId" TEXT NOT NULL,
+    "revision" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "changedById" TEXT,
+    "changeSummary" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "publication_revisions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "notification_templates" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "type" "CommunicationType" NOT NULL,
+    "subject" TEXT NOT NULL,
+    "body" TEXT NOT NULL,
+    "defaultChannel" "CommunicationChannel" NOT NULL DEFAULT 'in_app',
+    "defaultPriority" INTEGER NOT NULL DEFAULT 0,
+    "isSystem" BOOLEAN NOT NULL DEFAULT false,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdById" TEXT,
+    "updatedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "notification_templates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "automation_rules" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "sourceModule" TEXT NOT NULL,
+    "event" TEXT NOT NULL,
+    "templateId" TEXT NOT NULL,
+    "channels" "CommunicationChannel"[] DEFAULT ARRAY['in_app']::"CommunicationChannel"[],
+    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "cooldownMinutes" INTEGER,
+    "filterCriteria" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "automation_rules_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "channel_configurations" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "channel" "CommunicationChannel" NOT NULL,
+    "provider" TEXT,
+    "config" JSONB NOT NULL,
+    "isEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "channel_configurations_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "tenants_domain_key" ON "tenants"("domain");
 
@@ -1820,6 +2243,27 @@ CREATE UNIQUE INDEX "roles_id_tenantId_key" ON "roles"("id", "tenantId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_tenantId_roleName_key" ON "roles"("tenantId", "roleName");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "permissions_code_key" ON "permissions"("code");
+
+-- CreateIndex
+CREATE INDEX "groups_tenantId_idx" ON "groups"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "groups_id_tenantId_key" ON "groups"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "groups_tenantId_groupName_key" ON "groups"("tenantId", "groupName");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_tenantId_createdAt_idx" ON "audit_logs"("tenantId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_actorId_idx" ON "audit_logs"("actorId");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_action_idx" ON "audit_logs"("action");
 
 -- CreateIndex
 CREATE INDEX "courses_tenantId_idx" ON "courses"("tenantId");
@@ -2059,6 +2503,120 @@ CREATE UNIQUE INDEX "rooms_id_tenantId_key" ON "rooms"("id", "tenantId");
 CREATE UNIQUE INDEX "rooms_tenantId_floorId_roomNumber_key" ON "rooms"("tenantId", "floorId", "roomNumber");
 
 -- CreateIndex
+CREATE INDEX "hostel_blocks_tenantId_idx" ON "hostel_blocks"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "hostel_blocks_tenantId_status_idx" ON "hostel_blocks"("tenantId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_blocks_id_tenantId_key" ON "hostel_blocks"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_blocks_tenantId_name_key" ON "hostel_blocks"("tenantId", "name");
+
+-- CreateIndex
+CREATE INDEX "hostel_floors_tenantId_idx" ON "hostel_floors"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "hostel_floors_tenantId_blockId_idx" ON "hostel_floors"("tenantId", "blockId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_floors_id_tenantId_key" ON "hostel_floors"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_floors_tenantId_blockId_floorNumber_key" ON "hostel_floors"("tenantId", "blockId", "floorNumber");
+
+-- CreateIndex
+CREATE INDEX "hostel_room_types_tenantId_idx" ON "hostel_room_types"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_room_types_id_tenantId_key" ON "hostel_room_types"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_room_types_tenantId_name_key" ON "hostel_room_types"("tenantId", "name");
+
+-- CreateIndex
+CREATE INDEX "hostel_rooms_tenantId_idx" ON "hostel_rooms"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "hostel_rooms_tenantId_floorId_idx" ON "hostel_rooms"("tenantId", "floorId");
+
+-- CreateIndex
+CREATE INDEX "hostel_rooms_tenantId_roomTypeId_idx" ON "hostel_rooms"("tenantId", "roomTypeId");
+
+-- CreateIndex
+CREATE INDEX "hostel_rooms_tenantId_status_idx" ON "hostel_rooms"("tenantId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_rooms_id_tenantId_key" ON "hostel_rooms"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_rooms_tenantId_floorId_roomNumber_key" ON "hostel_rooms"("tenantId", "floorId", "roomNumber");
+
+-- CreateIndex
+CREATE INDEX "hostel_sections_tenantId_idx" ON "hostel_sections"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "hostel_sections_tenantId_sectionId_idx" ON "hostel_sections"("tenantId", "sectionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_sections_id_tenantId_key" ON "hostel_sections"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_sections_tenantId_sectionId_key" ON "hostel_sections"("tenantId", "sectionId");
+
+-- CreateIndex
+CREATE INDEX "hostel_section_rooms_tenantId_sectionId_idx" ON "hostel_section_rooms"("tenantId", "sectionId");
+
+-- CreateIndex
+CREATE INDEX "hostel_section_rooms_tenantId_roomId_idx" ON "hostel_section_rooms"("tenantId", "roomId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_section_rooms_id_tenantId_key" ON "hostel_section_rooms"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_section_rooms_tenantId_sectionId_roomId_key" ON "hostel_section_rooms"("tenantId", "sectionId", "roomId");
+
+-- CreateIndex
+CREATE INDEX "hostel_staff_assignments_tenantId_blockId_idx" ON "hostel_staff_assignments"("tenantId", "blockId");
+
+-- CreateIndex
+CREATE INDEX "hostel_staff_assignments_tenantId_teacherId_idx" ON "hostel_staff_assignments"("tenantId", "teacherId");
+
+-- CreateIndex
+CREATE INDEX "hostel_staff_assignments_tenantId_role_idx" ON "hostel_staff_assignments"("tenantId", "role");
+
+-- CreateIndex
+CREATE INDEX "hostel_staff_assignments_tenantId_status_idx" ON "hostel_staff_assignments"("tenantId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_staff_assignments_id_tenantId_key" ON "hostel_staff_assignments"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hostel_staff_assignments_tenantId_blockId_teacherId_role_fr_key" ON "hostel_staff_assignments"("tenantId", "blockId", "teacherId", "role", "fromDate");
+
+-- CreateIndex
+CREATE INDEX "student_hostel_allocations_tenantId_enrollmentId_idx" ON "student_hostel_allocations"("tenantId", "enrollmentId");
+
+-- CreateIndex
+CREATE INDEX "student_hostel_allocations_tenantId_roomId_idx" ON "student_hostel_allocations"("tenantId", "roomId");
+
+-- CreateIndex
+CREATE INDEX "student_hostel_allocations_tenantId_sectionId_idx" ON "student_hostel_allocations"("tenantId", "sectionId");
+
+-- CreateIndex
+CREATE INDEX "student_hostel_allocations_tenantId_academicYearId_idx" ON "student_hostel_allocations"("tenantId", "academicYearId");
+
+-- CreateIndex
+CREATE INDEX "student_hostel_allocations_tenantId_status_idx" ON "student_hostel_allocations"("tenantId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "student_hostel_allocations_id_tenantId_key" ON "student_hostel_allocations"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "student_hostel_allocations_tenantId_enrollmentId_academicYe_key" ON "student_hostel_allocations"("tenantId", "enrollmentId", "academicYearId");
+
+-- CreateIndex
 CREATE INDEX "vehicle_categories_tenantId_idx" ON "vehicle_categories"("tenantId");
 
 -- CreateIndex
@@ -2201,6 +2759,9 @@ CREATE UNIQUE INDEX "parents_userId_tenantId_key" ON "parents"("userId", "tenant
 
 -- CreateIndex
 CREATE UNIQUE INDEX "parents_id_tenantId_key" ON "parents"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "parents_tenantId_phone_key" ON "parents"("tenantId", "phone");
 
 -- CreateIndex
 CREATE INDEX "student_parents_tenantId_studentId_idx" ON "student_parents"("tenantId", "studentId");
@@ -2347,6 +2908,12 @@ CREATE UNIQUE INDEX "students_tenantId_aadhaarNumber_key" ON "students"("tenantI
 CREATE UNIQUE INDEX "students_tenantId_admissionNumber_key" ON "students"("tenantId", "admissionNumber");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "students_tenantId_pen_key" ON "students"("tenantId", "pen");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "students_tenantId_apaarId_key" ON "students"("tenantId", "apaarId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "students_id_tenantId_key" ON "students"("id", "tenantId");
 
 -- CreateIndex
@@ -2387,6 +2954,9 @@ CREATE INDEX "uploads_tenantId_entityType_entityId_idx" ON "uploads"("tenantId",
 
 -- CreateIndex
 CREATE INDEX "fee_heads_tenantId_idx" ON "fee_heads"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "fee_heads_tenantId_hostelRoomTypeId_idx" ON "fee_heads"("tenantId", "hostelRoomTypeId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "fee_heads_tenantId_name_key" ON "fee_heads"("tenantId", "name");
@@ -2838,14 +3408,119 @@ CREATE INDEX "id_sequence_logs_tenantId_createdAt_idx" ON "id_sequence_logs"("te
 -- CreateIndex
 CREATE UNIQUE INDEX "id_sequence_logs_tenantId_generatedValue_key" ON "id_sequence_logs"("tenantId", "generatedValue");
 
+-- CreateIndex
+CREATE INDEX "zai_chats_tenantId_userId_idx" ON "zai_chats"("tenantId", "userId");
+
+-- CreateIndex
+CREATE INDEX "zai_chats_tenantId_updatedAt_idx" ON "zai_chats"("tenantId", "updatedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "zai_chats_id_tenantId_key" ON "zai_chats"("id", "tenantId");
+
+-- CreateIndex
+CREATE INDEX "zai_messages_chatId_createdAt_idx" ON "zai_messages"("chatId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "communications_tenantId_type_idx" ON "communications"("tenantId", "type");
+
+-- CreateIndex
+CREATE INDEX "communications_tenantId_status_idx" ON "communications"("tenantId", "status");
+
+-- CreateIndex
+CREATE INDEX "communications_tenantId_senderId_idx" ON "communications"("tenantId", "senderId");
+
+-- CreateIndex
+CREATE INDEX "communications_tenantId_createdAt_idx" ON "communications"("tenantId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "communications_id_tenantId_key" ON "communications"("id", "tenantId");
+
+-- CreateIndex
+CREATE INDEX "communication_recipients_tenantId_userId_idx" ON "communication_recipients"("tenantId", "userId");
+
+-- CreateIndex
+CREATE INDEX "communication_recipients_tenantId_deliveryStatus_idx" ON "communication_recipients"("tenantId", "deliveryStatus");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "communication_recipients_id_tenantId_key" ON "communication_recipients"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "communication_recipients_tenantId_communicationId_userId_ch_key" ON "communication_recipients"("tenantId", "communicationId", "userId", "channel");
+
+-- CreateIndex
+CREATE INDEX "publications_tenantId_type_idx" ON "publications"("tenantId", "type");
+
+-- CreateIndex
+CREATE INDEX "publications_tenantId_status_idx" ON "publications"("tenantId", "status");
+
+-- CreateIndex
+CREATE INDEX "publications_tenantId_publishDate_idx" ON "publications"("tenantId", "publishDate");
+
+-- CreateIndex
+CREATE INDEX "publications_tenantId_expiryDate_idx" ON "publications"("tenantId", "expiryDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "publications_id_tenantId_key" ON "publications"("id", "tenantId");
+
+-- CreateIndex
+CREATE INDEX "publication_revisions_tenantId_publicationId_idx" ON "publication_revisions"("tenantId", "publicationId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "publication_revisions_id_tenantId_key" ON "publication_revisions"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "publication_revisions_tenantId_publicationId_revision_key" ON "publication_revisions"("tenantId", "publicationId", "revision");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "notification_templates_id_tenantId_key" ON "notification_templates"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "notification_templates_tenantId_name_key" ON "notification_templates"("tenantId", "name");
+
+-- CreateIndex
+CREATE INDEX "automation_rules_tenantId_sourceModule_idx" ON "automation_rules"("tenantId", "sourceModule");
+
+-- CreateIndex
+CREATE INDEX "automation_rules_tenantId_isEnabled_idx" ON "automation_rules"("tenantId", "isEnabled");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "automation_rules_id_tenantId_key" ON "automation_rules"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "automation_rules_tenantId_sourceModule_event_key" ON "automation_rules"("tenantId", "sourceModule", "event");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "channel_configurations_tenantId_channel_key" ON "channel_configurations"("tenantId", "channel");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "channel_configurations_id_tenantId_key" ON "channel_configurations"("id", "tenantId");
+
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_roleId_tenantId_fkey" FOREIGN KEY ("roleId", "tenantId") REFERENCES "roles"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "roles" ADD CONSTRAINT "roles_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "roles" ADD CONSTRAINT "roles_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_roleId_tenantId_fkey" FOREIGN KEY ("roleId", "tenantId") REFERENCES "roles"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_roleId_tenantId_fkey" FOREIGN KEY ("roleId", "tenantId") REFERENCES "roles"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "groups" ADD CONSTRAINT "groups_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "role_groups" ADD CONSTRAINT "role_groups_roleId_tenantId_fkey" FOREIGN KEY ("roleId", "tenantId") REFERENCES "roles"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "role_groups" ADD CONSTRAINT "role_groups_groupId_tenantId_fkey" FOREIGN KEY ("groupId", "tenantId") REFERENCES "groups"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "courses" ADD CONSTRAINT "courses_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -3005,6 +3680,66 @@ ALTER TABLE "rooms" ADD CONSTRAINT "rooms_tenantId_fkey" FOREIGN KEY ("tenantId"
 
 -- AddForeignKey
 ALTER TABLE "rooms" ADD CONSTRAINT "rooms_floorId_tenantId_fkey" FOREIGN KEY ("floorId", "tenantId") REFERENCES "floors"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_blocks" ADD CONSTRAINT "hostel_blocks_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_floors" ADD CONSTRAINT "hostel_floors_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_floors" ADD CONSTRAINT "hostel_floors_blockId_tenantId_fkey" FOREIGN KEY ("blockId", "tenantId") REFERENCES "hostel_blocks"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_room_types" ADD CONSTRAINT "hostel_room_types_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_rooms" ADD CONSTRAINT "hostel_rooms_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_rooms" ADD CONSTRAINT "hostel_rooms_floorId_tenantId_fkey" FOREIGN KEY ("floorId", "tenantId") REFERENCES "hostel_floors"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_rooms" ADD CONSTRAINT "hostel_rooms_roomTypeId_tenantId_fkey" FOREIGN KEY ("roomTypeId", "tenantId") REFERENCES "hostel_room_types"("id", "tenantId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_sections" ADD CONSTRAINT "hostel_sections_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_sections" ADD CONSTRAINT "hostel_sections_sectionId_tenantId_fkey" FOREIGN KEY ("sectionId", "tenantId") REFERENCES "sections"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_section_rooms" ADD CONSTRAINT "hostel_section_rooms_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_section_rooms" ADD CONSTRAINT "hostel_section_rooms_sectionId_tenantId_fkey" FOREIGN KEY ("sectionId", "tenantId") REFERENCES "hostel_sections"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_section_rooms" ADD CONSTRAINT "hostel_section_rooms_roomId_tenantId_fkey" FOREIGN KEY ("roomId", "tenantId") REFERENCES "hostel_rooms"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_staff_assignments" ADD CONSTRAINT "hostel_staff_assignments_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_staff_assignments" ADD CONSTRAINT "hostel_staff_assignments_blockId_tenantId_fkey" FOREIGN KEY ("blockId", "tenantId") REFERENCES "hostel_blocks"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hostel_staff_assignments" ADD CONSTRAINT "hostel_staff_assignments_teacherId_tenantId_fkey" FOREIGN KEY ("teacherId", "tenantId") REFERENCES "teachers"("id", "tenantId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "student_hostel_allocations" ADD CONSTRAINT "student_hostel_allocations_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "student_hostel_allocations" ADD CONSTRAINT "student_hostel_allocations_enrollmentId_tenantId_fkey" FOREIGN KEY ("enrollmentId", "tenantId") REFERENCES "student_enrollments"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "student_hostel_allocations" ADD CONSTRAINT "student_hostel_allocations_roomId_tenantId_fkey" FOREIGN KEY ("roomId", "tenantId") REFERENCES "hostel_rooms"("id", "tenantId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "student_hostel_allocations" ADD CONSTRAINT "student_hostel_allocations_sectionId_tenantId_fkey" FOREIGN KEY ("sectionId", "tenantId") REFERENCES "hostel_sections"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "student_hostel_allocations" ADD CONSTRAINT "student_hostel_allocations_academicYearId_tenantId_fkey" FOREIGN KEY ("academicYearId", "tenantId") REFERENCES "academic_years"("id", "tenantId") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "vehicle_categories" ADD CONSTRAINT "vehicle_categories_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -3218,6 +3953,9 @@ ALTER TABLE "uploads" ADD CONSTRAINT "uploads_tenantId_fkey" FOREIGN KEY ("tenan
 
 -- AddForeignKey
 ALTER TABLE "fee_heads" ADD CONSTRAINT "fee_heads_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "fee_heads" ADD CONSTRAINT "fee_heads_hostelRoomTypeId_tenantId_fkey" FOREIGN KEY ("hostelRoomTypeId", "tenantId") REFERENCES "hostel_room_types"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "section_fees" ADD CONSTRAINT "section_fees_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -3587,3 +4325,63 @@ ALTER TABLE "id_sequence_logs" ADD CONSTRAINT "id_sequence_logs_tenantId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "id_sequence_logs" ADD CONSTRAINT "id_sequence_logs_patternId_tenantId_fkey" FOREIGN KEY ("patternId", "tenantId") REFERENCES "id_sequence_patterns"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "zai_chats" ADD CONSTRAINT "zai_chats_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "zai_chats" ADD CONSTRAINT "zai_chats_userId_tenantId_fkey" FOREIGN KEY ("userId", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "zai_messages" ADD CONSTRAINT "zai_messages_chatId_tenantId_fkey" FOREIGN KEY ("chatId", "tenantId") REFERENCES "zai_chats"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "communications" ADD CONSTRAINT "communications_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "communications" ADD CONSTRAINT "communications_senderId_tenantId_fkey" FOREIGN KEY ("senderId", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "communications" ADD CONSTRAINT "communications_automationRuleId_tenantId_fkey" FOREIGN KEY ("automationRuleId", "tenantId") REFERENCES "automation_rules"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "communication_recipients" ADD CONSTRAINT "communication_recipients_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "communication_recipients" ADD CONSTRAINT "communication_recipients_communicationId_tenantId_fkey" FOREIGN KEY ("communicationId", "tenantId") REFERENCES "communications"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "communication_recipients" ADD CONSTRAINT "communication_recipients_userId_tenantId_fkey" FOREIGN KEY ("userId", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publications" ADD CONSTRAINT "publications_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publications" ADD CONSTRAINT "publications_submittedById_tenantId_fkey" FOREIGN KEY ("submittedById", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publications" ADD CONSTRAINT "publications_approvedById_tenantId_fkey" FOREIGN KEY ("approvedById", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publications" ADD CONSTRAINT "publications_rejectedById_tenantId_fkey" FOREIGN KEY ("rejectedById", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publication_revisions" ADD CONSTRAINT "publication_revisions_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publication_revisions" ADD CONSTRAINT "publication_revisions_publicationId_tenantId_fkey" FOREIGN KEY ("publicationId", "tenantId") REFERENCES "publications"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "publication_revisions" ADD CONSTRAINT "publication_revisions_changedById_tenantId_fkey" FOREIGN KEY ("changedById", "tenantId") REFERENCES "users"("id", "tenantId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification_templates" ADD CONSTRAINT "notification_templates_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "automation_rules" ADD CONSTRAINT "automation_rules_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "automation_rules" ADD CONSTRAINT "automation_rules_templateId_tenantId_fkey" FOREIGN KEY ("templateId", "tenantId") REFERENCES "notification_templates"("id", "tenantId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "channel_configurations" ADD CONSTRAINT "channel_configurations_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
