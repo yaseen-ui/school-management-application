@@ -79,6 +79,10 @@ web_modules/
 .env.production.local
 .env.local
 
+# Google Cloud service account key (contains private key — must never be committed)
+config/google-service-key.json
+lib/backend/modules/uploads/school-admin-gcp.json
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
