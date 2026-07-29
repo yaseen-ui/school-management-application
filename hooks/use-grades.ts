@@ -17,7 +17,7 @@ export function useGrade(id: string) {
     queryKey: ["grades", id],
     queryFn: async () => {
       const response = await gradesApi.getById(id)
-      return response.data.data
+      return response.data
     },
     enabled: !!id,
   })

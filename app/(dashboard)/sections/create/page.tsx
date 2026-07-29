@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useForm, FormProvider } from "react-hook-form"
+import { useForm, FormProvider, type FieldErrors } from "react-hook-form"
 import { Loader2, Users, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,9 +13,11 @@ import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { RoomSelector } from "@/components/shared/room-selector"
 import { TeacherSelector } from "@/components/shared/teacher-selector"
 import { motion } from "framer-motion"
+import { showRequiredFieldsToast } from "@/lib/form-validation"
 
 interface FormData {
   sectionName: string
+  courseId: string
   gradeId: string
   roomId: string
   sectionInChargeId: string
@@ -26,6 +28,7 @@ export default function CreateSectionPage() {
   const methods = useForm<FormData>({
     defaultValues: {
       sectionName: "",
+      courseId: "",
       gradeId: "",
       roomId: "",
       sectionInChargeId: "",
@@ -50,6 +53,14 @@ export default function CreateSectionPage() {
     })
     reset()
     router.push("/sections")
+  }
+
+  const onInvalid = (formErrors: FieldErrors<FormData>) => {
+    showRequiredFieldsToast(formErrors, {
+      sectionName: "Section name",
+      courseId: "Course",
+      gradeId: "Grade",
+    })
   }
 
   return (
@@ -82,7 +93,7 @@ export default function CreateSectionPage() {
           </div>
         </CardHeader>
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="sectionName">
@@ -99,9 +110,9 @@ export default function CreateSectionPage() {
               <div className="space-y-2">
                 <HierarchicalFilter
                   filters={["courses", "grades"]}
-                  required={{ gradeId: true }}
+                  required={{ courseId: true, gradeId: true }}
                   labels={{
-                    courseId: "Course (Optional)",
+                    courseId: "Course",
                     gradeId: "Grade",
                   }}
                 />

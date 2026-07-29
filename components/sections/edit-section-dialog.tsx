@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useForm, FormProvider } from "react-hook-form"
+import { useForm, FormProvider, type FieldErrors } from "react-hook-form"
 import { Loader2, Users } from "lucide-react"
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { RoomSelector } from "@/components/shared/room-selector"
 import { TeacherSelector } from "@/components/shared/teacher-selector"
 import type { Section } from "@/lib/api/sections"
+import { showRequiredFieldsToast } from "@/lib/form-validation"
 
 interface EditSectionDialogProps {
   open: boolean
@@ -29,6 +30,7 @@ interface EditSectionDialogProps {
 
 interface FormData {
   sectionName: string
+  courseId: string
   gradeId: string
   roomId: string
   sectionInChargeId: string
@@ -49,6 +51,7 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
     if (section && open) {
       reset({
         sectionName: section.sectionName,
+        courseId: section.grade?.courseId || "",
         gradeId: section.gradeId,
         roomId: section.roomId ?? "",
         sectionInChargeId: section.sectionInChargeId ?? "",
@@ -73,6 +76,14 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
     onOpenChange(false)
   }
 
+  const onInvalid = (formErrors: FieldErrors<FormData>) => {
+    showRequiredFieldsToast(formErrors, {
+      sectionName: "Section name",
+      courseId: "Course",
+      gradeId: "Grade",
+    })
+  }
+
   if (!section) return null
 
   return (
@@ -91,7 +102,7 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
         </DialogHeader>
 
         <FormProvider {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="sectionName">
@@ -108,7 +119,7 @@ export function EditSectionDialog({ open, onOpenChange, section }: EditSectionDi
               <div className="space-y-2">
                 <HierarchicalFilter
                   filters={["courses", "grades"]}
-                  required={{ courseId: false, gradeId: true }}
+                  required={{ courseId: true, gradeId: true }}
                   labels={{
                     courseId: "Course",
                     gradeId: "Grade",
