@@ -38,6 +38,7 @@ interface TopicMark {
   id: string
   topic: string
   marks: string
+  maxMarks: string
 }
 
 interface MarksInputEntry {
@@ -110,6 +111,14 @@ function normalizeBreakup(
           typeof item.marks === "number" || typeof item.marks === "string"
             ? String(item.marks)
             : "",
+        maxMarks:
+          typeof item.maxMarks === "number" || typeof item.maxMarks === "string"
+            ? String(item.maxMarks)
+            : typeof item.totalMarks === "number" || typeof item.totalMarks === "string"
+              ? String(item.totalMarks)
+              : typeof item.marks === "number" || typeof item.marks === "string"
+                ? String(item.marks)
+                : "",
       })),
   }
 }
@@ -122,8 +131,12 @@ function calculateTopicTotal(topics: TopicMark[]) {
   }, 0)
 }
 
-function hasEnteredTopicMarks(topics: TopicMark[]) {
-  return topics.some((topic) => topic.marks.trim() !== "")
+function calculateTopicMaxTotal(topics: TopicMark[]) {
+  return topics.reduce((total, topic) => {
+    if (topic.maxMarks.trim() === "") return total
+    const value = Number(topic.maxMarks)
+    return Number.isFinite(value) ? total + value : total
+  }, 0)
 }
 
 export default function MarksEntryPage() {
@@ -194,15 +207,17 @@ export default function MarksEntryPage() {
       const existingMark = student.marks.find((m) => m.paperId === paper.paperId)
       const normalizedBreakup = normalizeBreakup(paper.paperId, existingMark?.breakup)
       initial[paper.paperId] = {
-        marksObtained: hasEnteredTopicMarks(normalizedBreakup.topics)
-          ? String(calculateTopicTotal(normalizedBreakup.topics))
-          : existingMark?.marksObtained?.toString() ?? "",
+        marksObtained:
+          existingMark?.marksObtained?.toString() ??
+          (normalizedBreakup.topics.length > 0
+            ? String(calculateTopicTotal(normalizedBreakup.topics))
+            : ""),
         isAbsent: existingMark?.isAbsent ?? false,
         ...normalizedBreakup,
       }
     }
     setMarksInput(initial)
-    setExpandedPaperId(marksGrid?.papers[0]?.paperId ?? null)
+    setExpandedPaperId(null)
   }
 
   const handleMarksChange = (paperId: string, value: string) => {
@@ -233,7 +248,7 @@ export default function MarksEntryPage() {
         ...previous,
         [paperId]: {
           ...current,
-          topics: [...current.topics, { id: topicId(paperId), topic, marks: "" }],
+          topics: [...current.topics, { id: topicId(paperId), topic, marks: "", maxMarks: "" }],
         },
       }
     })
@@ -242,7 +257,7 @@ export default function MarksEntryPage() {
   const updateTopic = (
     paperId: string,
     topicEntryId: string,
-    field: "topic" | "marks",
+    field: "topic" | "marks" | "maxMarks",
     value: string,
   ) => {
     setMarksInput((previous) => {
@@ -258,9 +273,6 @@ export default function MarksEntryPage() {
         [paperId]: {
           ...current,
           topics,
-          marksObtained: hasEnteredTopicMarks(topics)
-            ? String(calculateTopicTotal(topics))
-            : current.marksObtained,
         },
       }
     })
@@ -277,9 +289,6 @@ export default function MarksEntryPage() {
         [paperId]: {
           ...current,
           topics,
-          marksObtained: hasEnteredTopicMarks(topics)
-            ? String(calculateTopicTotal(topics))
-            : current.marksObtained,
         },
       }
     })
@@ -291,17 +300,6 @@ export default function MarksEntryPage() {
     for (const paper of marksGrid?.papers || []) {
       const input = marksInput[paper.paperId]
       if (!input || input.isAbsent) continue
-
-      const invalidTopic = input.topics.find(
-        (topic) =>
-          (topic.topic.trim() && topic.marks.trim() === "") ||
-          (!topic.topic.trim() && topic.marks.trim() !== "") ||
-          (topic.marks.trim() !== "" && (!Number.isFinite(Number(topic.marks)) || Number(topic.marks) < 0)),
-      )
-      if (invalidTopic) {
-        toast.error(`Complete the topic name and valid marks for ${paper.subjectName}`)
-        return
-      }
 
       const obtained = input.marksObtained === "" ? null : Number(input.marksObtained)
       if (obtained !== null && (!Number.isFinite(obtained) || obtained < 0 || obtained > paper.maxMarks)) {
@@ -315,10 +313,20 @@ export default function MarksEntryPage() {
       const marks = (marksGrid?.papers || []).map((paper) => {
         const input = marksInput[paper.paperId]
         const completedTopics = (input?.topics || [])
-          .filter((topic) => topic.topic.trim() && topic.marks.trim() !== "")
+          .filter(
+            (topic) =>
+              topic.topic.trim() &&
+              topic.marks.trim() !== "" &&
+              topic.maxMarks.trim() !== "" &&
+              Number.isFinite(Number(topic.marks)) &&
+              Number(topic.marks) >= 0 &&
+              Number.isFinite(Number(topic.maxMarks)) &&
+              Number(topic.maxMarks) > 0,
+          )
           .map((topic) => ({
             topic: topic.topic.trim(),
             marks: Number(topic.marks),
+            maxMarks: Number(topic.maxMarks),
           }))
         const breakupObj =
           completedTopics.length > 0 || Object.keys(input?.breakupBase || {}).length > 0
@@ -539,7 +547,7 @@ export default function MarksEntryPage() {
                         </CardTitle>
                         {selectedStudent && (
                           <CardDescription className="mt-1 text-xs">
-                            Roll: {selectedStudent.rollNumber} · Enter a total or divide it into subject topics
+                            Roll: {selectedStudent.rollNumber} · Enter the official score and optionally explain it by topic
                           </CardDescription>
                         )}
                       </div>
@@ -572,9 +580,14 @@ export default function MarksEntryPage() {
                           breakupBase: {},
                         }
                         const topicTotal = calculateTopicTotal(input.topics)
-                        const isCalculated = hasEnteredTopicMarks(input.topics)
+                        const topicMaxTotal = calculateTopicMaxTotal(input.topics)
                         const score = input.marksObtained === "" ? null : Number(input.marksObtained)
                         const scoreTooHigh = score !== null && score > paper.maxMarks
+                        const remainingSubjectMarks = score === null ? null : score - topicTotal
+                        const remainingSubjectMaximum = paper.maxMarks - topicMaxTotal
+                        const breakupExceedsSubject =
+                          (remainingSubjectMarks !== null && remainingSubjectMarks < 0) ||
+                          remainingSubjectMaximum < 0
                         const suggestions = getSuggestedTopics(paper.subjectName)
                         const isExpanded = expandedPaperId === paper.paperId
                         const addedTopics = new Set(
@@ -692,25 +705,18 @@ export default function MarksEntryPage() {
                                       max={paper.maxMarks}
                                       value={input.marksObtained}
                                       onChange={(event) => handleMarksChange(paper.paperId, event.target.value)}
-                                      readOnly={isCalculated}
                                       className={`h-9 min-w-0 text-center text-sm font-semibold ${
                                         scoreTooHigh ? "border-destructive text-destructive" : ""
-                                      } ${isCalculated ? "bg-muted/50" : ""}`}
+                                      }`}
                                       placeholder="Score"
                                     />
                                     <span className="shrink-0 text-sm text-muted-foreground">
                                       / {paper.maxMarks}
                                     </span>
                                   </div>
-                                  {isCalculated ? (
-                                    <p className="mt-1.5 text-[10px] leading-4 text-primary">
-                                      Calculated from topics.
-                                    </p>
-                                  ) : (
-                                    <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
-                                      Enter directly or add topics.
-                                    </p>
-                                  )}
+                                  <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
+                                    This official score saves independently from the optional breakup.
+                                  </p>
                                   {scoreTooHigh && (
                                     <p className="mt-1.5 text-[10px] text-destructive">
                                       Total cannot exceed {paper.maxMarks}.
@@ -723,28 +729,95 @@ export default function MarksEntryPage() {
                                     <div>
                                       <h4 className="text-sm font-medium">Topic breakup</h4>
                                       <p className="mt-0.5 text-[10px] text-muted-foreground">
-                                        Separate the score into topics.
+                                        Record each topic as obtained marks out of its maximum.
                                       </p>
                                     </div>
-                                    <Badge
-                                      variant={topicTotal > paper.maxMarks ? "destructive" : "secondary"}
-                                      className="text-[10px]"
-                                    >
-                                      Topic total: {topicTotal}
-                                    </Badge>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px]"
+                                      >
+                                        Breakup obtained: {topicTotal}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px]"
+                                      >
+                                        Breakup maximum: {topicMaxTotal}
+                                      </Badge>
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    className={`mt-2.5 grid items-center gap-2 rounded-lg border px-2.5 py-2 sm:grid-cols-[minmax(0,1fr)_176px] ${
+                                      breakupExceedsSubject
+                                        ? "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/15"
+                                        : "border-blue-200/70 bg-gradient-to-r from-blue-50/80 to-violet-50/50 dark:border-blue-900/50 dark:from-blue-950/20 dark:to-violet-950/15"
+                                    }`}
+                                  >
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <div
+                                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                                          breakupExceedsSubject
+                                            ? "bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400"
+                                            : "bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
+                                        }`}
+                                      >
+                                        <BookOpen className="h-3.5 w-3.5" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="truncate text-xs font-semibold">
+                                          Remaining in {paper.subjectName}
+                                        </p>
+                                        <p
+                                          className={`mt-0.5 text-[10px] ${
+                                            breakupExceedsSubject
+                                              ? "text-rose-600 dark:text-rose-400"
+                                              : "text-muted-foreground"
+                                          }`}
+                                        >
+                                          {breakupExceedsSubject
+                                            ? "Topic breakup exceeds the official subject balance"
+                                            : "Read-only balance not yet separated into topics"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+                                      <div
+                                        className={`flex h-8 items-center justify-center rounded-md border bg-background/80 px-2 text-xs font-semibold ${
+                                          remainingSubjectMarks !== null && remainingSubjectMarks < 0
+                                            ? "border-destructive/60 text-destructive"
+                                            : "border-border/70"
+                                        }`}
+                                        title="Remaining obtained marks"
+                                      >
+                                        {remainingSubjectMarks ?? "—"}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">/</span>
+                                      <div
+                                        className={`flex h-8 items-center justify-center rounded-md border bg-background/80 px-2 text-xs font-semibold ${
+                                          remainingSubjectMaximum < 0
+                                            ? "border-destructive/60 text-destructive"
+                                            : "border-border/70"
+                                        }`}
+                                        title="Remaining maximum marks"
+                                      >
+                                        {remainingSubjectMaximum}
+                                      </div>
+                                    </div>
                                   </div>
 
                                   {input.topics.length > 0 && (
                                     <div className="mt-2.5 space-y-1.5">
-                                      <div className="grid grid-cols-[minmax(0,1fr)_88px_32px] gap-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                      <div className="grid grid-cols-[minmax(0,1fr)_176px_32px] gap-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                                         <span>Topic</span>
-                                        <span className="text-center">Marks</span>
+                                        <span className="text-center">Obtained / Maximum</span>
                                         <span className="sr-only">Remove</span>
                                       </div>
                                       {input.topics.map((topic) => (
                                         <div
                                           key={topic.id}
-                                          className="grid grid-cols-[minmax(0,1fr)_88px_32px] items-center gap-2"
+                                          className="grid grid-cols-[minmax(0,1fr)_176px_32px] items-center gap-2"
                                         >
                                           <Input
                                             value={topic.topic}
@@ -754,18 +827,33 @@ export default function MarksEntryPage() {
                                             placeholder="e.g. Algebra"
                                             className="h-8 min-w-0 text-xs"
                                           />
-                                          <Input
-                                            type="number"
-                                            min={0}
-                                            max={paper.maxMarks}
-                                            value={topic.marks}
-                                            onChange={(event) =>
-                                              updateTopic(paper.paperId, topic.id, "marks", event.target.value)
-                                            }
-                                            placeholder="0"
-                                            aria-label={`Marks for ${topic.topic || "topic"}`}
-                                            className="h-8 text-center text-xs"
-                                          />
+                                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+                                            <Input
+                                              type="number"
+                                              min={0}
+                                              max={paper.maxMarks}
+                                              value={topic.marks}
+                                              onChange={(event) =>
+                                                updateTopic(paper.paperId, topic.id, "marks", event.target.value)
+                                              }
+                                              placeholder="0"
+                                              aria-label={`Marks obtained for ${topic.topic || "topic"}`}
+                                              className="h-8 min-w-0 px-1.5 text-center text-xs"
+                                            />
+                                            <span className="text-xs text-muted-foreground">/</span>
+                                            <Input
+                                              type="number"
+                                              min={1}
+                                              max={paper.maxMarks}
+                                              value={topic.maxMarks}
+                                              onChange={(event) =>
+                                                updateTopic(paper.paperId, topic.id, "maxMarks", event.target.value)
+                                              }
+                                              placeholder="Max"
+                                              aria-label={`Maximum marks for ${topic.topic || "topic"}`}
+                                              className="h-8 min-w-0 px-1.5 text-center text-xs"
+                                            />
+                                          </div>
                                           <Button
                                             type="button"
                                             variant="ghost"
@@ -786,7 +874,7 @@ export default function MarksEntryPage() {
                                       <Sparkles className="h-3 w-3" />
                                       Suggested:
                                     </span>
-                                    {suggestions.map((topic) => {
+                                    {[...suggestions, "Others"].map((topic) => {
                                       const isAdded = addedTopics.has(topic.toLowerCase())
                                       return (
                                         <Button
@@ -814,6 +902,12 @@ export default function MarksEntryPage() {
                                       Custom topic
                                     </Button>
                                   </div>
+                                  {input.topics.length > 0 && (
+                                    <p className="mt-2 text-[10px] text-muted-foreground">
+                                      Breakup totals are informational and do not change or block the official score.
+                                      Incomplete topic rows are ignored when saving.
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             ))}
