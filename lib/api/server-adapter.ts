@@ -84,6 +84,10 @@ const createMockReq = async (nextReq: NextRequest, params: any = {}, query: any 
     ? {
         ...user,
         id: user.userId,
+        // Company users can operate inside a tenant selected through the
+        // x-tenant-id header. Controllers historically read req.user.tenantId,
+        // so expose the resolved request tenant there as well as req.tenantId.
+        tenantId,
         // Forward-compat: ensure roleIds is always an array for the RBAC engine
         roleIds: user.roleIds ?? [],
         permVersion: user.permVersion ?? 0,

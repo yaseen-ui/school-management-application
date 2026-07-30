@@ -26,7 +26,7 @@ export default function AttendanceTypesPage() {
   const [deleteType, setDeleteType] = useState<AttendanceType | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ["attendance-types"],
+    queryKey: ["attendance-types", "all"],
     queryFn: async () => {
       const res = await attendanceApi.getAllTypes()
       return (res.data as any).data || (res.data as any) || []
