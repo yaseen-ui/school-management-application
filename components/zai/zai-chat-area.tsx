@@ -84,27 +84,37 @@ export function ZaiChatArea({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative">
-      {/* Mobile header with back button (WhatsApp-style) */}
-      {onBack && (
-        <div className="lg:hidden flex items-center gap-3 px-3 py-2.5 bg-emerald-600 text-white flex-shrink-0 shadow-sm">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-background via-background to-primary/[0.035]">
+      <header className="relative z-10 flex min-h-16 flex-shrink-0 items-center gap-3 border-b border-border/60 bg-card/85 px-3 py-2.5 shadow-sm backdrop-blur-xl sm:px-4">
+        {onBack && (
           <button
+            type="button"
             onClick={onBack}
-            className="p-1.5 -ml-1 rounded-full hover:bg-white/10 transition-colors active:bg-white/20"
+            className="-ml-1 rounded-full p-2 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary xl:hidden"
+            aria-label="Back to conversations"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">
-              {title || "Chat"}
-            </p>
-          </div>
-          <Sparkles className="h-4 w-4 opacity-70 flex-shrink-0" />
+        )}
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-violet-500/10 text-primary ring-1 ring-primary/15">
+          <Sparkles className="h-4.5 w-4.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {title || "AI Assistant"}
+          </p>
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+            Ready to help with school data
+          </p>
         </div>
-      )}
+        <span className="hidden rounded-full border border-primary/10 bg-primary/5 px-2.5 py-1 text-[10px] font-semibold text-primary sm:inline">
+          Read-only insights
+        </span>
+      </header>
 
       {/* Ambient background orb */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
           className="absolute -top-40 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full
             bg-[radial-gradient(circle,oklch(0.55_0.2_260_/_0.08),oklch(0.5_0.22_280_/_0.04),transparent_70%)]
@@ -117,7 +127,7 @@ export function ZaiChatArea({
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto scrollbar-thin relative"
+        className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin"
       >
         {isLoading && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
@@ -132,8 +142,14 @@ export function ZaiChatArea({
           }} />
         )}
 
+        {error && messages.length === 0 && (
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-10 mx-auto max-w-xl rounded-xl border border-destructive/15 bg-destructive/[0.06] px-4 py-2.5 text-center text-xs text-destructive shadow-sm backdrop-blur sm:inset-x-5">
+            {error}
+          </div>
+        )}
+
         {messages.length > 0 && (
-          <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="mx-auto w-full max-w-4xl px-3 py-5 sm:px-5 sm:py-6">
             {messages.map((msg, i) => (
               <ZaiMessageBubble
                 key={msg.id}
@@ -144,11 +160,11 @@ export function ZaiChatArea({
 
             {/* Thinking indicator */}
             {isGenerating && (
-              <div className="flex items-start gap-3 mb-6">
+              <div className="mb-5 flex min-w-0 items-start gap-2.5 sm:gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
-                <div className="glass rounded-2xl rounded-tl-md px-4 py-3 border border-border/50">
+                <div className="rounded-2xl rounded-tl-md border border-border/60 bg-card/80 px-4 py-3 shadow-sm backdrop-blur">
                   <div className="flex items-center gap-1.5 py-1">
                     {[0, 1, 2].map((i) => (
                       <motion.div
@@ -172,11 +188,6 @@ export function ZaiChatArea({
           </div>
         )}
 
-        {error && (
-          <div className="max-w-3xl mx-auto px-4 pb-4">
-            <p className="text-sm text-destructive/80 text-center">{error}</p>
-          </div>
-        )}
       </div>
 
       {/* Scroll to bottom FAB */}
@@ -187,7 +198,7 @@ export function ZaiChatArea({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             onClick={scrollToBottom}
-            className="absolute bottom-24 right-6 z-10 p-2 rounded-full bg-card border border-border
+            className="absolute bottom-24 right-4 z-10 rounded-full border border-border bg-card p-2
               shadow-lg hover:shadow-xl transition-all"
           >
             <ChevronDown className="h-4 w-4" />
@@ -196,10 +207,10 @@ export function ZaiChatArea({
       </AnimatePresence>
 
       {/* Input area */}
-      <div className="border-t border-border/50 bg-background/80 backdrop-blur-xl px-4 py-3">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="relative flex items-end gap-2 bg-card rounded-2xl border border-border
-            shadow-sm focus-within:shadow-md focus-within:border-primary/30
+      <div className="shrink-0 border-t border-border/60 bg-card/80 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-5">
+        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-4xl min-w-0">
+          <div className="relative flex min-w-0 items-end gap-1 overflow-hidden rounded-2xl border border-border bg-background/90
+            shadow-sm focus-within:border-primary/35 focus-within:shadow-md
             focus-within:shadow-[0_0_30px_-8px_var(--primary)] transition-all duration-300">
             <textarea
               ref={inputRef}
@@ -208,9 +219,9 @@ export function ZaiChatArea({
               onKeyDown={handleKeyDown}
               placeholder="Ask ZAI anything about your school data..."
               rows={1}
-              className="flex-1 resize-none bg-transparent px-4 py-3 text-sm
+              className="min-h-[46px] max-h-[120px] min-w-0 w-full flex-1 resize-none bg-transparent px-4 py-3 text-sm
                 placeholder:text-muted-foreground/50
-                focus:outline-none min-h-[44px] max-h-[120px]"
+                focus:outline-none"
               style={{ scrollbarWidth: "thin" }}
               disabled={isGenerating}
             />
@@ -218,7 +229,7 @@ export function ZaiChatArea({
               type="submit"
               disabled={!input.trim() || isGenerating}
               className={cn(
-                "m-2 p-2 rounded-xl transition-all duration-200 flex-shrink-0",
+                "m-1.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200",
                 input.trim() && !isGenerating
                   ? "bg-primary text-primary-foreground hover:opacity-90 active:scale-95 shadow-sm"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
@@ -231,7 +242,7 @@ export function ZaiChatArea({
               )}
             </button>
           </div>
-          <p className="text-[10px] text-center text-muted-foreground/40 mt-2">
+          <p className="mt-1.5 truncate px-2 text-center text-[9px] text-muted-foreground/50 sm:text-[10px]">
             ZAI uses AI to query your school database • Results are read-only
           </p>
         </form>
@@ -260,7 +271,10 @@ function ZaiMessageBubble({ message, isLast }: { message: Message; isLast: boole
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={cn("flex gap-3 mb-6", isUser ? "flex-row-reverse" : "flex-row")}
+      className={cn(
+        "group mb-5 flex min-w-0 gap-2 sm:gap-3",
+        isUser ? "flex-row-reverse" : "flex-row"
+      )}
     >
       {/* Avatar */}
       <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -276,15 +290,20 @@ function ZaiMessageBubble({ message, isLast }: { message: Message; isLast: boole
       </div>
 
       {/* Bubble */}
-      <div className={cn("max-w-[75%] flex flex-col", isUser ? "items-end" : "items-start")}>
+      <div
+        className={cn(
+          "flex min-w-0 max-w-[86%] flex-col sm:max-w-[78%]",
+          isUser ? "items-end" : "items-start"
+        )}
+      >
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+            "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm sm:px-4 sm:py-3",
             isUser
-              ? "rounded-tr-md bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-[0_4px_24px_-4px_var(--primary)]"
+              ? "rounded-tr-md bg-gradient-to-br from-primary via-violet-600 to-indigo-700 text-primary-foreground shadow-primary/15"
               : isError
-                ? "rounded-tl-md bg-destructive/5 border border-destructive/10 text-destructive/80"
-                : "rounded-tl-md glass border border-border/50"
+                ? "rounded-tl-md border border-destructive/15 bg-destructive/[0.06] text-destructive"
+                : "rounded-tl-md border border-border/60 bg-card/90"
           )}
         >
           <ReactMarkdown
@@ -349,10 +368,10 @@ function ZaiMessageBubble({ message, isLast }: { message: Message; isLast: boole
 
         {/* Data table — collapsible */}
         {hasData && Array.isArray(message.resultData) && message.resultData.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 max-w-full">
             <button
               onClick={() => setShowDataTable(!showDataTable)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/50 
+              className="flex max-w-full items-center gap-2 rounded-lg border border-border/50 px-3 py-1.5
                 bg-card/30 hover:bg-card/50 transition-all text-xs text-muted-foreground"
             >
               <Table className="h-3.5 w-3.5" />
@@ -366,7 +385,7 @@ function ZaiMessageBubble({ message, isLast }: { message: Message; isLast: boole
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ duration: 0.2 }}
-                className="mt-2 w-full max-w-[500px] overflow-hidden rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm"
+                className="mt-2 w-full max-w-[min(500px,calc(100vw-5rem))] overflow-hidden rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm"
               >
                 <div className="overflow-x-auto max-h-[300px] scrollbar-thin">
                   <table className="w-full text-xs">
@@ -418,7 +437,7 @@ function ZaiMessageBubble({ message, isLast }: { message: Message; isLast: boole
       <button
         onClick={handleCopy}
         className={cn(
-          "p-1 rounded-md opacity-0 hover:opacity-100 transition-opacity flex-shrink-0",
+          "h-7 w-7 flex-shrink-0 rounded-md p-1 opacity-50 transition-opacity hover:bg-muted hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
           isLast && "opacity-100"
         )}
         title="Copy"

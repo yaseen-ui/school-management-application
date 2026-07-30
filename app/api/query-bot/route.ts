@@ -34,7 +34,30 @@ async function getBackendModules() {
 /**
  * Extract user from JWT in Authorization header.
  */
-function getUserFromRequest(req: NextRequest) {
+type QueryBotUser = {
+  userId: string;
+  email: string;
+  userType: string;
+  tenantId: string | null;
+  roleIds: string[];
+  permVersion: number;
+};
+
+function getConversationalReply(question: string): string | null {
+  const normalized = question.trim().toLowerCase().replace(/[!.?]+$/g, '');
+
+  if (/^(hi|hello|hey|hii|hiii|good morning|good afternoon|good evening)$/.test(normalized)) {
+    return "Hello! I'm ready to help with your school data. You can ask about students, attendance, exams, fees, staff, schedules, or results.";
+  }
+
+  if (/^(how are you|how are you doing)$/.test(normalized)) {
+    return "I'm doing well and ready to help. What would you like to know about your school data?";
+  }
+
+  return null;
+}
+
+async function getUserFromRequest(req: NextRequest): Promise<QueryBotUser | null> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
 
@@ -43,13 +66,44 @@ function getUserFromRequest(req: NextRequest) {
 
   try {
     const secret = process.env.JWT_SECRET || 'your_jwt_secret';
-    return jwt.verify(token, secret) as {
+    const decoded = jwt.verify(token, secret) as {
       userId: string;
       email: string;
       userType: string;
-      tenantId: string;
+      tenantId?: string | null;
       roleIds: string[];
       permVersion: number;
+    };
+
+    if (decoded.tenantId) {
+      return { ...decoded, tenantId: decoded.tenantId };
+    }
+
+    // Older sessions may not contain tenantId in the token. Resolve the
+    // authenticated user's current school from the database instead of
+    // requiring a logout/login cycle.
+    const { prisma } = await import('@/lib/backend/lib/prisma.js');
+    const dbUser = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { tenantId: true, userType: true },
+    });
+
+    let tenantId = dbUser?.tenantId ?? null;
+    const requestedTenantId = req.headers.get('x-tenant-id')?.trim() || null;
+
+    // Company users may explicitly operate inside a selected school workspace.
+    if (!tenantId && dbUser?.userType === 'company' && requestedTenantId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: requestedTenantId },
+        select: { id: true },
+      });
+      tenantId = tenant?.id ?? null;
+    }
+
+    return {
+      ...decoded,
+      userType: dbUser?.userType ?? decoded.userType,
+      tenantId,
     };
   } catch {
     return null;
@@ -59,7 +113,7 @@ function getUserFromRequest(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // 1. Authenticate
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user) {
       return NextResponse.json(
         { error: 'Authentication required. Please log in.' },
@@ -69,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     if (!user.tenantId) {
       return NextResponse.json(
-        { error: 'Tenant context required. Please log in from a school account.' },
+        { error: 'Open a school workspace before using the AI Assistant.' },
         { status: 403 }
       );
     }
@@ -136,6 +190,31 @@ export async function POST(req: NextRequest) {
         content: question.trim(),
       },
     });
+
+    // Friendly conversation should not be forced through the database-query
+    // generator. It avoids invalid generated Prisma queries for greetings and
+    // makes the assistant behave naturally without changing query features.
+    const conversationalReply = getConversationalReply(question);
+    if (conversationalReply) {
+      await prisma.zaiMessage.create({
+        data: {
+          chatId,
+          tenantId: user.tenantId,
+          role: 'assistant',
+          content: conversationalReply,
+        },
+      });
+
+      return NextResponse.json({
+        chatId,
+        summary: conversationalReply,
+        data: null,
+        columns: [],
+        rowCount: 0,
+        queryUsed: null,
+        warnings: [],
+      });
+    }
 
     // 7. Fetch conversation history for context (last 10 messages)
     const previousMessages = existingChatId ? await prisma.zaiMessage.findMany({
@@ -295,9 +374,15 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
-    if (!user || !user.tenantId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    }
+    if (!user.tenantId) {
+      return NextResponse.json(
+        { error: 'Open a school workspace before using the AI Assistant.' },
+        { status: 403 }
+      );
     }
 
     const { prisma } = await import('@/lib/backend/lib/prisma.js');
@@ -342,9 +427,15 @@ export async function GET(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
-    if (!user || !user.tenantId) {
+    const user = await getUserFromRequest(req);
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    }
+    if (!user.tenantId) {
+      return NextResponse.json(
+        { error: 'Open a school workspace before using the AI Assistant.' },
+        { status: 403 }
+      );
     }
 
     const chatId = req.nextUrl.searchParams.get('chatId');

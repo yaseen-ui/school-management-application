@@ -6,12 +6,11 @@ import {
   Search,
   Trash2,
   Sparkles,
-  ArrowRight,
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Chat {
   id: string;
@@ -55,33 +54,37 @@ export function ZaiChatList({
   );
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header — WhatsApp-style green bar */}
-      <div className="px-4 py-3 bg-emerald-600 text-white">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold tracking-tight">ZAI</h1>
-          <Sparkles className="h-5 w-5 opacity-80" />
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-card">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-violet-600 to-indigo-700 px-4 py-4 text-primary-foreground">
+        <div className="pointer-events-none absolute -right-12 -top-14 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-lg font-bold tracking-tight">AI Assistant</p>
+            <p className="text-[11px] text-white/70">School insights, ready to help</p>
+          </div>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10">
+            <Sparkles className="h-4 w-4" />
+          </span>
         </div>
-        {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/65" />
           <input
             type="text"
             placeholder="Search conversations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/20 text-white 
-              placeholder:text-white/50 text-sm
-              focus:outline-none focus:bg-white/30 transition-all"
+            className="w-full rounded-xl border border-white/10 bg-white/12 py-2.5 pl-10 pr-4 text-sm text-white shadow-inner shadow-black/5 outline-none placeholder:text-white/55 transition focus:border-white/25 focus:bg-white/18 focus:ring-2 focus:ring-white/10"
           />
         </div>
       </div>
 
       {/* Chat list */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-20 scrollbar-thin">
         {filteredChats.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-            <MessageSquare className="h-12 w-12 opacity-20" />
+          <div className="flex h-full min-h-72 flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8 ring-1 ring-primary/10">
+              <MessageSquare className="h-7 w-7 text-primary/45" />
+            </span>
             <p className="text-sm font-medium">
               {search ? "No conversations found" : "No conversations yet"}
             </p>
@@ -93,97 +96,91 @@ export function ZaiChatList({
 
         {Object.entries(groupedChats).map(([label, chatList]) => (
           <div key={label}>
-            <p className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-emerald-600/80">
+            <p className="px-4 pb-1 pt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-primary/70">
               {label}
             </p>
             {chatList.map((chat, i) => (
-              <motion.button
+              <motion.div
                 key={chat.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.03 }}
-                onClick={() => onSelectChat(chat.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                  "border-b border-border/30 last:border-b-0",
-                  "hover:bg-muted/50 active:bg-muted",
-                  activeChatId === chat.id && "bg-emerald-50 border-l-[3px] border-l-emerald-500"
+                  "group mx-2 flex items-center rounded-xl border border-transparent transition-colors",
+                  "hover:bg-muted/55",
+                  activeChatId === chat.id &&
+                    "border-primary/10 bg-gradient-to-r from-primary/12 to-violet-500/5 shadow-sm"
                 )}
               >
-                {/* Avatar circle */}
-                <div
-                  className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
-                    activeChatId === chat.id
-                      ? "bg-emerald-100"
-                      : "bg-muted"
-                  )}
+                <button
+                  type="button"
+                  onClick={() => onSelectChat(chat.id)}
+                  className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
                 >
-                  <MessageSquare
+                  <span
                     className={cn(
-                      "h-5 w-5",
+                      "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ring-1",
                       activeChatId === chat.id
-                        ? "text-emerald-600"
-                        : "text-muted-foreground"
+                        ? "bg-primary/15 text-primary ring-primary/15"
+                        : "bg-muted text-muted-foreground ring-border/50"
                     )}
-                  />
-                </div>
+                  >
+                    <MessageSquare className="h-4.5 w-4.5" />
+                  </span>
 
-                {/* Chat info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
                     <p className={cn(
                       "text-sm font-medium truncate",
-                      activeChatId === chat.id ? "text-emerald-800" : "text-foreground"
+                      activeChatId === chat.id ? "text-primary" : "text-foreground"
                     )}>
                       {chat.title}
                     </p>
-                    <span className="text-[11px] text-muted-foreground/60 flex-shrink-0">
+                    <span className="flex-shrink-0 text-[10px] text-muted-foreground/70">
                       {formatTimeAgo(chat.updatedAt || chat.createdAt)}
                     </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    </span>
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {chat._count?.messages
                       ? `${chat._count.messages} message${chat._count.messages !== 1 ? "s" : ""}`
                       : "No messages yet"}
-                  </p>
-                </div>
+                  </span>
+                  </span>
+                </button>
 
-                {/* Delete button */}
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteChat(chat.id);
                   }}
-                  className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 
-                    hover:bg-red-50 hover:text-red-500 transition-all"
+                  className="mr-2 rounded-lg p-2 text-muted-foreground opacity-60 transition hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                   title="Delete chat"
+                  aria-label={`Delete ${chat.title}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         ))}
       </div>
 
       {/* FAB — New Chat */}
-      <div className="absolute bottom-6 right-6 z-20">
+      <div className="absolute bottom-11 right-5 z-20">
         <button
+          type="button"
           onClick={onNewChat}
-          className="w-14 h-14 rounded-2xl bg-emerald-500 text-white 
-            shadow-lg shadow-emerald-500/30
-            hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/40
-            active:scale-95 transition-all duration-200
-            flex items-center justify-center"
+          className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-violet-600 to-indigo-700 text-primary-foreground shadow-lg shadow-primary/25 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:scale-95"
+          aria-label="Start new conversation"
         >
-          <Plus className="h-7 w-7" strokeWidth={2.5} />
+          <Plus className="h-6 w-6" strokeWidth={2.4} />
         </button>
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-border/30 bg-muted/20">
-        <p className="text-[10px] text-center text-muted-foreground/50">
+      <div className="shrink-0 border-t border-border/50 bg-card/90 px-4 py-2 backdrop-blur">
+        <p className="text-center text-[10px] text-muted-foreground/60">
           {chats.length} conversation{chats.length !== 1 ? "s" : ""} • ZAI v1.0
         </p>
       </div>

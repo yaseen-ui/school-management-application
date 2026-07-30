@@ -3428,7 +3428,10 @@ model ZaiChat {
   updatedAt DateTime @updatedAt
 
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user     User         @relation(fields: [userId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade)
+  // The conversation is tenant-scoped through tenantId, while its owner may
+  // be either a tenant user or an authorized company user operating inside
+  // that tenant workspace.
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   messages ZaiMessage[]
 
   @@unique([id, tenantId], name: "zai_chat_tenant_identity")
