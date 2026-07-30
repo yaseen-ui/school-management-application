@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import { Loader2, ArrowLeft, TrendingUp, Users, UserCheck, UserX, Percent } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -58,6 +59,13 @@ export default function StudentAttendanceDetailPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Attendance", href: "/attendance" },
+          { label: "Attendance Register", href: "/attendance/register" },
+          { label: "Student Detail" },
+        ]}
+      />
       <PageHeader title="Student Attendance Detail" description="Monthly attendance breakdown">
         <Button variant="outline" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Register

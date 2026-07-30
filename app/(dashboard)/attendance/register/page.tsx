@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import { Loader2, Table, User, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -65,6 +66,12 @@ export default function AttendanceRegisterPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Attendance", href: "/attendance" },
+          { label: "Attendance Register" },
+        ]}
+      />
       <PageHeader title="Attendance Register" description="Monthly attendance view by section">
         <Button variant="outline" size="sm" onClick={() => window.history.back()}>
           <Calendar className="mr-2 h-4 w-4" /> Back

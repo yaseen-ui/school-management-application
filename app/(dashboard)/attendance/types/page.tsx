@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, Tag } from "lucide-react"
 import { format } from "date-fns"
 
 import { PageHeader } from "@/components/shared/page-header"
+import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -68,6 +69,12 @@ export default function AttendanceTypesPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Attendance", href: "/attendance" },
+          { label: "Attendance Types" },
+        ]}
+      />
       <PageHeader title="Attendance Types" description="Manage attendance types (Morning, Afternoon, Period, Exam, etc.)">
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add Type
