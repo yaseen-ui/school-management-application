@@ -5,11 +5,11 @@ import { Guard } from '@/lib/backend/rbac/guards.js'
 export async function GET(req: NextRequest) {
   await Guard.action(req, 'fee-payments:read');
   const FeeController = (await import('@backend/modules/fees/fee.controller.js')).default
-  return invokeBackendController(FeeController, 'getAllFeePayments', req)
+  return invokeBackendController(FeeController, 'getAllPayments', req)
 }
 
 export async function POST(req: NextRequest) {
   await Guard.action(req, 'fee-payments:collect');
   const FeeController = (await import('@backend/modules/fees/fee.controller.js')).default
-  return invokeBackendController(FeeController, 'createFeePayment', req)
+  return invokeBackendController(FeeController, 'createPayment', req)
 }
