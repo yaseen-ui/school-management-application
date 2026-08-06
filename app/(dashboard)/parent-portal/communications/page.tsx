@@ -35,12 +35,12 @@ export default function CommunicationsPage() {
   }, [])
 
   const filteredItems = items.filter((msg: any) => {
-    if (filter === "unread") return !msg.isRead
-    if (filter === "read") return msg.isRead
+    if (filter === "unread") return !msg.viewedAt
+    if (filter === "read") return !!msg.viewedAt
     return true
   })
 
-  const unreadCount = items.filter((m: any) => !m.isRead).length
+  const unreadCount = items.filter((m: any) => !m.viewedAt).length
 
   const handleMarkRead = async (communicationId: string) => {
     await acknowledge(communicationId, "acknowledged")
@@ -152,17 +152,17 @@ export default function CommunicationsPage() {
             <motion.div
               key={msg.id}
               variants={item}
-              className={cn(
-                "rounded-2xl border p-4 sm:p-5 transition-colors cursor-pointer",
-                msg.isRead
-                  ? "bg-card/30 border-border/30 hover:bg-card/50"
-                  : "bg-card/50 border-primary/20 ring-1 ring-primary/10"
-              )}
-              onClick={() => !msg.isRead && handleMarkRead(msg.communicationId)}
+          className={cn(
+            "rounded-2xl border p-4 sm:p-5 transition-colors cursor-pointer",
+            msg.viewedAt
+              ? "bg-card/30 border-border/30 hover:bg-card/50"
+              : "bg-card/50 border-primary/20 ring-1 ring-primary/10"
+          )}
+          onClick={() => !msg.viewedAt && handleMarkRead(msg.communicationId)}
             >
               <div className="flex items-start gap-3">
-                {/* Unread dot */}
-                {!msg.isRead && (
+          {/* Unread dot */}
+          {!msg.viewedAt && (
                   <div className="shrink-0 mt-1.5">
                     <motion.div
                       className="h-2.5 w-2.5 rounded-full bg-primary"
@@ -174,10 +174,7 @@ export default function CommunicationsPage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className={cn(
-                      "text-sm font-semibold truncate",
-                      msg.isRead ? "text-foreground" : "text-foreground"
-                    )}>
+                    <h3 className="text-sm font-semibold truncate text-foreground">
                       {msg.communication?.title || msg.communication?.type || "Notification"}
                     </h3>
                     <span className="shrink-0 text-[10px] text-muted-foreground">
@@ -204,12 +201,12 @@ export default function CommunicationsPage() {
                         {msg.communication.type?.replace("_", " ")}
                       </span>
                     )}
-                    {msg.isRead && (
-                      <span className="text-[9px] text-emerald-600 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Read
-                      </span>
-                    )}
-                    {!msg.isRead && (
+            {msg.viewedAt && (
+              <span className="text-[9px] text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Read
+              </span>
+            )}
+            {!msg.viewedAt && (
                       <span className="text-[9px] text-primary flex items-center gap-1">
                         Tap to mark read
                       </span>

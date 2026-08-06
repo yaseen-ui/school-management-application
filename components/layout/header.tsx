@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react"
+import { Search, Menu, LogOut, User, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
+import { NotificationBell } from "@/components/communication/notification-bell"
 import { useAuth } from "@/hooks/use-auth"
 import { useUIStore } from "@/stores/ui-store"
 
@@ -62,15 +63,7 @@ export function Header() {
         <ThemeToggle />
 
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative border border-border/70 bg-background/70 text-foreground shadow-sm hover:border-primary/30 hover:bg-accent hover:text-accent-foreground dark:bg-background/55"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-card" />
-        </Button>
+        <NotificationBell />
 
         {/* User menu */}
         <DropdownMenu>

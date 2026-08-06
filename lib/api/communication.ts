@@ -464,6 +464,59 @@ export async function toggleAutomationRule(id: string, isEnabled?: boolean): Pro
   return (res as any).data!;
 }
 
+// ─── Search ─────────────────────────────────────────────────────────────
+
+export interface UserSearchResult {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+export interface RoleSearchResult {
+  id: string;
+  roleName: string;
+}
+
+export interface GradeSearchResult {
+  id: string;
+  gradeName: string;
+  course?: { courseName: string };
+}
+
+export interface SectionSearchResult {
+  id: string;
+  sectionName: string;
+  grade?: { gradeName: string };
+}
+
+export async function searchUsers(q: string, limit?: number): Promise<UserSearchResult[]> {
+  const params = new URLSearchParams({ q });
+  if (limit) params.set("limit", String(limit));
+  const res = await apiClient.get<ApiResponse<UserSearchResult[]>>(`/communications/search/users?${params.toString()}`);
+  return (res as any).data ?? [];
+}
+
+export async function searchRoles(q: string, limit?: number): Promise<RoleSearchResult[]> {
+  const params = new URLSearchParams({ q });
+  if (limit) params.set("limit", String(limit));
+  const res = await apiClient.get<ApiResponse<RoleSearchResult[]>>(`/communications/search/roles?${params.toString()}`);
+  return (res as any).data ?? [];
+}
+
+export async function searchGrades(q: string, limit?: number): Promise<GradeSearchResult[]> {
+  const params = new URLSearchParams({ q });
+  if (limit) params.set("limit", String(limit));
+  const res = await apiClient.get<ApiResponse<GradeSearchResult[]>>(`/communications/search/grades?${params.toString()}`);
+  return (res as any).data ?? [];
+}
+
+export async function searchSections(q: string, limit?: number): Promise<SectionSearchResult[]> {
+  const params = new URLSearchParams({ q });
+  if (limit) params.set("limit", String(limit));
+  const res = await apiClient.get<ApiResponse<SectionSearchResult[]>>(`/communications/search/sections?${params.toString()}`);
+  return (res as any).data ?? [];
+}
+
 // ─── Channel Configuration ──────────────────────────────────────────────
 
 export async function getChannelConfigurations(): Promise<ChannelConfiguration[]> {
