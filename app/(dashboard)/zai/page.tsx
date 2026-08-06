@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useZaiChat } from "@/hooks/use-zai-chat";
 import { ZaiChatList } from "@/components/zai/zai-chat-list";
 import { ZaiChatArea } from "@/components/zai/zai-chat-area";
-import { cn } from "@/lib/utils";
 import { usePermissionStore } from "@/stores/permission-store";
 import { ForbiddenPage } from "@/components/shared/forbidden-page";
 
@@ -76,11 +75,11 @@ export default function ZaiPage() {
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden relative bg-background">
-      {/* ========= DESKTOP: Two-panel layout ========= */}
-      <div className="hidden lg:flex w-full h-full">
+    <div className="relative isolate flex h-full min-h-0 w-full min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl shadow-primary/10">
+      {/* Wide screens: familiar two-panel messenger layout */}
+      <div className="hidden h-full min-h-0 w-full xl:flex">
         {/* Left: Chat List (desktop sidebar) */}
-        <div className="w-[340px] flex-shrink-0 border-r border-border/50 bg-sidebar/30 relative">
+        <aside className="relative w-[310px] 2xl:w-[340px] flex-shrink-0 border-r border-border/60">
           <ZaiChatList
             chats={chats}
             activeChatId={activeChatId}
@@ -91,10 +90,10 @@ export default function ZaiPage() {
             onNewChat={createNewChat}
             onDeleteChat={deleteChat}
           />
-        </div>
+        </aside>
 
         {/* Right: Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 h-full">
+        <section className="flex h-full min-w-0 flex-1 flex-col">
           <ZaiChatArea
             messages={messages}
             isLoading={isLoading}
@@ -102,21 +101,14 @@ export default function ZaiPage() {
             error={error}
             onSend={sendMessage}
             hasActiveChat={!!activeChatId || messages.length > 0}
+            title={activeChat?.title || "New conversation"}
           />
-        </div>
+        </section>
       </div>
 
-      {/* ========= MOBILE: Single view (WhatsApp-style) ========= */}
-      <div className="flex lg:hidden w-full h-full flex-col">
-        {/* Chat List View */}
-        <div
-          className={cn(
-            "absolute inset-0 flex flex-col transition-transform duration-300 ease-in-out",
-            mobileView === "list"
-              ? "translate-x-0"
-              : "-translate-x-full"
-          )}
-        >
+      {/* Tablet/mobile: render one stable pane, never an off-screen sliding pane. */}
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col xl:hidden">
+        {mobileView === "list" ? (
           <ZaiChatList
             chats={chats}
             activeChatId={activeChatId}
@@ -124,17 +116,7 @@ export default function ZaiPage() {
             onNewChat={handleNewChat}
             onDeleteChat={deleteChat}
           />
-        </div>
-
-        {/* Chat Detail View */}
-        <div
-          className={cn(
-            "absolute inset-0 flex flex-col transition-transform duration-300 ease-in-out",
-            mobileView === "chat"
-              ? "translate-x-0"
-              : "translate-x-full"
-          )}
-        >
+        ) : (
           <ZaiChatArea
             messages={messages}
             isLoading={isLoading}
@@ -148,7 +130,7 @@ export default function ZaiPage() {
               (!activeChatId && messages.length === 0 ? "New Chat" : "Chat")
             }
           />
-        </div>
+        )}
       </div>
     </div>
   );

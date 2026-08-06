@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Select from "react-select"
-import type { Props as ReactSelectProps, GroupBase } from "react-select"
 
 export interface MultiSelectOption {
   value: string
@@ -18,27 +17,46 @@ interface MultiSelectProps {
   disabled?: boolean
 }
 
-// Custom styles to match shadcn/ui design
+// Keep the menu visually consistent with the application while allowing
+// react-select to render it in a portal without changing the form layout.
 const customStyles = {
   control: (base: any, state: any) => ({
     ...base,
     minHeight: "2.5rem",
     borderRadius: "0.5rem",
-    borderColor: state.isFocused ? "hsl(240 5.9% 10%)" : "hsl(240 5.9% 90%)",
-    boxShadow: state.isFocused ? "0 0 0 1px hsl(240 5.9% 10%)" : "none",
+    borderColor: state.isFocused ? "var(--ring)" : "var(--input)",
+    boxShadow: state.isFocused
+      ? "0 0 0 3px color-mix(in oklab, var(--ring) 18%, transparent)"
+      : "0 1px 2px rgb(15 23 42 / 0.04)",
     "&:hover": {
-      borderColor: "hsl(240 5.9% 10%)",
+      borderColor: state.isFocused ? "var(--ring)" : "var(--border)",
     },
-    backgroundColor: "hsl(0 0% 100%)",
+    backgroundColor: "var(--background)",
+    color: "var(--foreground)",
     fontSize: "0.875rem",
+    cursor: state.isDisabled ? "not-allowed" : "pointer",
+    transition: "border-color 150ms ease, box-shadow 150ms ease",
+  }),
+  valueContainer: (base: any) => ({
+    ...base,
+    gap: "0.25rem",
+    padding: "0.25rem 0.625rem",
   }),
   menu: (base: any) => ({
     ...base,
-    borderRadius: "0.5rem",
-    border: "1px solid hsl(240 5.9% 90%)",
-    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    zIndex: 9999,
-    position: "relative" as const,
+    marginTop: "0.375rem",
+    borderRadius: "0.75rem",
+    border: "1px solid var(--border)",
+    backgroundColor: "var(--popover)",
+    color: "var(--popover-foreground)",
+    boxShadow: "0 18px 45px -20px rgb(15 23 42 / 0.38), 0 6px 16px rgb(15 23 42 / 0.08)",
+    overflow: "hidden",
+  }),
+  menuList: (base: any) => ({
+    ...base,
+    maxHeight: "14rem",
+    padding: "0.375rem",
+    backgroundColor: "var(--popover)",
   }),
   menuPortal: (base: any) => ({
     ...base,
@@ -46,63 +64,89 @@ const customStyles = {
   }),
   option: (base: any, state: any) => ({
     ...base,
+    display: "flex",
+    alignItems: "center",
+    minHeight: "2.375rem",
+    margin: "0.125rem 0",
+    padding: "0.5rem 0.625rem",
+    borderRadius: "0.5rem",
     backgroundColor: state.isSelected
-      ? "hsl(240 5.9% 10%)"
+      ? "color-mix(in oklab, var(--primary) 12%, var(--popover))"
       : state.isFocused
-        ? "hsl(240 4.8% 95.9%)"
+        ? "var(--accent)"
         : "transparent",
-    color: state.isSelected ? "hsl(0 0% 98%)" : "hsl(240 10% 3.9%)",
+    color: state.isSelected
+      ? "var(--primary)"
+      : state.isFocused
+        ? "var(--accent-foreground)"
+        : "var(--popover-foreground)",
+    fontWeight: state.isSelected ? 600 : 400,
     fontSize: "0.875rem",
     cursor: "pointer",
     "&:active": {
-      backgroundColor: state.isSelected ? "hsl(240 5.9% 10%)" : "hsl(240 4.8% 95.9%)",
+      backgroundColor: "color-mix(in oklab, var(--primary) 16%, var(--popover))",
     },
   }),
   multiValue: (base: any) => ({
     ...base,
-    backgroundColor: "hsl(240 4.8% 95.9%)",
-    borderRadius: "0.375rem",
+    margin: 0,
+    border: "1px solid color-mix(in oklab, var(--primary) 18%, var(--border))",
+    borderRadius: "0.4rem",
+    backgroundColor: "color-mix(in oklab, var(--primary) 8%, var(--background))",
   }),
   multiValueLabel: (base: any) => ({
     ...base,
-    color: "hsl(240 10% 3.9%)",
-    fontSize: "0.875rem",
+    padding: "0.2rem 0.15rem 0.2rem 0.45rem",
+    color: "var(--foreground)",
+    fontSize: "0.8125rem",
+    fontWeight: 500,
   }),
   multiValueRemove: (base: any) => ({
     ...base,
-    color: "hsl(240 5% 64.9%)",
+    borderRadius: "0 0.35rem 0.35rem 0",
+    color: "var(--muted-foreground)",
+    cursor: "pointer",
     "&:hover": {
-      backgroundColor: "hsl(240 5.9% 10%)",
-      color: "hsl(0 0% 98%)",
-      borderRadius: "0 0.375rem 0.375rem 0",
+      backgroundColor: "color-mix(in oklab, var(--destructive) 12%, transparent)",
+      color: "var(--destructive)",
     },
   }),
   placeholder: (base: any) => ({
     ...base,
-    color: "hsl(240 3.8% 46.1%)",
+    color: "var(--muted-foreground)",
     fontSize: "0.875rem",
   }),
   input: (base: any) => ({
     ...base,
-    color: "hsl(240 10% 3.9%)",
+    color: "var(--foreground)",
     fontSize: "0.875rem",
+  }),
+  singleValue: (base: any) => ({
+    ...base,
+    color: "var(--foreground)",
   }),
   noOptionsMessage: (base: any) => ({
     ...base,
-    color: "hsl(240 3.8% 46.1%)",
+    color: "var(--muted-foreground)",
     fontSize: "0.875rem",
   }),
   indicatorSeparator: (base: any) => ({
     ...base,
-    backgroundColor: "hsl(240 5.9% 90%)",
+    backgroundColor: "var(--border)",
   }),
-  dropdownIndicator: (base: any) => ({
+  dropdownIndicator: (base: any, state: any) => ({
     ...base,
-    color: "hsl(240 3.8% 46.1%)",
+    padding: "0.5rem",
+    color: state.isFocused ? "var(--primary)" : "var(--muted-foreground)",
+    transition: "color 150ms ease, transform 150ms ease",
+    transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : undefined,
+    "&:hover": {
+      color: "var(--primary)",
+    },
   }),
   clearIndicator: (base: any) => ({
     ...base,
-    color: "hsl(240 3.8% 46.1%)",
+    color: "var(--muted-foreground)",
   }),
 }
 
@@ -114,6 +158,12 @@ export function MultiSelect({
   emptyText = "No items found.",
   disabled = false,
 }: MultiSelectProps) {
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null)
+
+  React.useEffect(() => {
+    setPortalTarget(document.body)
+  }, [])
+
   const selectedValues = options.filter((opt) => selected.includes(opt.value))
 
   const handleChange = (newValue: any) => {
@@ -134,6 +184,11 @@ export function MultiSelect({
       closeMenuOnSelect={false}
       hideSelectedOptions={false}
       styles={customStyles}
+      menuPortalTarget={portalTarget ?? undefined}
+      menuPosition="fixed"
+      menuPlacement="auto"
+      menuShouldScrollIntoView={false}
+      maxMenuHeight={224}
       className="w-full"
       classNamePrefix="react-select"
     />

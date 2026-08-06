@@ -83,11 +83,11 @@ export function EditAttendanceTypeDialog({
 
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={category} onValueChange={(v) => setValue("category", v)}>
-              <SelectTrigger>
+            <Select value={category} onValueChange={(v) => setValue("category", v, { shouldValidate: true })}>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" align="start">
                 {ATTENDANCE_TYPE_CATEGORIES.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     {cat.label}

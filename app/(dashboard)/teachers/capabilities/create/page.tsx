@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { useForm, Controller } from "react-hook-form"
@@ -14,7 +14,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/shared/page-header"
 import { Breadcrumbs } from "@/components/shared/breadcrumbs"
-import { useCreateBulkTeacherCapabilities } from "@/hooks/use-teacher-capabilities"
+import {
+  useCreateBulkTeacherCapabilities,
+  useTeacherCapabilities,
+  useUpdateTeacherCapability,
+} from "@/hooks/use-teacher-capabilities"
 import { useTeachers } from "@/hooks/use-teachers"
 import { useSubjects } from "@/hooks/use-subjects"
 import { useCourses } from "@/hooks/use-courses"
@@ -32,11 +36,13 @@ import {
   ArrowLeft,
   Save,
 } from "lucide-react"
-import type { SubjectCapabilityConfig } from "@/lib/api/teacher-capabilities"
+import type { SubjectCapabilityConfig, TeacherCapability } from "@/lib/api/teacher-capabilities"
 import { toast } from "@/components/ui/sonner"
 
 // ---- Types for the nested structure ----
-interface SubjectEntry extends SubjectCapabilityConfig {}
+interface SubjectEntry extends SubjectCapabilityConfig {
+  capabilityId?: string
+}
 
 interface SectionEntry {
   sectionId: string
@@ -69,7 +75,6 @@ export default function CreateTeacherCapabilitiesPage() {
   const {
     handleSubmit,
     formState: { errors },
-    reset,
     control,
     watch,
   } = useForm<{ teacherId: string }>({
@@ -77,11 +82,12 @@ export default function CreateTeacherCapabilitiesPage() {
   })
 
   const createBulkCapabilities = useCreateBulkTeacherCapabilities()
+  const updateCapability = useUpdateTeacherCapability()
   const { data: teachersData } = useTeachers()
-  const { data: coursesData } = useCourses()
-  const { data: allGradesData } = useGrades()
-  const { data: allSubjectsData } = useSubjects()
-  const { data: allSectionsData } = useSections()
+  const { data: coursesData, isLoading: coursesLoading } = useCourses()
+  const { data: allGradesData, isLoading: gradesLoading } = useGrades()
+  const { data: allSubjectsData, isLoading: subjectsLoading } = useSubjects()
+  const { data: allSectionsData, isLoading: sectionsLoading } = useSections()
 
   const teachers = teachersData || []
   const allCourses = coursesData?.data?.rows || []
@@ -90,6 +96,102 @@ export default function CreateTeacherCapabilitiesPage() {
   const allSections = allSectionsData?.data?.rows || allSectionsData || []
 
   const selectedTeacherId = watch("teacherId")
+  const {
+    data: existingCapabilities = [],
+    isLoading: capabilitiesLoading,
+  } = useTeacherCapabilities(
+    selectedTeacherId ? { teacherId: selectedTeacherId } : { teacherId: "__none__" }
+  )
+  const hydratedTeacherIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    hydratedTeacherIdRef.current = null
+    setCourses([])
+    setSelectedCourseIds([])
+  }, [selectedTeacherId])
+
+  useEffect(() => {
+    if (
+      !selectedTeacherId ||
+      hydratedTeacherIdRef.current === selectedTeacherId ||
+      coursesLoading ||
+      gradesLoading ||
+      subjectsLoading ||
+      sectionsLoading ||
+      capabilitiesLoading
+    ) {
+      return
+    }
+
+    const courseMap = new Map<string, CourseEntry>()
+
+    existingCapabilities.forEach((capability: TeacherCapability) => {
+      if (!capability.courseId || !capability.gradeId || !capability.sectionId) return
+
+      let course = courseMap.get(capability.courseId)
+      if (!course) {
+        const courseRecord = allCourses.find((item: any) => item.id === capability.courseId)
+        course = {
+          courseId: capability.courseId,
+          courseName: capability.course?.courseName || courseRecord?.courseName || "Course",
+          grades: [],
+          expanded: true,
+        }
+        courseMap.set(capability.courseId, course)
+      }
+
+      let grade = course.grades.find((item) => item.gradeId === capability.gradeId)
+      if (!grade) {
+        const gradeRecord = allGrades.find((item: any) => item.id === capability.gradeId)
+        grade = {
+          gradeId: capability.gradeId,
+          gradeName: capability.grade?.gradeName || gradeRecord?.gradeName || "Grade",
+          sections: [],
+          expanded: true,
+        }
+        course.grades.push(grade)
+      }
+
+      let section = grade.sections.find((item) => item.sectionId === capability.sectionId)
+      if (!section) {
+        const sectionRecord = (allSections as any[]).find((item: any) => item.id === capability.sectionId)
+        section = {
+          sectionId: capability.sectionId,
+          sectionName: capability.section?.sectionName || sectionRecord?.sectionName || "Section",
+          subjects: [],
+        }
+        grade.sections.push(section)
+      }
+
+      if (!section.subjects.some((subject) => subject.subjectId === capability.subjectId)) {
+        section.subjects.push({
+          capabilityId: capability.id,
+          subjectId: capability.subjectId,
+          expertiseLevel: capability.expertiseLevel,
+          isPrimary: capability.isPrimary,
+          priorityScore: capability.priorityScore,
+          canBeClassTeacher: capability.canBeClassTeacher,
+          remarks: capability.remarks,
+        })
+      }
+    })
+
+    const hydratedCourses = Array.from(courseMap.values())
+    setCourses(hydratedCourses)
+    setSelectedCourseIds(hydratedCourses.map((course) => course.courseId))
+    hydratedTeacherIdRef.current = selectedTeacherId
+  }, [
+    selectedTeacherId,
+    existingCapabilities,
+    capabilitiesLoading,
+    coursesLoading,
+    gradesLoading,
+    subjectsLoading,
+    sectionsLoading,
+    allCourses,
+    allGrades,
+    allSections,
+  ])
 
   // ---- Course management ----
   const addCourse = (courseId: string) => {
@@ -309,50 +411,117 @@ export default function CreateTeacherCapabilitiesPage() {
       ),
     0
   )
+  const existingRecordCount = courses.reduce(
+    (sum, course) =>
+      sum +
+      course.grades.reduce(
+        (gradeSum, grade) =>
+          gradeSum +
+          grade.sections.reduce(
+            (sectionSum, section) =>
+              sectionSum + section.subjects.filter((subject) => Boolean(subject.capabilityId)).length,
+            0
+          ),
+        0
+      ),
+    0
+  )
+  const newRecordCount = totalRecords - existingRecordCount
 
   // ---- Submit ----
   const onSubmit = async (data: { teacherId: string }) => {
     if (totalRecords === 0) return
 
-    const payload = {
-      teacherId: data.teacherId,
-      courses: courses.map((course) => ({
+    const newCapabilityCourses = courses
+      .map((course) => ({
         courseId: course.courseId,
-        grades: course.grades.map((grade) => ({
-          gradeId: grade.gradeId,
-          sections: grade.sections.map((section) => ({
-            sectionId: section.sectionId,
-            subjects: section.subjects.map((subject) => ({
-              subjectId: subject.subjectId,
-              expertiseLevel: subject.expertiseLevel,
-              isPrimary: subject.isPrimary,
-              priorityScore: subject.priorityScore,
-              canBeClassTeacher: subject.canBeClassTeacher,
-              remarks: subject.remarks,
-            })),
-          })),
-        })),
-      })),
+        grades: course.grades
+          .map((grade) => ({
+            gradeId: grade.gradeId,
+            sections: grade.sections
+              .map((section) => ({
+                sectionId: section.sectionId,
+                subjects: section.subjects
+                  .filter((subject) => !subject.capabilityId)
+                  .map((subject) => ({
+                    subjectId: subject.subjectId,
+                    expertiseLevel: subject.expertiseLevel,
+                    isPrimary: subject.isPrimary,
+                    priorityScore: subject.priorityScore,
+                    canBeClassTeacher: subject.canBeClassTeacher,
+                    remarks: subject.remarks,
+                  })),
+              }))
+              .filter((section) => section.subjects.length > 0),
+          }))
+          .filter((grade) => grade.sections.length > 0),
+      }))
+      .filter((course) => course.grades.length > 0)
+
+    const newCapabilityPayload = {
+      teacherId: data.teacherId,
+      courses: newCapabilityCourses,
     }
 
     try {
-      await createBulkCapabilities.mutateAsync(payload)
-      toast.success(`Successfully created ${totalRecords} capability record(s)`)
+      const existingUpdates = courses.flatMap((course) =>
+        course.grades.flatMap((grade) =>
+          grade.sections.flatMap((section) =>
+            section.subjects
+              .filter((subject) => Boolean(subject.capabilityId))
+              .map((subject) =>
+                updateCapability.mutateAsync({
+                  id: subject.capabilityId!,
+                  data: {
+                    teacherId: data.teacherId,
+                    subjectId: subject.subjectId,
+                    courseId: course.courseId,
+                    gradeId: grade.gradeId,
+                    sectionId: section.sectionId,
+                    expertiseLevel: subject.expertiseLevel,
+                    isPrimary: subject.isPrimary,
+                    priorityScore: subject.priorityScore,
+                    canBeClassTeacher: subject.canBeClassTeacher,
+                    remarks: subject.remarks,
+                  },
+                })
+              )
+          )
+        )
+      )
+
+      await Promise.all(existingUpdates)
+
+      if (newCapabilityCourses.length > 0) {
+        await createBulkCapabilities.mutateAsync(newCapabilityPayload)
+      }
+
+      toast.success(`Successfully saved ${totalRecords} capability record(s)`)
       router.push("/teachers/capabilities")
     } catch (error) {
-      toast.error("Failed to create capabilities")
+      toast.error("Failed to save capabilities")
     }
   }
 
   const availableCourses = allCourses.filter((c: any) => !selectedCourseIds.includes(c.id))
+  const isHydratingCapabilities = Boolean(
+    selectedTeacherId &&
+      (capabilitiesLoading ||
+        coursesLoading ||
+        gradesLoading ||
+        subjectsLoading ||
+        sectionsLoading ||
+        hydratedTeacherIdRef.current !== selectedTeacherId)
+  )
+  const isSaving = createBulkCapabilities.isPending || updateCapability.isPending
 
   return (
     <>
       <Breadcrumbs items={[{ label: "Staff & Curriculum", href: "/staff-curriculum" }, { label: "Teacher Capabilities", href: "/teachers/capabilities" }, { label: "Create" }]} />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader
-          title="Create Teacher Capabilities"
-          description="Select a teacher, then add courses, grades, sections, and assign subjects to define their teaching capabilities"
+          title={existingRecordCount > 0 ? "Manage Teacher Capabilities" : "Create Teacher Capabilities"}
+          description="Select a teacher to review existing capabilities and add or update courses, grades, sections, and subjects"
       >
         <Button variant="outline" onClick={() => router.push("/teachers/capabilities")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -421,7 +590,14 @@ export default function CreateTeacherCapabilitiesPage() {
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6 pt-0 space-y-4">
-            {courses.length === 0 && (
+            {isHydratingCapabilities && (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading existing capabilities…
+              </div>
+            )}
+
+            {!isHydratingCapabilities && courses.length === 0 && (
               <div className="text-sm text-muted-foreground p-8 border-2 border-dashed rounded-lg text-center">
                 <GraduationCap className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
                 <p>No courses added yet.</p>
@@ -621,7 +797,14 @@ export default function CreateTeacherCapabilitiesPage() {
                                             {section.subjects.map((subject) => (
                                               <TableRow key={subject.subjectId}>
                                                 <TableCell className="text-xs font-medium py-1">
-                                                  {getSubjectName(subject.subjectId)}
+                                                  <div className="flex items-center gap-1.5">
+                                                    <span>{getSubjectName(subject.subjectId)}</span>
+                                                    {subject.capabilityId && (
+                                                      <Badge variant="outline" className="px-1.5 py-0 text-[9px] text-emerald-700">
+                                                        Existing
+                                                      </Badge>
+                                                    )}
+                                                  </div>
                                                 </TableCell>
                                                 <TableCell className="py-1">
                                                   <Select
@@ -755,14 +938,15 @@ export default function CreateTeacherCapabilitiesPage() {
                 <Button
                   type="submit"
                   size="lg"
-                  disabled={createBulkCapabilities.isPending || totalRecords === 0 || !selectedTeacherId}
+                  disabled={isSaving || totalRecords === 0 || !selectedTeacherId || isHydratingCapabilities}
                 >
-                  {createBulkCapabilities.isPending ? (
+                  {isSaving ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="mr-2 h-4 w-4" />
                   )}
-                  Save Capabilities ({totalRecords} record{totalRecords !== 1 ? "s" : ""})
+                  Save Capabilities ({existingRecordCount > 0 && `${existingRecordCount} existing, `}
+                  {newRecordCount} new)
                 </Button>
               </div>
             </CardContent>
@@ -775,8 +959,8 @@ export default function CreateTeacherCapabilitiesPage() {
             <Button type="button" variant="outline" onClick={() => router.push("/teachers/capabilities")}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createBulkCapabilities.isPending || totalRecords === 0 || !selectedTeacherId}>
-              {createBulkCapabilities.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isSaving || totalRecords === 0 || !selectedTeacherId || isHydratingCapabilities}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Capabilities
             </Button>
           </div>

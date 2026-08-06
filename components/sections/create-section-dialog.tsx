@@ -1,5 +1,5 @@
 "use client"
-import { useForm, FormProvider } from "react-hook-form"
+import { useForm, FormProvider, type FieldErrors } from "react-hook-form"
 import { Loader2, Users } from "lucide-react"
 import {
   Dialog,
@@ -17,6 +17,7 @@ import { useCreateSection } from "@/hooks/use-sections"
 import { HierarchicalFilter } from "@/components/shared/hierarchical-filter"
 import { RoomSelector } from "@/components/shared/room-selector"
 import { TeacherSelector } from "@/components/shared/teacher-selector"
+import { showRequiredFieldsToast } from "@/lib/form-validation"
 
 interface CreateSectionDialogProps {
   open: boolean
@@ -25,6 +26,7 @@ interface CreateSectionDialogProps {
 
 interface FormData {
   sectionName: string
+  courseId: string
   gradeId: string
   roomId: string
   sectionInChargeId: string
@@ -34,6 +36,7 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
   const methods = useForm<FormData>({
     defaultValues: {
       sectionName: "",
+      courseId: "",
       gradeId: "",
       roomId: "",
       sectionInChargeId: "",
@@ -61,6 +64,14 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
     onOpenChange(false)
   }
 
+  const onInvalid = (formErrors: FieldErrors<FormData>) => {
+    showRequiredFieldsToast(formErrors, {
+      sectionName: "Section name",
+      courseId: "Course",
+      gradeId: "Grade",
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -77,7 +88,7 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
         </DialogHeader>
 
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6" noValidate>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="sectionName">
@@ -94,9 +105,9 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
               <div className="space-y-2">
                 <HierarchicalFilter
                   filters={["courses", "grades"]}
-                  required={{ gradeId: true }}
+                  required={{ courseId: true, gradeId: true }}
                   labels={{
-                    courseId: "Course (Optional)",
+                    courseId: "Course",
                     gradeId: "Grade",
                   }}
                 />

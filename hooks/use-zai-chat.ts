@@ -41,6 +41,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
 export function useZaiChat(): UseZaiChatReturn {
   const token = useAuthStore((s) => s.token);
+  const storeTenantId = useAuthStore((s) => s.tenantId);
+  const userTenantId = useAuthStore((s) => s.user?.tenantId ?? null);
+  const tenantId = storeTenantId || userTenantId;
   const [chats, setChats] = useState<ZaiChat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ZaiMessage[]>([]);
@@ -49,43 +52,55 @@ export function useZaiChat(): UseZaiChatReturn {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const getAuthHeaders = useCallback(() => ({
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  }), [token]);
+  const getAuthHeaders = useCallback(() => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    if (tenantId) {
+      headers["x-tenant-id"] = tenantId;
+    }
+
+    return headers;
+  }, [tenantId, token]);
 
   const refreshChats = useCallback(async () => {
     if (!token) return;
     try {
       const res = await fetch(`${API_BASE}/query-bot`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setChats(data.chats || []);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || "Unable to load conversations");
       }
-    } catch {
-      // Silently fail — chats will load on next refresh
+
+      setChats(data?.chats || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load conversations");
     }
-  }, [token]);
+  }, [getAuthHeaders, token]);
 
   const fetchMessages = useCallback(async (chatId: string) => {
     if (!token) return;
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE}/query-bot?chatId=${chatId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data.messages || []);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load messages");
       }
-    } catch {
-      toast.error("Failed to load messages");
+
+      setMessages(data?.messages || []);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load messages");
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [getAuthHeaders, token]);
 
   const setActiveChat = useCallback((chatId: string) => {
     setActiveChatId(chatId);
@@ -158,12 +173,11 @@ export function useZaiChat(): UseZaiChatReturn {
       const errorAssistantMsg: ZaiMessage = {
         id: `err-${Date.now()}`,
         role: "assistant",
-        content: `Sorry, I encountered an error: ${errorMsg}`,
+        content: `I couldn't complete that request. ${errorMsg}`,
         error: errorMsg,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorAssistantMsg]);
-      toast.error(errorMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -174,7 +188,7 @@ export function useZaiChat(): UseZaiChatReturn {
     try {
       const res = await fetch(`${API_BASE}/query-bot?chatId=${chatId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       });
       if (res.ok) {
         if (activeChatId === chatId) {
@@ -187,7 +201,7 @@ export function useZaiChat(): UseZaiChatReturn {
     } catch {
       toast.error("Failed to delete chat");
     }
-  }, [token, activeChatId, refreshChats]);
+  }, [token, activeChatId, getAuthHeaders, refreshChats]);
 
   // Load chats on mount
   useEffect(() => {

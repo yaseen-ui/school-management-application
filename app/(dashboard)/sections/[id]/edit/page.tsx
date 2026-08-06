@@ -2,8 +2,8 @@
 
 import { useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useForm, FormProvider } from "react-hook-form"
-import { Loader2, Users, ArrowLeft } from "lucide-react"
+import { useForm, FormProvider, type FieldErrors } from "react-hook-form"
+import { Loader2, Users, ArrowLeft, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,8 @@ import { RoomSelector } from "@/components/shared/room-selector"
 import { TeacherSelector } from "@/components/shared/teacher-selector"
 import { motion } from "framer-motion"
 import { CardSkeleton } from "@/components/shared/loading-skeleton"
+import { useGrade } from "@/hooks/use-grades"
+import { showRequiredFieldsToast } from "@/lib/form-validation"
 
 interface FormData {
   sectionName: string
@@ -29,8 +31,13 @@ export default function EditSectionPage() {
   const params = useParams()
   const sectionId = params.id as string
 
-  const { data: sectionData, isLoading } = useSection(sectionId)
+  const { data: sectionData, isLoading, isError, error, refetch } = useSection(sectionId)
   const section = (sectionData as any)?.data || sectionData
+  const {
+    data: sectionGrade,
+    isLoading: isGradeLoading,
+    isError: isGradeError,
+  } = useGrade(section?.gradeId || "")
 
   const form = useForm<FormData>({
     defaultValues: {
@@ -50,18 +57,20 @@ export default function EditSectionPage() {
 
   const updateSection = useUpdateSection()
 
-  // When section is loaded, pre-populate form with courseId (from nested grade) and gradeId
+  // Prefer the grade included with the section and fall back to the grade endpoint.
+  // This keeps both hierarchy selectors populated even if a lean section response is returned.
   useEffect(() => {
-    if (section) {
+    const courseId = section?.grade?.courseId || sectionGrade?.courseId
+    if (section && courseId) {
       reset({
         sectionName: section.sectionName,
         gradeId: section.gradeId,
         roomId: section.roomId ?? "",
-        courseId: section.grade?.courseId || "",
+        courseId,
         sectionInChargeId: section.sectionInChargeId ?? "",
       })
     }
-  }, [section, reset])
+  }, [section, sectionGrade, reset])
 
   const onSubmit = async (data: FormData) => {
     if (!section) return
@@ -79,7 +88,18 @@ export default function EditSectionPage() {
     router.push("/sections")
   }
 
-  if (isLoading) {
+  const onInvalid = (formErrors: FieldErrors<FormData>) => {
+    showRequiredFieldsToast(formErrors, {
+      sectionName: "Section name",
+      courseId: "Course",
+      gradeId: "Grade",
+    })
+  }
+
+  const isLoadingDetails =
+    isLoading || Boolean(section && !section.grade?.courseId && isGradeLoading)
+
+  if (isLoadingDetails) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -105,7 +125,7 @@ export default function EditSectionPage() {
     )
   }
 
-  if (!section) {
+  if (isError || !section || (!section.grade?.courseId && isGradeError)) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -118,10 +138,18 @@ export default function EditSectionPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Section Not Found</h1>
-            <p className="text-sm text-muted-foreground">The section you are looking for does not exist.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Unable to Open Section</h1>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error
+                ? error.message
+                : "The section details could not be loaded. Please try again."}
+            </p>
           </div>
         </div>
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Try Again
+        </Button>
       </motion.div>
     )
   }
@@ -156,7 +184,7 @@ export default function EditSectionPage() {
           </div>
         </CardHeader>
         <FormProvider {...form}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="sectionName">
@@ -173,7 +201,7 @@ export default function EditSectionPage() {
               <div className="space-y-2">
                 <HierarchicalFilter
                   filters={["courses", "grades"]}
-                  required={{ courseId: false, gradeId: true }}
+                  required={{ courseId: true, gradeId: true }}
                   labels={{
                     courseId: "Course",
                     gradeId: "Grade",

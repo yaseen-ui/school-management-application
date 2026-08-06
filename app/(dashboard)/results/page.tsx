@@ -16,6 +16,13 @@ import { useSections } from "@/hooks/use-sections"
 import { useExams, useExamSchedules, useScheduleResults } from "@/hooks/use-exams"
 import type { ResultStudentEntry } from "@/lib/api/exams"
 
+const filterFieldClassName = "min-w-0 space-y-2 lg:col-span-2"
+const selectTriggerClassName =
+  "w-full min-w-0 max-w-full overflow-hidden bg-background/90 text-left shadow-sm transition-colors hover:border-primary/40 [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate"
+const selectContentClassName =
+  "w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] rounded-xl"
+const selectItemTextClassName = "block min-w-0 truncate"
+
 export default function ResultsPage() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>("")
   const [selectedGradeId, setSelectedGradeId] = useState<string>("")
@@ -32,7 +39,11 @@ export default function ResultsPage() {
   )
   const { data: resultsData, isLoading: resultsLoading } = useScheduleResults(selectedScheduleId || null)
 
-  const schedulesWithPapers = (schedules || []).filter((s) => (s.papers?.length || 0) > 0)
+  const schedulesWithPapers = (schedules || []).filter(
+    (schedule) =>
+      (schedule.papers?.length || 0) > 0 &&
+      (!selectedExamId || schedule.examId === selectedExamId),
+  )
 
   const handleCourseChange = (value: string) => {
     setSelectedCourseId(value)
@@ -104,29 +115,38 @@ export default function ResultsPage() {
       />
 
       {/* Hierarchical Filters */}
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden border-border/70 shadow-sm">
+        <CardHeader className="border-b bg-gradient-to-r from-primary/[0.06] via-background to-cyan-500/[0.06] py-5">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Filter Results
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Search className="h-4.5 w-4.5" />
+            </span>
+            <span>
+              <span className="block">Filter Results</span>
+              <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                Choose the academic path and exam schedule
+              </span>
+            </span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 xl:grid-cols-12">
             {/* Course */}
-            <div className="space-y-2">
+            <div className={filterFieldClassName}>
               <Label className="flex items-center gap-1.5">
                 <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
                 Course
               </Label>
               <Select value={selectedCourseId} onValueChange={handleCourseChange}>
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClassName}>
                   <SelectValue placeholder="Select course" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={selectContentClassName}>
                   {(courses?.data?.rows || []).map((course) => (
                     <SelectItem key={course.id} value={course.id}>
-                      {course.courseName}
+                      <span className={selectItemTextClassName} title={course.courseName}>
+                        {course.courseName}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -134,7 +154,7 @@ export default function ResultsPage() {
             </div>
 
             {/* Grade */}
-            <div className="space-y-2">
+            <div className={filterFieldClassName}>
               <Label className="flex items-center gap-1.5">
                 <Layers className="h-3.5 w-3.5 text-muted-foreground" />
                 Grade
@@ -144,13 +164,15 @@ export default function ResultsPage() {
                 onValueChange={handleGradeChange}
                 disabled={!selectedCourseId}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClassName}>
                   <SelectValue placeholder={selectedCourseId ? "Select grade" : "Select course first"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={selectContentClassName}>
                   {(grades?.rows || []).map((grade: any) => (
                     <SelectItem key={grade.id} value={grade.id}>
-                      {grade.gradeName}
+                      <span className={selectItemTextClassName} title={grade.gradeName}>
+                        {grade.gradeName}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -158,7 +180,7 @@ export default function ResultsPage() {
             </div>
 
             {/* Section */}
-            <div className="space-y-2">
+            <div className={filterFieldClassName}>
               <Label className="flex items-center gap-1.5">
                 <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
                 Section
@@ -168,13 +190,15 @@ export default function ResultsPage() {
                 onValueChange={handleSectionChange}
                 disabled={!selectedGradeId}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClassName}>
                   <SelectValue placeholder={selectedGradeId ? "Select section" : "Select grade first"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={selectContentClassName}>
                   {(sections?.data?.rows || []).map((section) => (
                     <SelectItem key={section.id} value={section.id}>
-                      {section.sectionName}
+                      <span className={selectItemTextClassName} title={section.sectionName}>
+                        {section.sectionName}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -182,7 +206,7 @@ export default function ResultsPage() {
             </div>
 
             {/* Exam */}
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2 lg:col-span-3 xl:col-span-3">
               <Label className="flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 Exam
@@ -192,21 +216,26 @@ export default function ResultsPage() {
                 onValueChange={handleExamChange}
                 disabled={!selectedSectionId}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClassName}>
                   <SelectValue placeholder={selectedSectionId ? "Select exam" : "Select section first"} />
                 </SelectTrigger>
-                <SelectContent>
-                  {(exams || []).map((exam) => (
-                    <SelectItem key={exam.id} value={exam.id}>
-                      {exam.name} ({exam.examType})
-                    </SelectItem>
-                  ))}
+                <SelectContent className={selectContentClassName}>
+                  {(exams || []).map((exam) => {
+                    const examLabel = `${exam.name} (${exam.examType.replaceAll("_", " ")})`
+                    return (
+                      <SelectItem key={exam.id} value={exam.id}>
+                        <span className={selectItemTextClassName} title={examLabel}>
+                          {examLabel}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Schedule */}
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2 lg:col-span-3 xl:col-span-3">
               <Label className="flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 Schedule
@@ -216,15 +245,20 @@ export default function ResultsPage() {
                 onValueChange={setSelectedScheduleId}
                 disabled={!selectedExamId}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectTriggerClassName}>
                   <SelectValue placeholder={selectedExamId ? "Select schedule" : "Select exam first"} />
                 </SelectTrigger>
-                <SelectContent>
-                  {schedulesWithPapers.map((schedule) => (
-                    <SelectItem key={schedule.id} value={schedule.id}>
-                      {schedule.name} - {new Date(schedule.endDate).toLocaleDateString()}
-                    </SelectItem>
-                  ))}
+                <SelectContent className={selectContentClassName}>
+                  {schedulesWithPapers.map((schedule) => {
+                    const scheduleLabel = `${schedule.name} · ${new Date(schedule.endDate).toLocaleDateString()}`
+                    return (
+                      <SelectItem key={schedule.id} value={schedule.id}>
+                        <span className={selectItemTextClassName} title={scheduleLabel}>
+                          {scheduleLabel}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
                   {schedulesWithPapers.length === 0 && selectedExamId && (
                     <div className="px-2 py-4 text-sm text-muted-foreground text-center">
                       No exam schedules with papers found

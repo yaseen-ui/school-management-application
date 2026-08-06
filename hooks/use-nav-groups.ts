@@ -30,7 +30,6 @@ import {
   Tag,
   Clock,
   Upload,
-  Sparkles,
   Bell,
   Inbox,
   History,
@@ -116,7 +115,6 @@ const companyNavGroups: NavGroup[] = [
     title: "Overview",
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard:view" },
-      { title: "AI Assistant", href: "/zai", icon: Sparkles, permission: "query-bot:ask" },
     ],
   },
   {
@@ -290,6 +288,7 @@ const parentNavGroups: NavGroup[] = [
     title: "Overview",
     items: [
       { title: "Dashboard", href: "/parent-portal", icon: LayoutDashboard },
+      { title: "AI Assistant", href: "/zai", icon: Bot, permission: "query-bot:ask" },
     ],
   },
   {
