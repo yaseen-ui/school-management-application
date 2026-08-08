@@ -6,22 +6,40 @@ import { Loader2 } from "lucide-react"
 import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
 import { getViewPermission } from "@/lib/rbac/route-permissions"
 import { ForbiddenPage } from "@/components/shared/forbidden-page"
+import { useAuthStore } from "@/stores/auth-store"
+import { config } from "@/lib/config"
+
+/** Dashboard paths company (platform) users may open (#13). */
+const COMPANY_ALLOWED_PATH_PREFIXES = [
+  "/dashboard",
+  "/tenants",
+  "/company-users",
+  "/settings",
+]
+
+function isCompanyAllowedPath(pathname: string | null): boolean {
+  if (!pathname) return false
+  return COMPANY_ALLOWED_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  )
+}
 
 /**
  * Layout-level page entry gate.
  * Uses the shared route → permission map; paths with no mapping are allowed
  * (e.g. rare utility pages). Backend still enforces API authz.
+ *
+ * Company users are restricted to platform pages only (#13).
  */
 export function PagePermissionGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isLoaded = usePermissionsLoaded()
+  const user = useAuthStore((s) => s.user) as { userType?: string } | null
   const viewPermission = getViewPermission(pathname)
   const canView = usePermission(viewPermission ?? "dashboard:view")
 
-  // No mapping configured → do not block (nav may still hide the link)
-  if (!viewPermission) {
-    return <>{children}</>
-  }
+  const isCompanyUser =
+    user?.userType === "company" || config.isCompanyHost
 
   if (!isLoaded) {
     return (
@@ -29,6 +47,16 @@ export function PagePermissionGate({ children }: { children: React.ReactNode }) 
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
+  }
+
+  // #13 — company never enters tenant product pages (even with admin:super)
+  if (isCompanyUser && !isCompanyAllowedPath(pathname)) {
+    return <ForbiddenPage />
+  }
+
+  // No mapping configured → do not block (nav may still hide the link)
+  if (!viewPermission) {
+    return <>{children}</>
   }
 
   if (!canView) {

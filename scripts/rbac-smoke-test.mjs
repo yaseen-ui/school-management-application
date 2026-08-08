@@ -252,6 +252,44 @@ console.log('\n=== 5. Role matrix CAN / CANNOT (template simulation) ===');
   }
 }
 
+console.log('\n=== 6. Company vs tenant boundary (#13) ===');
+{
+  const {
+    isPlatformApiPath,
+    resolveTenantIdForUser,
+    assertCompanyNotOnTenantApi,
+    CompanyTenantForbiddenError,
+  } = await import(pathToFileURL(path.join(root, 'lib/backend/auth/company-boundary.js')).href);
+
+  assert(isPlatformApiPath('/api/tenants'), 'platform: /api/tenants');
+  assert(isPlatformApiPath('/api/users/company'), 'platform: /api/users/company');
+  assert(!isPlatformApiPath('/api/students'), 'not platform: /api/students');
+  assert(
+    resolveTenantIdForUser({ userType: 'company', tenantId: null }, 'school-1') === null,
+    'company ignores x-tenant-id'
+  );
+  assert(
+    resolveTenantIdForUser({ userType: 'tenant', tenantId: 'A' }, 'B') === 'A',
+    'tenant JWT wins over header'
+  );
+
+  let blocked = false;
+  try {
+    assertCompanyNotOnTenantApi({ userType: 'company' }, '/api/students');
+  } catch (e) {
+    blocked = e instanceof CompanyTenantForbiddenError || e?.code === 'COMPANY_TENANT_FORBIDDEN';
+  }
+  assert(blocked, 'company blocked on school API path');
+
+  let allowed = true;
+  try {
+    assertCompanyNotOnTenantApi({ userType: 'company' }, '/api/tenants');
+  } catch {
+    allowed = false;
+  }
+  assert(allowed, 'company allowed on platform API path');
+}
+
 console.log('\n=== Summary ===');
 console.log(`Passed: ${passes.length}`);
 console.log(`Failed: ${failures.length}`);

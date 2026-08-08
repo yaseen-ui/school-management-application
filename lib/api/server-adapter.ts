@@ -8,6 +8,15 @@ import { PrismaClient } from '@prisma/client'
 // Also bridges the Express auth middleware semantics: decodes the Bearer JWT and
 // populates req.user + req.tenantId so controllers that expect those (set by
 // authenticate.js / authenticateTenant.js in the Express path) keep working.
+//
+// Company vs tenant (#13): company users never receive school tenant context and
+// cannot call non-platform APIs (see company-boundary.js).
+
+import {
+  assertCompanyNotOnTenantApi,
+  CompanyTenantForbiddenError,
+  resolveTenantIdForUser,
+} from '@/lib/backend/auth/company-boundary.js'
 
 const prisma = new PrismaClient()
 
@@ -59,6 +68,7 @@ async function resolveTenantId(tenantHeader: string): Promise<string | null> {
   })
   if (tenant) return tenant.id
   // Fallback: return the first tenant (for single-tenant setups)
+  // Note: company users never reach this with a header-selected school (#13).
   const firstTenant = await prisma.tenant.findFirst({ select: { id: true } })
   return firstTenant?.id ?? tenantHeader
 }
@@ -66,33 +76,30 @@ async function resolveTenantId(tenantHeader: string): Promise<string | null> {
 const createMockReq = async (nextReq: NextRequest, params: any = {}, query: any = {}) => {
   const headers = Object.fromEntries(nextReq.headers)
   const user = decodeBearerToken(headers.authorization)
-  // Tenant context preference: JWT (trustworthy) > x-tenant-id header (company users
-  // who operate across tenants). Tenant users CANNOT escape their own tenant via the
-  // header because the JWT value takes precedence.
-  const rawTenantId = user?.tenantId ?? headers['x-tenant-id'] ?? null
-  // Resolve non-UUID tenant identifiers (e.g. "default", school name) to actual UUID
-  const tenantId = rawTenantId ? await resolveTenantId(rawTenantId) : null
+
+  // Company users: never take tenant from header (#13).
+  // Tenant users: JWT tenantId wins over x-tenant-id (cannot hop schools via header).
+  const headerTenantRaw = headers['x-tenant-id'] ?? null
+  const logicalTenantKey = resolveTenantIdForUser(user, headerTenantRaw)
+
+  // Resolve non-UUID tenant identifiers (e.g. school name) to actual UUID
+  const tenantId = logicalTenantKey ? await resolveTenantId(logicalTenantKey) : null
 
   // Ensure req.user is never null — controllers destructure req.user.tenantId.
-  // When no JWT is present, fall back to the x-tenant-id header value.
+  // When no JWT is present, fall back to the x-tenant-id header value (public-ish
+  // flows only; prefer authenticated requests).
   // Also map userId -> id for controllers that destructure { id } from req.user
   // (e.g. staff-attendance, leave, payroll).
   //
   // RBAC v2: JWT now carries roleIds[] + permVersion instead of old role object.
-  // Include both for backward compatibility with older JWTs that may still have "role".
   const safeUser = user
     ? {
         ...user,
         id: user.userId,
-        // Company users can operate inside a tenant selected through the
-        // x-tenant-id header. Controllers historically read req.user.tenantId,
-        // so expose the resolved request tenant there as well as req.tenantId.
-        tenantId,
-        // Forward-compat: ensure roleIds is always an array for the RBAC engine
+        // Company: always null. Tenant: JWT-bound school only.
+        tenantId: user.userType === 'company' ? null : tenantId,
         roleIds: user.roleIds ?? [],
         permVersion: user.permVersion ?? 0,
-        // Backward-compat: if an old JWT had "role" (one-to-one), expose it so
-        // controllers that still access req.user.role don't break.
         role: (user as any).role ?? null,
       }
     : (tenantId
@@ -107,15 +114,21 @@ const createMockReq = async (nextReq: NextRequest, params: any = {}, query: any 
           }
         : null)
 
+  // Block company users on non-platform APIs before controllers run.
+  assertCompanyNotOnTenantApi(safeUser, nextReq.nextUrl?.pathname ?? nextReq.url)
+
   return {
-    body: nextReq.method !== 'GET' ? await nextReq.json().catch(() => ({})) : {},
+    body: nextReq.method !== 'GET' && nextReq.method !== 'HEAD'
+      ? await nextReq.json().catch(() => ({}))
+      : {},
     params,
     query,
     headers,
     method: nextReq.method,
     url: nextReq.url,
     user: safeUser,
-    tenantId,
+    // Company never carries school tenant context
+    tenantId: user?.userType === 'company' ? null : tenantId,
   }
 }
 
@@ -146,12 +159,12 @@ export const invokeBackendController = async (
   req: NextRequest,
   routeParams: Record<string, string> | Promise<Record<string, string>> = {}
 ) => {
-  const resolvedParams = await routeParams
-  const query = Object.fromEntries(req.nextUrl.searchParams)
-  const mockReq = await createMockReq(req, resolvedParams, query)
-  const [mockRes, responsePromise] = createMockRes()
-
   try {
+    const resolvedParams = await routeParams
+    const query = Object.fromEntries(req.nextUrl.searchParams)
+    const mockReq = await createMockReq(req, resolvedParams, query)
+    const [mockRes, responsePromise] = createMockRes()
+
     // Some controllers are classes (e.g. students/teachers); instantiate if needed
     const ctrl = typeof controller === 'function' && controller.prototype ? new controller() : controller
     await (ctrl[method] || controller[method])(mockReq, mockRes)
@@ -160,6 +173,23 @@ export const invokeBackendController = async (
     // Return the full response body so the frontend ApiResponse<T> contract is preserved.
     return NextResponse.json(result.data, { status: result.status })
   } catch (error) {
-    return NextResponse.json({ status: 'fail', message: (error as Error).message }, { status: 500 })
+    const err = error as Error & { statusCode?: number; code?: string; name?: string }
+    if (
+      err instanceof CompanyTenantForbiddenError ||
+      err?.name === 'CompanyTenantForbiddenError' ||
+      err?.code === 'COMPANY_TENANT_FORBIDDEN'
+    ) {
+      return NextResponse.json(
+        { status: 'fail', message: err.message, code: 'COMPANY_TENANT_FORBIDDEN' },
+        { status: 403 }
+      )
+    }
+    if (err?.statusCode === 403 || err?.statusCode === 401) {
+      return NextResponse.json(
+        { status: 'fail', message: err.message, code: err.code },
+        { status: err.statusCode }
+      )
+    }
+    return NextResponse.json({ status: 'fail', message: err.message }, { status: 500 })
   }
 }

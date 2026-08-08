@@ -18,7 +18,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       tenantId: null,
@@ -28,10 +28,30 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: (user, token) => {
         apiClient.setToken(token)
+        // Company users never carry a school tenantId in the client (#13)
+        if ((user as { userType?: string } | null)?.userType === "company") {
+          apiClient.setTenantId(null)
+          set({
+            user,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+            tenantId: null,
+            tenantInfo: null,
+          })
+          return
+        }
         set({ user, token, isAuthenticated: true, isLoading: false })
       },
 
       setTenantInfo: (tenantInfo) => {
+        // Domain resolve is tenant-host only; still guard against company sessions
+        const currentUser = get().user as { userType?: string } | null
+        if (currentUser?.userType === "company") {
+          apiClient.setTenantId(null)
+          set({ tenantId: null, tenantInfo: null })
+          return
+        }
         apiClient.setTenantId(tenantInfo.id)
         set({ tenantId: tenantInfo.id, tenantInfo })
       },
@@ -59,7 +79,14 @@ export const useAuthStore = create<AuthState>()(
           if (state.token) {
             apiClient.setToken(state.token)
           }
-          if (state.tenantId) {
+          // Company sessions must not restore a school tenantId (#13)
+          const isCompany =
+            (state.user as { userType?: string } | null)?.userType === "company"
+          if (isCompany) {
+            state.tenantId = null
+            state.tenantInfo = null
+            apiClient.setTenantId(null)
+          } else if (state.tenantId) {
             apiClient.setTenantId(state.tenantId)
           }
         }

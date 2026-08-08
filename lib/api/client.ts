@@ -63,8 +63,10 @@ class ApiClient {
       headers.set("Authorization", `Bearer ${token}`)
     }
 
+    // Only attach tenant header on tenant hosts. Company host must never
+    // inject a school tenant context (#13 — company cannot enter a tenant).
     const tenantId = this.getTenantId()
-    if (tenantId && config.isTenantHost) {
+    if (tenantId && config.isTenantHost && !config.isCompanyHost) {
       headers.set("x-tenant-id", tenantId)
     }
 

@@ -89,21 +89,22 @@ async function getUserFromRequest(req: NextRequest): Promise<QueryBotUser | null
       select: { tenantId: true, userType: true },
     });
 
-    let tenantId = dbUser?.tenantId ?? null;
-    const requestedTenantId = req.headers.get('x-tenant-id')?.trim() || null;
-
-    // Company users may explicitly operate inside a selected school workspace.
-    if (!tenantId && dbUser?.userType === 'company' && requestedTenantId) {
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: requestedTenantId },
-        select: { id: true },
-      });
-      tenantId = tenant?.id ?? null;
+    // Company users never get a school tenant context (#13).
+    // Do not honor x-tenant-id to "open a school workspace".
+    const userType = dbUser?.userType ?? decoded.userType;
+    if (userType === 'company') {
+      return {
+        ...decoded,
+        userType: 'company',
+        tenantId: null,
+      };
     }
+
+    const tenantId = dbUser?.tenantId ?? null;
 
     return {
       ...decoded,
-      userType: dbUser?.userType ?? decoded.userType,
+      userType,
       tenantId,
     };
   } catch {
@@ -123,9 +124,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (user.userType === 'company') {
+      return NextResponse.json(
+        {
+          error:
+            'Company users cannot use the school AI Assistant. Sign in on a school domain as a tenant user.',
+          code: 'COMPANY_TENANT_FORBIDDEN',
+        },
+        { status: 403 }
+      );
+    }
+
     if (!user.tenantId) {
       return NextResponse.json(
-        { error: 'Open a school workspace before using the AI Assistant.' },
+        { error: 'School context is required. Sign in on your school domain.' },
         { status: 403 }
       );
     }
@@ -381,9 +393,20 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
     }
+    if (user.userType === 'company') {
+      return NextResponse.json(
+        {
+          error:
+            'Company users cannot use the school AI Assistant. Sign in on a school domain as a tenant user.',
+          code: 'COMPANY_TENANT_FORBIDDEN',
+        },
+        { status: 403 }
+      );
+    }
+
     if (!user.tenantId) {
       return NextResponse.json(
-        { error: 'Open a school workspace before using the AI Assistant.' },
+        { error: 'School context is required. Sign in on your school domain.' },
         { status: 403 }
       );
     }
@@ -435,9 +458,20 @@ export async function DELETE(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
     }
+    if (user.userType === 'company') {
+      return NextResponse.json(
+        {
+          error:
+            'Company users cannot use the school AI Assistant. Sign in on a school domain as a tenant user.',
+          code: 'COMPANY_TENANT_FORBIDDEN',
+        },
+        { status: 403 }
+      );
+    }
+
     if (!user.tenantId) {
       return NextResponse.json(
-        { error: 'Open a school workspace before using the AI Assistant.' },
+        { error: 'School context is required. Sign in on your school domain.' },
         { status: 403 }
       );
     }
