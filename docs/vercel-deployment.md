@@ -110,6 +110,11 @@ Go to **Project → Settings → Environment Variables** and add:
 | `COMM_EMAIL_ENABLED` | No | `false` (unless you configure email) |
 | `COMM_SMS_ENABLED` | No | `false` (unless you configure SMS) |
 | `COMM_PUSH_ENABLED` | No | `false` (unless you configure push) |
+| `COMM_WHATSAPP_ENABLED` | No | `false` until Meta templates + credentials ready |
+| `COMM_WHATSAPP_DRY_RUN` | No | `true` recommended until go-live |
+| `COMM_WHATSAPP_PHONE_NUMBER_ID` | If WhatsApp live | Meta Phone Number ID |
+| `COMM_WHATSAPP_API_KEY` | If WhatsApp live | Meta permanent/system user token |
+| `COMM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` | If WhatsApp webhooks | Shared verify token for `/api/webhooks/whatsapp` |
 
 > **Google Cloud Storage Note:** Vercel's filesystem is read-only. You must either:
 > - Store `google-service-key.json` contents as an env var (`GCS_SERVICE_ACCOUNT_JSON`) and parse it at runtime

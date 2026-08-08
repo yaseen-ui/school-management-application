@@ -329,6 +329,7 @@ enum CommunicationChannel {
   email
   sms
   push
+  whatsapp
 }
 
 enum DeliveryStatus {

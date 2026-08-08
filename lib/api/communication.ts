@@ -7,7 +7,7 @@ export type CommunicationType = "notification" | "alert" | "reminder" | "action_
 export type PublicationType = "circular" | "announcement" | "notice_board" | "holiday_notice" | "event_notice" | "academic_notice";
 export type CommunicationStatus = "draft" | "sent" | "scheduled" | "cancelled";
 export type PublicationStatus = "draft" | "pending_approval" | "approved" | "rejected" | "published" | "expired" | "archived" | "withdrawn";
-export type CommunicationChannel = "in_app" | "email" | "sms" | "push";
+export type CommunicationChannel = "in_app" | "email" | "sms" | "push" | "whatsapp";
 export type DeliveryStatus = "pending" | "sent" | "delivered" | "failed" | "viewed" | "acknowledged";
 export type SenderType = "user" | "system";
 
@@ -526,5 +526,48 @@ export async function getChannelConfigurations(): Promise<ChannelConfiguration[]
 
 export async function updateChannelConfigurations(channels: ChannelConfigUpdatePayload[]): Promise<ChannelConfiguration[]> {
   const res = await apiClient.patch<ApiResponse<ChannelConfiguration[]>>("/communication/channels", { channels });
+  return (res as any).data!;
+}
+
+// ─── WhatsApp ───────────────────────────────────────────────────────────
+
+export interface WhatsAppTemplateInfo {
+  key: string;
+  metaName: string;
+  language: string;
+  description: string;
+}
+
+export interface WhatsAppTestPayload {
+  phone: string;
+  templateKey?: string;
+  recipientName?: string;
+  title?: string;
+  body?: string;
+}
+
+export interface WhatsAppTestResult {
+  status: string;
+  providerMessageId?: string;
+  reason?: string;
+  dryRun?: boolean;
+  templateKey?: string;
+  templates?: WhatsAppTemplateInfo[];
+}
+
+export async function listWhatsAppTemplates(): Promise<WhatsAppTemplateInfo[]> {
+  const res = await apiClient.get<ApiResponse<{ templates: WhatsAppTemplateInfo[] }>>(
+    "/communication/whatsapp/test"
+  );
+  return (res as any).data?.templates ?? [];
+}
+
+export async function sendWhatsAppTest(
+  payload: WhatsAppTestPayload
+): Promise<WhatsAppTestResult> {
+  const res = await apiClient.post<ApiResponse<WhatsAppTestResult>>(
+    "/communication/whatsapp/test",
+    payload
+  );
   return (res as any).data!;
 }

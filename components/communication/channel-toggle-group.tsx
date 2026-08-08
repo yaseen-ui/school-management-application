@@ -2,7 +2,7 @@
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
-import { Mail, MessageSquare, Bell, Smartphone } from "lucide-react"
+import { Mail, MessageSquare, Bell, Smartphone, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ChannelToggleGroupProps {
@@ -16,6 +16,7 @@ const channels = [
   { value: "in_app", label: "In-App", icon: Bell },
   { value: "email", label: "Email", icon: Mail },
   { value: "sms", label: "SMS", icon: MessageSquare },
+  { value: "whatsapp", label: "WhatsApp", icon: MessageCircle },
   { value: "push", label: "Push", icon: Smartphone },
 ]
 

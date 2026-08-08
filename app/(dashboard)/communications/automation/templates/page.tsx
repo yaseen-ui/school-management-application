@@ -27,6 +27,7 @@ const communicationTypes: { value: CommunicationType; label: string }[] = [
 
 const channels: { value: CommunicationChannel; label: string }[] = [
   { value: "in_app", label: "In-App" },
+  { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "Email" },
   { value: "sms", label: "SMS" },
   { value: "push", label: "Push" },

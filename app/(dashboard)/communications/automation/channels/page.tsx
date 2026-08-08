@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import type { ChannelConfiguration, ChannelConfigUpdatePayload, CommunicationChannel } from "@/lib/api/communication"
 import * as communicationApi from "@/lib/api/communication"
-import { RefreshCw, Mail, MessageSquare, Bell, Smartphone } from "lucide-react"
+import { RefreshCw, Mail, MessageSquare, Bell, Smartphone, MessageCircle, Send } from "lucide-react"
 
 const channelMeta: Record<CommunicationChannel, { label: string; icon: any; description: string; providerPlaceholder: string; configPlaceholder: string }> = {
   in_app: {
@@ -35,6 +35,15 @@ const channelMeta: Record<CommunicationChannel, { label: string; icon: any; desc
     providerPlaceholder: "twilio",
     configPlaceholder: '{\n  "accountSid": "ACxxxx",\n  "authToken": "xxxx",\n  "fromNumber": "+1234567890"\n}',
   },
+  whatsapp: {
+    label: "WhatsApp",
+    icon: MessageCircle,
+    description:
+      "Send notifications via Meta WhatsApp Cloud API (approved templates). Use env vars or JSON config below.",
+    providerPlaceholder: "meta",
+    configPlaceholder:
+      '{\n  "phoneNumberId": "123456789012345",\n  "apiKey": "EAAJIx...",\n  "fromNumber": "+91XXXXXXXXXX"\n}',
+  },
   push: {
     label: "Push Notifications",
     icon: Smartphone,
@@ -44,11 +53,19 @@ const channelMeta: Record<CommunicationChannel, { label: string; icon: any; desc
   },
 }
 
+const ALL_CHANNELS: CommunicationChannel[] = ["in_app", "email", "sms", "whatsapp", "push"]
+
 export default function ChannelsPage() {
   const [channels, setChannels] = useState<ChannelConfiguration[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState<Record<string, { provider: string; config: string; isEnabled: boolean }>>({})
+
+  // WhatsApp test send
+  const [testPhone, setTestPhone] = useState("")
+  const [testTemplate, setTestTemplate] = useState("general_announcement")
+  const [testing, setTesting] = useState(false)
+  const [templates, setTemplates] = useState<communicationApi.WhatsAppTemplateInfo[]>([])
 
   const fetchChannels = async () => {
     setLoading(true)
@@ -63,10 +80,13 @@ export default function ChannelsPage() {
           isEnabled: c.isEnabled,
         }
       })
-      // Ensure all 4 channels exist in form
-      ;(["in_app", "email", "sms", "push"] as CommunicationChannel[]).forEach((ch) => {
+      ALL_CHANNELS.forEach((ch) => {
         if (!fd[ch]) {
-          fd[ch] = { provider: "", config: "", isEnabled: ch === "in_app" }
+          fd[ch] = {
+            provider: ch === "whatsapp" ? "meta" : "",
+            config: "",
+            isEnabled: ch === "in_app",
+          }
         }
       })
       setFormData(fd)
@@ -77,8 +97,18 @@ export default function ChannelsPage() {
     }
   }
 
+  const fetchTemplates = async () => {
+    try {
+      const list = await communicationApi.listWhatsAppTemplates()
+      setTemplates(list)
+    } catch {
+      // Non-fatal — templates list is optional for UI
+    }
+  }
+
   useEffect(() => {
     fetchChannels()
+    fetchTemplates()
   }, [])
 
   const handleUpdateField = (channel: CommunicationChannel, field: string, value: any) => {
@@ -120,13 +150,41 @@ export default function ChannelsPage() {
     }
   }
 
+  const handleWhatsAppTest = async () => {
+    if (!testPhone.trim()) {
+      toast.error("Enter a phone number to test")
+      return
+    }
+    setTesting(true)
+    try {
+      const result = await communicationApi.sendWhatsAppTest({
+        phone: testPhone.trim(),
+        templateKey: testTemplate,
+        recipientName: "Test Recipient",
+        title: "WhatsApp Test",
+        body: "This is a test message from EduManage channel configuration.",
+      })
+      if (result.status === "failed") {
+        toast.error(result.reason || "WhatsApp test failed")
+      } else if (result.dryRun) {
+        toast.success(result.reason || "Dry-run OK — check server logs (not sent to Meta)")
+      } else {
+        toast.success(`Sent. Message ID: ${result.providerMessageId || "n/a"}`)
+      }
+    } catch (e: any) {
+      toast.error(e.message || "WhatsApp test failed")
+    } finally {
+      setTesting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col gap-6">
         <Breadcrumbs items={[{ label: "Communications" }, { label: "Automation" }, { label: "Channels" }]} />
         <PageHeader title="Channel Configuration" description="Configure notification delivery channels" />
         <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
@@ -137,7 +195,7 @@ export default function ChannelsPage() {
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Communications" }, { label: "Automation" }, { label: "Channels" }]} />
-      <PageHeader title="Channel Configuration" description="Configure notification delivery channels (email, SMS, push)">
+      <PageHeader title="Channel Configuration" description="Configure notification delivery channels (in-app, email, SMS, WhatsApp, push)">
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchChannels} disabled={loading}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -201,6 +259,49 @@ export default function ChannelsPage() {
                       />
                     </div>
                   </>
+                )}
+
+                {channel === "whatsapp" && data.isEnabled && (
+                  <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+                    <p className="text-sm font-medium">Send test message</p>
+                    <p className="text-xs text-muted-foreground">
+                      Uses Meta template <code className="text-xs">general_announcement</code> (or selected key).
+                      Requires approved templates + credentials (or dry-run mode).
+                    </p>
+                    <div className="space-y-2">
+                      <Label>Phone (E.164 or 10-digit India)</Label>
+                      <Input
+                        placeholder="+919876543210"
+                        value={testPhone}
+                        onChange={(e) => setTestPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Template key</Label>
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                        value={testTemplate}
+                        onChange={(e) => setTestTemplate(e.target.value)}
+                      >
+                        {(templates.length
+                          ? templates
+                          : [
+                              { key: "general_announcement", metaName: "general_announcement", language: "en", description: "" },
+                              { key: "student_absent", metaName: "student_absent", language: "en", description: "" },
+                              { key: "fee_reminder", metaName: "fee_reminder", language: "en", description: "" },
+                            ]
+                        ).map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.key} ({t.metaName})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button type="button" size="sm" onClick={handleWhatsAppTest} disabled={testing}>
+                      <Send className="h-4 w-4 mr-2" />
+                      {testing ? "Sending..." : "Send test"}
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>

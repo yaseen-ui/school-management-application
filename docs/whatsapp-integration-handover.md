@@ -313,12 +313,14 @@ A "conversation" = a 24-hour messaging window. For one-way notifications, it's 1
 
 | Item | Status |
 |---|---|
-| Prisma schema change | ✅ Needs migration |
-| WhatsApp provider | ⏳ Needs implementation |
-| Frontend UI (toggle + config) | ⏳ Needs wire-up |
+| Prisma schema change | ✅ Done (`whatsapp` enum + migration) |
+| WhatsApp provider | ✅ Done (templates, E.164, dry-run, tenant config) |
+| Frontend UI (toggle + config) | ✅ Done (+ test send on Channels page) |
+| Webhook for delivery receipts | ✅ Done (`/api/webhooks/whatsapp`) |
 | Meta setup (WABA, tokens) | ⏳ Needs Meta account setup |
 | Message templates | ⏳ Needs Meta submission + approval |
-| Webhook for delivery receipts | 🔮 Future enhancement |
+
+See also: [whatsapp-v1-setup.md](./whatsapp-v1-setup.md) for the full V1 setup checklist.
 
 ---
 

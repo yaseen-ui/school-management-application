@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const PUBLIC_ROUTES = [
   '/api/public',
   '/api/auth',
+  '/api/webhooks',
 ]
 
 const isPublicRoute = (pathname: string): boolean => {
