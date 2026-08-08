@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { invokeBackendController } from "@/lib/api/server-adapter"
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 // GET /api/parent/leave — get leave requests for parent's children
 export async function GET(req: NextRequest) {
+  await Guard.action(req, 'parent-portal:access');
   try {
     const ParentsController = (await import("@backend/modules/parents/parents.controller.js")).default
     return invokeBackendController(ParentsController, "getMyChildrenLeave", req)
@@ -13,6 +15,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/parent/leave — submit a leave request for a child
 export async function POST(req: NextRequest) {
+  await Guard.action(req, 'parent-portal:access');
   try {
     const ParentsController = (await import("@backend/modules/parents/parents.controller.js")).default
     return invokeBackendController(ParentsController, "submitLeaveForChild", req)

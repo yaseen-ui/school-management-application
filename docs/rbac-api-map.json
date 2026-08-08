@@ -1,0 +1,2665 @@
+{
+  "generatedAt": "2026-08-08T12:43:17.728Z",
+  "totals": {
+    "routes": 269,
+    "public": 24,
+    "guardedFiles": 254,
+    "injectionsThisRun": 388,
+    "stillUnguarded": []
+  },
+  "publicPrefixes": [
+    "auth/",
+    "public/",
+    "webhooks/",
+    "parents/invite/",
+    "parents/register",
+    "teachers/invite/",
+    "teachers/register",
+    "communications/inbox",
+    "communications/acknowledge"
+  ],
+  "updated": [
+    {
+      "file": "academic-years/[id]/activate/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "academic-years:edit"
+        }
+      ]
+    },
+    {
+      "file": "academic-years/[id]/archive/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "academic-years:edit"
+        }
+      ]
+    },
+    {
+      "file": "academic-years/[id]/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "academic-years:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "academic-years:read"
+        }
+      ]
+    },
+    {
+      "file": "academic-years/active/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "academic-years:read"
+        }
+      ]
+    },
+    {
+      "file": "academic-years/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "academic-years:write"
+        },
+        {
+          "method": "GET",
+          "perm": "academic-years:read"
+        }
+      ]
+    },
+    {
+      "file": "accounts/categories/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "accounts:edit"
+        },
+        {
+          "method": "PUT",
+          "perm": "accounts:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "accounts:read"
+        }
+      ]
+    },
+    {
+      "file": "accounts/categories/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "accounts:write"
+        },
+        {
+          "method": "GET",
+          "perm": "accounts:read"
+        }
+      ]
+    },
+    {
+      "file": "accounts/summary/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "accounts:read"
+        }
+      ]
+    },
+    {
+      "file": "accounts/transactions/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "transactions:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "transactions:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transactions:read"
+        }
+      ]
+    },
+    {
+      "file": "accounts/transactions/[id]/void/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "transactions:write"
+        }
+      ]
+    },
+    {
+      "file": "accounts/transactions/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transactions:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transactions:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/context-options/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/marks/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "attendance:mark"
+        }
+      ]
+    },
+    {
+      "file": "attendance/marks/bulk/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "attendance:mark"
+        }
+      ]
+    },
+    {
+      "file": "attendance/marks/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "attendance:mark"
+        }
+      ]
+    },
+    {
+      "file": "attendance/marks/session/[sessionId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/register/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/register/student/[enrollmentId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/sessions/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "attendance:mark"
+        },
+        {
+          "method": "PUT",
+          "perm": "attendance:mark"
+        },
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/student/[enrollmentId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/summary/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/types/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "attendance:mark"
+        },
+        {
+          "method": "PUT",
+          "perm": "attendance:mark"
+        },
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "attendance/types/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "attendance:mark"
+        },
+        {
+          "method": "GET",
+          "perm": "attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "buildings/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "infrastructure:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "infrastructure:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "infrastructure:read"
+        }
+      ]
+    },
+    {
+      "file": "buildings/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "infrastructure:write"
+        },
+        {
+          "method": "GET",
+          "perm": "infrastructure:read"
+        }
+      ]
+    },
+    {
+      "file": "courses/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "courses:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "courses:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "courses:read"
+        }
+      ]
+    },
+    {
+      "file": "enrollments/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "students:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "exams:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "exams:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "exams:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/papers/[id]/marks/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "marks:entry"
+        },
+        {
+          "method": "GET",
+          "perm": "marks:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/papers/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "exams:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "exams:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "exams:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/schedules/[id]/marks-grid/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "marks:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/schedules/[id]/papers/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "exam-schedules:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "exam-schedules:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/schedules/[id]/results/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "marks:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/schedules/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "exam-schedules:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "exam-schedules:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "exam-schedules:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/schedules/[id]/students/[enrollmentId]/marks/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "marks:entry"
+        }
+      ]
+    },
+    {
+      "file": "exams/schedules/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "exam-schedules:write"
+        },
+        {
+          "method": "GET",
+          "perm": "exam-schedules:read"
+        }
+      ]
+    },
+    {
+      "file": "exams/students/[enrollmentId]/marks/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "marks:read"
+        }
+      ]
+    },
+    {
+      "file": "fee-heads/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "fee-heads:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "fee-heads:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "fee-heads:read"
+        }
+      ]
+    },
+    {
+      "file": "fee-heads/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "fee-heads:write"
+        },
+        {
+          "method": "GET",
+          "perm": "fee-heads:read"
+        }
+      ]
+    },
+    {
+      "file": "fee-payments/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "fee-payments:collect"
+        },
+        {
+          "method": "PUT",
+          "perm": "fee-payments:collect"
+        },
+        {
+          "method": "GET",
+          "perm": "fee-payments:read"
+        }
+      ]
+    },
+    {
+      "file": "fee-refunds/[id]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "fee-refunds:read"
+        }
+      ]
+    },
+    {
+      "file": "fee-terms/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "fee-terms:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "fee-terms:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "fee-terms:read"
+        }
+      ]
+    },
+    {
+      "file": "fee-terms/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "fee-terms:write"
+        },
+        {
+          "method": "GET",
+          "perm": "fee-terms:read"
+        }
+      ]
+    },
+    {
+      "file": "fees/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "student-fees:read"
+        }
+      ]
+    },
+    {
+      "file": "floors/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "infrastructure:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "infrastructure:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "infrastructure:read"
+        }
+      ]
+    },
+    {
+      "file": "floors/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "infrastructure:write"
+        },
+        {
+          "method": "GET",
+          "perm": "infrastructure:read"
+        }
+      ]
+    },
+    {
+      "file": "gcs/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "gcs/update-cors/route.ts",
+      "applied": [
+        {
+          "method": "PATCH",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "gcs/view-metadata/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "grades/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "grades:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "grades:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "grades:read"
+        }
+      ]
+    },
+    {
+      "file": "holiday-categories/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "holidays:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "holidays:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "holidays:read"
+        }
+      ]
+    },
+    {
+      "file": "holiday-categories/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "holidays:write"
+        },
+        {
+          "method": "GET",
+          "perm": "holidays:read"
+        }
+      ]
+    },
+    {
+      "file": "holiday-rules/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "holidays:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "holidays:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "holidays:read"
+        }
+      ]
+    },
+    {
+      "file": "holiday-rules/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "holidays:write"
+        },
+        {
+          "method": "GET",
+          "perm": "holidays:read"
+        }
+      ]
+    },
+    {
+      "file": "holidays/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "holidays:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "holidays:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "holidays:read"
+        }
+      ]
+    },
+    {
+      "file": "holidays/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "holidays:write"
+        },
+        {
+          "method": "GET",
+          "perm": "holidays:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/allocations/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:allocate"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:allocate"
+        }
+      ]
+    },
+    {
+      "file": "hostel/allocations/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:allocate"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/blocks/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/blocks/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/floors/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/floors/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/room-types/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:manage"
+        }
+      ]
+    },
+    {
+      "file": "hostel/room-types/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/rooms/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/rooms/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/sections/[id]/rooms/[roomId]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:manage"
+        }
+      ]
+    },
+    {
+      "file": "hostel/sections/[id]/rooms/batch/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        }
+      ]
+    },
+    {
+      "file": "hostel/sections/[id]/rooms/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        }
+      ]
+    },
+    {
+      "file": "hostel/sections/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/sections/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "hostel/staff/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "hostel:assign-staff"
+        },
+        {
+          "method": "PATCH",
+          "perm": "hostel:assign-staff"
+        }
+      ]
+    },
+    {
+      "file": "hostel/staff/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "hostel:assign-staff"
+        },
+        {
+          "method": "GET",
+          "perm": "hostel:read"
+        }
+      ]
+    },
+    {
+      "file": "imports/faculty/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "imports:execute"
+        }
+      ]
+    },
+    {
+      "file": "imports/students/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "imports:execute"
+        }
+      ]
+    },
+    {
+      "file": "inventory/categories/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "inventory/items/[id]/stock/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "store:write"
+        }
+      ]
+    },
+    {
+      "file": "inventory/items/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "inventory/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/approvals-pending/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "leave:approve"
+        }
+      ]
+    },
+    {
+      "file": "leave/balances/[employeeId]/adjust/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:manage"
+        }
+      ]
+    },
+    {
+      "file": "leave/balances/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/calculate-days/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:apply"
+        }
+      ]
+    },
+    {
+      "file": "leave/categories/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "leave:manage"
+        },
+        {
+          "method": "PUT",
+          "perm": "leave:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/categories/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/reports/calendar/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/reports/summary/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/[id]/approve/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:approve"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/[id]/cancel/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:apply"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/[id]/reject/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:approve"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/[id]/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "leave:apply"
+        },
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/[id]/submit/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:apply"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/[id]/withdraw/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:apply"
+        }
+      ]
+    },
+    {
+      "file": "leave/requests/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "leave:apply"
+        },
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "leave/tenant-config/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "leave:manage"
+        },
+        {
+          "method": "GET",
+          "perm": "leave:read"
+        }
+      ]
+    },
+    {
+      "file": "parent/attendance/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parent-portal:access"
+        }
+      ]
+    },
+    {
+      "file": "parent/fees/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parent-portal:access"
+        }
+      ]
+    },
+    {
+      "file": "parent/leave/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "parent-portal:access"
+        },
+        {
+          "method": "GET",
+          "perm": "parent-portal:access"
+        }
+      ]
+    },
+    {
+      "file": "parent/me/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parent-portal:access"
+        }
+      ]
+    },
+    {
+      "file": "parent/results/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parent-portal:access"
+        }
+      ]
+    },
+    {
+      "file": "parent/store/orders/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parent-portal:access"
+        }
+      ]
+    },
+    {
+      "file": "parents/[parentId]/invite/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "parents:write"
+        }
+      ]
+    },
+    {
+      "file": "parents/[parentId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parents:read"
+        }
+      ]
+    },
+    {
+      "file": "parents/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "parents:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/batches/[id]/bulk-update/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "payroll:process"
+        }
+      ]
+    },
+    {
+      "file": "payroll/batches/[id]/populate/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "payroll:process"
+        }
+      ]
+    },
+    {
+      "file": "payroll/batches/[id]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "payroll:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/batches/[id]/submit/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "payroll:process"
+        }
+      ]
+    },
+    {
+      "file": "payroll/batches/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "payroll:process"
+        },
+        {
+          "method": "GET",
+          "perm": "payroll:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/compensations/[employeeId]/history/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "compensation:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/compensations/[employeeId]/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "compensation:write"
+        },
+        {
+          "method": "GET",
+          "perm": "compensation:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/compensations/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "compensation:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/records/[id]/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "payroll:process"
+        }
+      ]
+    },
+    {
+      "file": "payroll/salary-components/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "salary-components:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "salary-components:write"
+        },
+        {
+          "method": "GET",
+          "perm": "salary-components:read"
+        }
+      ]
+    },
+    {
+      "file": "payroll/salary-components/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "salary-components:write"
+        },
+        {
+          "method": "GET",
+          "perm": "salary-components:read"
+        }
+      ]
+    },
+    {
+      "file": "query-bot/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "query-bot:ask"
+        },
+        {
+          "method": "GET",
+          "perm": "query-bot:ask"
+        },
+        {
+          "method": "POST",
+          "perm": "query-bot:ask"
+        }
+      ]
+    },
+    {
+      "file": "roles/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "roles:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "roles:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "roles:read"
+        }
+      ]
+    },
+    {
+      "file": "rooms/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "infrastructure:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "infrastructure:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "infrastructure:read"
+        }
+      ]
+    },
+    {
+      "file": "rooms/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "infrastructure:write"
+        },
+        {
+          "method": "GET",
+          "perm": "infrastructure:read"
+        }
+      ]
+    },
+    {
+      "file": "section-fees/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "section-fees:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "section-fees:write"
+        },
+        {
+          "method": "GET",
+          "perm": "section-fees:read"
+        }
+      ]
+    },
+    {
+      "file": "section-fees/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "section-fees:write"
+        },
+        {
+          "method": "GET",
+          "perm": "section-fees:read"
+        }
+      ]
+    },
+    {
+      "file": "section-subjects/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "section-subjects:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "section-subjects:write"
+        },
+        {
+          "method": "GET",
+          "perm": "section-subjects:read"
+        }
+      ]
+    },
+    {
+      "file": "section-subjects/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "section-subjects:write"
+        },
+        {
+          "method": "GET",
+          "perm": "section-subjects:read"
+        }
+      ]
+    },
+    {
+      "file": "sections/[id]/generate-roll-numbers/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "sections:write"
+        }
+      ]
+    },
+    {
+      "file": "sections/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "sections:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "sections:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "sections:read"
+        }
+      ]
+    },
+    {
+      "file": "sections/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "sections:write"
+        },
+        {
+          "method": "GET",
+          "perm": "sections:read"
+        }
+      ]
+    },
+    {
+      "file": "settings/id-sequences/[id]/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "settings:write"
+        },
+        {
+          "method": "GET",
+          "perm": "settings:read"
+        }
+      ]
+    },
+    {
+      "file": "settings/id-sequences/next/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "settings:read"
+        }
+      ]
+    },
+    {
+      "file": "settings/id-sequences/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "settings:write"
+        },
+        {
+          "method": "GET",
+          "perm": "settings:read"
+        }
+      ]
+    },
+    {
+      "file": "settings/institute/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "settings:write"
+        },
+        {
+          "method": "GET",
+          "perm": "settings:read"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "staff-attendance:mark"
+        },
+        {
+          "method": "PATCH",
+          "perm": "staff-attendance:mark"
+        },
+        {
+          "method": "GET",
+          "perm": "staff-attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/check-in/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "staff-attendance:mark"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/check-out/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "staff-attendance:mark"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/my-today/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "staff-attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/report/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "staff-attendance:report"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "staff-attendance:mark"
+        },
+        {
+          "method": "GET",
+          "perm": "staff-attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "staff-attendance/today/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "staff-attendance:read"
+        }
+      ]
+    },
+    {
+      "file": "store/backfill-dues/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:process"
+        }
+      ]
+    },
+    {
+      "file": "store/categories/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "store:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/categories/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/check-stock/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        }
+      ]
+    },
+    {
+      "file": "store/dues/[id]/payments/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:process"
+        }
+      ]
+    },
+    {
+      "file": "store/dues/[id]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/dues/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/kits/[id]/items/[itemId]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "store:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "store:write"
+        }
+      ]
+    },
+    {
+      "file": "store/kits/[id]/items/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        }
+      ]
+    },
+    {
+      "file": "store/kits/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "store:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/kits/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/orders/[id]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/orders/[id]/status/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "store:process"
+        }
+      ]
+    },
+    {
+      "file": "store/orders/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:order"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/pending-items/[id]/collect/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "store:process"
+        }
+      ]
+    },
+    {
+      "file": "store/pending-items/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/products/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "store:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/products/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:write"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/returns/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "store:process"
+        },
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "store/students/[enrollmentId]/purchases/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "store:read"
+        }
+      ]
+    },
+    {
+      "file": "student-fees/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "student-fees:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "student-fees:write"
+        },
+        {
+          "method": "GET",
+          "perm": "student-fees:read"
+        }
+      ]
+    },
+    {
+      "file": "student-fees/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "student-fees:write"
+        },
+        {
+          "method": "GET",
+          "perm": "student-fees:read"
+        }
+      ]
+    },
+    {
+      "file": "subjects/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "subjects:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "subjects:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "subjects:read"
+        }
+      ]
+    },
+    {
+      "file": "subjects/course/[courseId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "subjects:read"
+        }
+      ]
+    },
+    {
+      "file": "subjects/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "subjects:write"
+        },
+        {
+          "method": "GET",
+          "perm": "subjects:read"
+        }
+      ]
+    },
+    {
+      "file": "teacher-assignments/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "teacher-assignments:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "teacher-assignments:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teacher-assignments:read"
+        }
+      ]
+    },
+    {
+      "file": "teacher-assignments/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teacher-assignments:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teacher-assignments:read"
+        }
+      ]
+    },
+    {
+      "file": "teacher-availability/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "teacher-availability:write"
+        }
+      ]
+    },
+    {
+      "file": "teacher-availability/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teacher-availability:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teacher-availability:read"
+        }
+      ]
+    },
+    {
+      "file": "teacher-availability/teacher/[teacherId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "teacher-availability:read"
+        }
+      ]
+    },
+    {
+      "file": "teacher-capabilities/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "teacher-capabilities:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "teacher-capabilities:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teacher-capabilities:read"
+        }
+      ]
+    },
+    {
+      "file": "teacher-capabilities/bulk/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teacher-capabilities:write"
+        }
+      ]
+    },
+    {
+      "file": "teacher-capabilities/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teacher-capabilities:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teacher-capabilities:read"
+        }
+      ]
+    },
+    {
+      "file": "teachers/[id]/employment-history/[employmentHistoryId]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "teachers:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "teachers:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "teachers:read"
+        }
+      ]
+    },
+    {
+      "file": "teachers/[id]/employment-history/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teachers:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teachers:read"
+        }
+      ]
+    },
+    {
+      "file": "teachers/[id]/invite/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teachers:write"
+        }
+      ]
+    },
+    {
+      "file": "teachers/[id]/qualifications/[qualificationId]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "teachers:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "teachers:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "teachers:read"
+        }
+      ]
+    },
+    {
+      "file": "teachers/[id]/qualifications/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "teachers:write"
+        },
+        {
+          "method": "GET",
+          "perm": "teachers:read"
+        }
+      ]
+    },
+    {
+      "file": "teachers/eligible/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "teachers:read"
+        }
+      ]
+    },
+    {
+      "file": "tenants/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "tenants:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "tenants:write"
+        },
+        {
+          "method": "GET",
+          "perm": "tenants:read"
+        }
+      ]
+    },
+    {
+      "file": "tenants/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "tenants:write"
+        },
+        {
+          "method": "GET",
+          "perm": "tenants:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-entries/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "timetable:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "timetable:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "timetable:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-entries/bulk/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "timetable:write"
+        }
+      ]
+    },
+    {
+      "file": "timetable-entries/grid/[sectionId]/[academicYearId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "timetable:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-entries/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "timetable:write"
+        },
+        {
+          "method": "GET",
+          "perm": "timetable:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-periods/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "timetable-periods:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "timetable-periods:write"
+        },
+        {
+          "method": "GET",
+          "perm": "timetable-periods:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-periods/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "timetable-periods:write"
+        },
+        {
+          "method": "GET",
+          "perm": "timetable-periods:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-structures/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "timetable-structures:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "timetable-structures:write"
+        },
+        {
+          "method": "GET",
+          "perm": "timetable-structures:read"
+        }
+      ]
+    },
+    {
+      "file": "timetable-structures/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "timetable-structures:write"
+        },
+        {
+          "method": "GET",
+          "perm": "timetable-structures:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/assignments/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "transport:assign"
+        },
+        {
+          "method": "PUT",
+          "perm": "transport:assign"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/assignments/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transport:assign"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/auto-assign/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transport:assign"
+        }
+      ]
+    },
+    {
+      "file": "transportation/driver-assignments/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "transport:assign"
+        },
+        {
+          "method": "PUT",
+          "perm": "transport:assign"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/driver-assignments/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transport:assign"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/nearest-pickup-point/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/pickup-points/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "transport:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "transport:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/pickup-points/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transport:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/vehicle-categories/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "transport:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "transport:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/vehicle-categories/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transport:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/vehicles/[id]/availability/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/vehicles/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "transport:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "transport:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "transportation/vehicles/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "transport:write"
+        },
+        {
+          "method": "GET",
+          "perm": "transport:read"
+        }
+      ]
+    },
+    {
+      "file": "uploads/[tenantId]/[category]/[entityId]/[documentType]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "dashboard:view"
+        },
+        {
+          "method": "GET",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "uploads/[tenantId]/[category]/[entityId]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "uploads/presigned-url/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "uploads/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "dashboard:view"
+        }
+      ]
+    },
+    {
+      "file": "users/[id]/password/route.ts",
+      "applied": [
+        {
+          "method": "PUT",
+          "perm": "users:edit"
+        }
+      ]
+    },
+    {
+      "file": "users/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "users:delete"
+        },
+        {
+          "method": "PUT",
+          "perm": "users:edit"
+        },
+        {
+          "method": "GET",
+          "perm": "users:read"
+        }
+      ]
+    },
+    {
+      "file": "users/company/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "users:read"
+        },
+        {
+          "method": "POST",
+          "perm": "users:write"
+        }
+      ]
+    },
+    {
+      "file": "visitor-notifications/[id]/read/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:write"
+        }
+      ]
+    },
+    {
+      "file": "visitor-notifications/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "visitors:read"
+        }
+      ]
+    },
+    {
+      "file": "visitor-purposes/[id]/route.ts",
+      "applied": [
+        {
+          "method": "DELETE",
+          "perm": "visitors:write"
+        },
+        {
+          "method": "PUT",
+          "perm": "visitors:write"
+        },
+        {
+          "method": "GET",
+          "perm": "visitors:read"
+        }
+      ]
+    },
+    {
+      "file": "visitor-purposes/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:write"
+        },
+        {
+          "method": "GET",
+          "perm": "visitors:read"
+        }
+      ]
+    },
+    {
+      "file": "visitors/[id]/approve/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:approve"
+        }
+      ]
+    },
+    {
+      "file": "visitors/[id]/cancel/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:write"
+        }
+      ]
+    },
+    {
+      "file": "visitors/[id]/check-in/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:check-in"
+        }
+      ]
+    },
+    {
+      "file": "visitors/[id]/check-out/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:check-in"
+        }
+      ]
+    },
+    {
+      "file": "visitors/[id]/reject/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:approve"
+        }
+      ]
+    },
+    {
+      "file": "visitors/[id]/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "visitors:read"
+        }
+      ]
+    },
+    {
+      "file": "visitors/active/route.ts",
+      "applied": [
+        {
+          "method": "GET",
+          "perm": "visitors:read"
+        }
+      ]
+    },
+    {
+      "file": "visitors/route.ts",
+      "applied": [
+        {
+          "method": "POST",
+          "perm": "visitors:write"
+        },
+        {
+          "method": "GET",
+          "perm": "visitors:read"
+        }
+      ]
+    }
+  ]
+}

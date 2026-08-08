@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 // Dynamic imports to avoid edge-runtime issues with fs
 async function getBackendModules() {
@@ -111,6 +112,7 @@ async function getUserFromRequest(req: NextRequest): Promise<QueryBotUser | null
 }
 
 export async function POST(req: NextRequest) {
+  await Guard.action(req, 'query-bot:ask');
   try {
     // 1. Authenticate
     const user = await getUserFromRequest(req);
@@ -373,6 +375,7 @@ export async function POST(req: NextRequest) {
  * Retrieves chat history.
  */
 export async function GET(req: NextRequest) {
+  await Guard.action(req, 'query-bot:ask');
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
@@ -426,6 +429,7 @@ export async function GET(req: NextRequest) {
  * Deletes a chat and its messages.
  */
 export async function DELETE(req: NextRequest) {
+  await Guard.action(req, 'query-bot:ask');
   try {
     const user = await getUserFromRequest(req);
     if (!user) {

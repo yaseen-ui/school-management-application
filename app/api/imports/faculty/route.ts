@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { importFacultyFromExcel } from "@/lib/backend/modules/imports/imports.service.js";
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 export async function POST(req: NextRequest) {
+  await Guard.action(req, 'imports:execute');
   try {
     // ── Auth: Decode JWT and extract tenantId ────────────────────────────
     const authHeader = req.headers.get("authorization") || "";
