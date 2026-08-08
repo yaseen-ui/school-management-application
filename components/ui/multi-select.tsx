@@ -58,9 +58,13 @@ const customStyles = {
     padding: "0.375rem",
     backgroundColor: "var(--popover)",
   }),
+  // Radix Dialog (and similar modals) set body { pointer-events: none } while open
+  // and only re-enable pointer-events on dialog content. Portaled menus live under
+  // body, so without this clicks fall through — menu closes, nothing is selected.
   menuPortal: (base: any) => ({
     ...base,
     zIndex: 9999,
+    pointerEvents: "auto",
   }),
   option: (base: any, state: any) => ({
     ...base,

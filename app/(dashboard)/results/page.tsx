@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Search, BookOpen, Layers, GraduationCap, FileText, Trophy, Download, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
@@ -13,8 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useCourses } from "@/hooks/use-courses"
 import { useGrades } from "@/hooks/use-grades"
 import { useSections } from "@/hooks/use-sections"
-import { useExams, useExamSchedules, useScheduleResults } from "@/hooks/use-exams"
-import type { ResultStudentEntry } from "@/lib/api/exams"
+import { useExamSchedules, useScheduleResults } from "@/hooks/use-exams"
+import type { ExamSchedule } from "@/lib/api/exams"
 
 const filterFieldClassName = "min-w-0 space-y-2 lg:col-span-2"
 const selectTriggerClassName =
@@ -22,6 +22,28 @@ const selectTriggerClassName =
 const selectContentClassName =
   "w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] rounded-xl"
 const selectItemTextClassName = "block min-w-0 truncate"
+
+/** Prefix for section-level custom schedules that have no parent examId (e.g. Slip Test). */
+const CUSTOM_EXAM_PREFIX = "custom:"
+
+type ExamOption = {
+  value: string
+  label: string
+  kind: "exam" | "custom"
+  scheduleId?: string
+}
+
+function scheduleHasPapers(schedule: ExamSchedule): boolean {
+  return (schedule.papers?.length || 0) > 0 || (schedule._count?.papers || 0) > 0
+}
+
+function isCustomExamValue(value: string): boolean {
+  return value.startsWith(CUSTOM_EXAM_PREFIX)
+}
+
+function customScheduleIdFromValue(value: string): string {
+  return value.slice(CUSTOM_EXAM_PREFIX.length)
+}
 
 export default function ResultsPage() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>("")
@@ -33,17 +55,68 @@ export default function ResultsPage() {
   const { data: courses } = useCourses()
   const { data: grades } = useGrades(selectedCourseId || undefined)
   const { data: sections } = useSections(selectedGradeId || undefined, selectedCourseId || undefined)
-  const { data: exams } = useExams()
+  // Load schedules for the selected section — includes admin exam schedules and
+  // custom section exams (examId null), e.g. "Slip Test".
   const { data: schedules } = useExamSchedules(
-    selectedSectionId ? { sectionId: selectedSectionId } : {}
+    selectedSectionId ? { sectionId: selectedSectionId } : undefined,
+    { enabled: !!selectedSectionId },
   )
   const { data: resultsData, isLoading: resultsLoading } = useScheduleResults(selectedScheduleId || null)
 
-  const schedulesWithPapers = (schedules || []).filter(
-    (schedule) =>
-      (schedule.papers?.length || 0) > 0 &&
-      (!selectedExamId || schedule.examId === selectedExamId),
-  )
+  const sectionSchedules = schedules || []
+
+  /**
+   * Exam dropdown is built from schedules for the selected section so that:
+   * - Admin exams with a schedule in this section appear
+   * - Custom section exams (no parent exam row) appear as their schedule name
+   */
+  const examOptions = useMemo<ExamOption[]>(() => {
+    if (!selectedSectionId) return []
+
+    const options: ExamOption[] = []
+    const seenExamIds = new Set<string>()
+
+    for (const schedule of sectionSchedules) {
+      if (!scheduleHasPapers(schedule)) continue
+
+      if (schedule.examId) {
+        if (seenExamIds.has(schedule.examId)) continue
+        seenExamIds.add(schedule.examId)
+        const examName = schedule.exam?.name || "Exam"
+        const examType = schedule.exam?.examType
+          ? ` (${schedule.exam.examType.replaceAll("_", " ")})`
+          : ""
+        options.push({
+          value: schedule.examId,
+          label: `${examName}${examType}`,
+          kind: "exam",
+        })
+      } else {
+        // Faculty/custom schedule created without linking an admin exam
+        options.push({
+          value: `${CUSTOM_EXAM_PREFIX}${schedule.id}`,
+          label: `${schedule.name} (Custom)`,
+          kind: "custom",
+          scheduleId: schedule.id,
+        })
+      }
+    }
+
+    return options.sort((a, b) => a.label.localeCompare(b.label))
+  }, [selectedSectionId, sectionSchedules])
+
+  const schedulesWithPapers = useMemo(() => {
+    return sectionSchedules.filter((schedule) => {
+      if (!scheduleHasPapers(schedule)) return false
+      if (!selectedExamId) return true
+
+      if (isCustomExamValue(selectedExamId)) {
+        return schedule.id === customScheduleIdFromValue(selectedExamId)
+      }
+
+      return schedule.examId === selectedExamId
+    })
+  }, [sectionSchedules, selectedExamId])
 
   const handleCourseChange = (value: string) => {
     setSelectedCourseId(value)
@@ -68,7 +141,12 @@ export default function ResultsPage() {
 
   const handleExamChange = (value: string) => {
     setSelectedExamId(value)
-    setSelectedScheduleId("")
+    // Custom exams are a single schedule — auto-select it for results.
+    if (isCustomExamValue(value)) {
+      setSelectedScheduleId(customScheduleIdFromValue(value))
+    } else {
+      setSelectedScheduleId("")
+    }
   }
 
   const handleExportCSV = () => {
@@ -205,7 +283,7 @@ export default function ResultsPage() {
               </Select>
             </div>
 
-            {/* Exam */}
+            {/* Exam — includes admin exams and section custom schedules (e.g. Slip Test) */}
             <div className="min-w-0 space-y-2 lg:col-span-3 xl:col-span-3">
               <Label className="flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
@@ -220,16 +298,18 @@ export default function ResultsPage() {
                   <SelectValue placeholder={selectedSectionId ? "Select exam" : "Select section first"} />
                 </SelectTrigger>
                 <SelectContent className={selectContentClassName}>
-                  {(exams || []).map((exam) => {
-                    const examLabel = `${exam.name} (${exam.examType.replaceAll("_", " ")})`
-                    return (
-                      <SelectItem key={exam.id} value={exam.id}>
-                        <span className={selectItemTextClassName} title={examLabel}>
-                          {examLabel}
-                        </span>
-                      </SelectItem>
-                    )
-                  })}
+                  {examOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <span className={selectItemTextClassName} title={option.label}>
+                        {option.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                  {selectedSectionId && examOptions.length === 0 && (
+                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                      No exams with papers found for this section
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>

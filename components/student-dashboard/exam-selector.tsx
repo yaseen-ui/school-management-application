@@ -43,6 +43,9 @@ export function ExamSelector({ exams, value, onChange, disabled }: ExamSelectorP
             <SelectItem key={exam.scheduleId} value={exam.scheduleId}>
               <span className="flex items-center gap-2">
                 {exam.name}
+                {exam.isCustom && (
+                  <span className="text-[10px] font-medium text-muted-foreground">Custom</span>
+                )}
                 {exam.isLatest && (
                   <span className="text-[10px] font-medium text-primary">Latest</span>
                 )}

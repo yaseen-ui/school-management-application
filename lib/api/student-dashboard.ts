@@ -22,11 +22,13 @@ export interface DashboardEnrollment {
 }
 
 export interface DashboardExamOption {
-  examId: string
+  examId: string | null
   scheduleId: string
   name: string
   examName: string
   examType: string
+  /** True for section-level custom schedules with no parent exam (e.g. Slip Test). */
+  isCustom?: boolean
   dateRange: { start: string | null; end: string | null }
   endDate: string | null
   isLatest: boolean
@@ -38,6 +40,18 @@ export interface SubjectClassAverage {
   sampleSize: number
 }
 
+export interface TopicBreakupItem {
+  topic: string
+  marks: number | null
+  maxMarks: number | null
+}
+
+export interface SubjectBreakup {
+  /** Topic rows from marks entry — shape may vary slightly by client. */
+  topics?: Array<TopicBreakupItem | Record<string, unknown>>
+  [key: string]: unknown
+}
+
 export interface DashboardSubject {
   subjectId: string | null
   subjectName: string
@@ -47,14 +61,14 @@ export interface DashboardSubject {
   isAbsent: boolean
   gradeLabel: string | null
   remarks: string | null
-  breakup: unknown
+  breakup: SubjectBreakup | null
   classAverage: SubjectClassAverage | null
 }
 
 export interface SelectedExam {
   scheduleId: string
   scheduleName: string
-  examId: string
+  examId: string | null
   examName: string
   examType: string
   overall: {
@@ -63,6 +77,10 @@ export interface SelectedExam {
     percentage: number | null
     gradeLabel: string | null
     classAvgPercentage: number | null
+    /** Section rank for this schedule (1 = top). Null if not rankable. */
+    rank: number | null
+    /** Number of students ranked in the section for this schedule. */
+    cohortSize: number | null
   }
   subjects: DashboardSubject[]
 }

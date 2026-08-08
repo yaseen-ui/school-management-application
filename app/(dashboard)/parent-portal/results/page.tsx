@@ -105,7 +105,9 @@ export default function ResultsPage() {
                 )}
               >
                 {exam.examName}
-                <span className="ml-1.5 text-[10px] opacity-70">{exam.examType}</span>
+                <span className="ml-1.5 text-[10px] opacity-70">
+                  {exam.examType === "custom" ? "Custom" : exam.examType}
+                </span>
               </button>
             ))}
           </div>

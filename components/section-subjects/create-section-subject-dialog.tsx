@@ -58,7 +58,10 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
   const courses: any[] = (coursesData as any)?.data?.rows || (coursesData as any)?.data || []
   const grades: any[] = (gradesData as any)?.rows || (gradesData as any)?.data?.rows || []
   const sections: any[] = (sectionsData as any)?.data?.rows || (sectionsData as any) || []
-  const subjects: any[] = (subjectsData as any) || []
+  // useSubjects returns response.data (Subject[]), but tolerate nested shapes
+  const subjects: any[] = Array.isArray(subjectsData)
+    ? subjectsData
+    : (subjectsData as any)?.data || (subjectsData as any)?.rows || []
 
   // Reset filters when dialog opens
   useEffect(() => {
@@ -98,9 +101,32 @@ export function CreateSectionSubjectDialog({ open, onOpenChange }: CreateSection
     onOpenChange(false)
   }
 
+  // react-select menus are portaled to document.body; treat them as inside the dialog
+  // so Radix does not dismiss / steal the option click.
+  const isReactSelectPortalEvent = (event: Event) => {
+    const target = event.target as HTMLElement | null
+    return Boolean(
+      target?.closest?.(".react-select__menu") ||
+        target?.closest?.(".react-select__menu-portal") ||
+        target?.closest?.(".react-select__option"),
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className="sm:max-w-[500px]"
+        onPointerDownOutside={(e) => {
+          if (isReactSelectPortalEvent(e.detail.originalEvent)) {
+            e.preventDefault()
+          }
+        }}
+        onInteractOutside={(e) => {
+          if (isReactSelectPortalEvent(e.detail.originalEvent)) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Assign Subjects to Section</DialogTitle>
           <DialogDescription>

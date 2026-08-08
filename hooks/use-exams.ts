@@ -71,13 +71,14 @@ export function useDeleteExam() {
 
 // ─── Schedules ──────────────────────────────────────────────────────────────
 
-export function useExamSchedules(filters?: Record<string, string>) {
+export function useExamSchedules(filters?: Record<string, string>, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["exam-schedules", filters],
     queryFn: async () => {
       const response = await examApi.getAllSchedules(filters)
       return response.data.rows
     },
+    enabled: options?.enabled ?? true,
   })
 }
 
