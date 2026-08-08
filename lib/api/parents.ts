@@ -9,6 +9,9 @@ export interface ParentStudent {
   gradeName?: string
   sectionName?: string
   isPrimary: boolean
+  /** Current/active enrollment for Student Dashboard USP */
+  enrollmentId?: string | null
+  academicYearLabel?: string | null
 }
 
 export interface Parent {

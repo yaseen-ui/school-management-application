@@ -364,8 +364,15 @@ export function useNavGroups(): NavGroup[] {
     return NAV_REGISTRY.parent
   }
 
-  // Fallback: if user is on a parent-portal route, show parent nav.
+  // Fallback: if user is on a parent-portal or student-dashboard route, show parent nav.
   if (pathname?.startsWith("/parent-portal")) return NAV_REGISTRY.parent
+  if (pathname?.startsWith("/student-dashboard")) {
+    // Parents land here; staff with Parent role already matched above.
+    // If only parent-portal users hit this without role match, keep parent chrome.
+    if (isLoaded && usePermissionStore.getState().permissions.has("parent-portal:access")) {
+      return NAV_REGISTRY.parent
+    }
+  }
 
   return NAV_REGISTRY.staff
 }

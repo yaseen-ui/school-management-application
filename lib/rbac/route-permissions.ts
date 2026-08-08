@@ -325,6 +325,12 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermissionActions> = {
   '/parent-portal': {
     view: 'parent-portal:access',
   },
+
+  // Student Dashboard USP (parent or staff with students:read — PagePermissionGate
+  // uses view action; service enforces parent link OR students:read)
+  '/student-dashboard': {
+    view: 'students:read',
+  },
 }
 
 /**

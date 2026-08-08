@@ -36,7 +36,14 @@ export function PagePermissionGate({ children }: { children: React.ReactNode }) 
   const isLoaded = usePermissionsLoaded()
   const user = useAuthStore((s) => s.user) as { userType?: string } | null
   const viewPermission = getViewPermission(pathname)
-  const canView = usePermission(viewPermission ?? "dashboard:view")
+  const canViewMapped = usePermission(viewPermission ?? "dashboard:view")
+  // Student Dashboard USP: parents (parent-portal) OR staff (students:read)
+  const isStudentDashboard = !!pathname?.startsWith("/student-dashboard")
+  const canParentPortal = usePermission("parent-portal:access")
+  const canStudentsRead = usePermission("students:read")
+  const canView = isStudentDashboard
+    ? canParentPortal || canStudentsRead
+    : canViewMapped
 
   const isCompanyUser =
     user?.userType === "company" || config.isCompanyHost
@@ -55,7 +62,8 @@ export function PagePermissionGate({ children }: { children: React.ReactNode }) 
   }
 
   // No mapping configured → do not block (nav may still hide the link)
-  if (!viewPermission) {
+  // Exception: student-dashboard always uses dual check above
+  if (!viewPermission && !isStudentDashboard) {
     return <>{children}</>
   }
 
