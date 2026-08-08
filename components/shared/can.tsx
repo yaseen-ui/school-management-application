@@ -1,10 +1,14 @@
 "use client";
 
 import React from "react";
-import { usePermission } from "@/hooks/use-permission";
+import {
+  usePermission,
+  useAnyPermission,
+  useAllPermissions,
+} from "@/hooks/use-permission";
 
 interface CanProps {
-  /** Permission code required to render children, e.g., "students:read" */
+  /** Permission code required to render children, e.g., "students:write" */
   permission: string;
   /** Optional fallback to render when the user lacks the permission */
   fallback?: React.ReactNode;
@@ -47,7 +51,7 @@ interface CanAnyProps {
  *   </CanAny>
  */
 export function CanAny({ permissions, fallback = null, children }: CanAnyProps) {
-  const hasAccess = permissions.some((p) => usePermission(p));
+  const hasAccess = useAnyPermission(permissions);
   if (!hasAccess) return <>{fallback}</>;
   return <>{children}</>;
 }
@@ -61,7 +65,7 @@ interface CanAllProps {
 }
 
 /**
- * Renders children only if the user has ALL of the given permissions.
+ * Renders children only if the user has ALL of the given permission codes.
  *
  * @example
  *   <CanAll permissions={['students:write', 'students:edit']}>
@@ -69,7 +73,7 @@ interface CanAllProps {
  *   </CanAll>
  */
 export function CanAll({ permissions, fallback = null, children }: CanAllProps) {
-  const hasAccess = permissions.every((p) => usePermission(p));
+  const hasAccess = useAllPermissions(permissions);
   if (!hasAccess) return <>{fallback}</>;
   return <>{children}</>;
 }

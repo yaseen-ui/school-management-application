@@ -14,8 +14,7 @@ import { CreatePaymentDialog } from "@/components/fees/create-payment-dialog"
 import { format } from "date-fns"
 import { MoreVertical } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
-import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
-import { ForbiddenPage } from "@/components/shared/forbidden-page"
+import { Can } from "@/components/shared/can"
 import type { FeePayment } from "@/lib/api/fees"
 
 const paymentMethodIcons: Record<string, React.ReactNode> = {
@@ -35,9 +34,6 @@ const paymentMethodColors: Record<string, string> = {
 }
 
 export default function FeePaymentsPage() {
-  const canAccess = usePermission('fee-payments:read')
-  const isLoaded = usePermissionsLoaded()
-  if (!canAccess && isLoaded) return <ForbiddenPage />
   return <FeePaymentsContent />
 }
 
@@ -82,10 +78,12 @@ function FeePaymentsContent() {
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader title="Fee Payments" description="Manage fee payments and collections">
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Record Payment
-          </Button>
+          <Can permission="fee-payments:collect">
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Record Payment
+            </Button>
+          </Can>
         </PageHeader>
 
         <div className="grid gap-4 md:grid-cols-3">

@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/header"
 import { MobileSidebar } from "@/components/layout/mobile-sidebar"
 import { AuthGuard } from "@/components/auth/auth-guard"
 import { PermissionProvider } from "@/components/providers/permission-provider"
+import { PagePermissionGate } from "@/components/shared/page-permission-gate"
 import { useUIStore } from "@/stores/ui-store"
 import { cn } from "@/lib/utils"
 
@@ -36,7 +37,7 @@ export default function DashboardLayout({
               transition={{ duration: 0.3 }}
               className="p-6"
             >
-              {children}
+              <PagePermissionGate>{children}</PagePermissionGate>
             </motion.main>
           </div>
         </div>

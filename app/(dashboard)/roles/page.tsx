@@ -5,6 +5,7 @@ import { Plus, Shield } from "lucide-react"
 import { motion } from "framer-motion"
 
 import { PageHeader } from "@/components/shared/page-header"
+import { Can } from "@/components/shared/can"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/shared/empty-state"
 import { RolesTable } from "@/components/roles/roles-table"
@@ -21,10 +22,12 @@ export default function RolesPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Roles & Permissions" description="Manage roles and define access permissions for users">
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Role
-        </Button>
+        <Can permission="roles:write">
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Role
+          </Button>
+        </Can>
       </PageHeader>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>

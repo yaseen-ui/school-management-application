@@ -13,8 +13,7 @@ import { DeleteExamDialog } from "@/components/exams/delete-exam-dialog"
 import { format } from "date-fns"
 import { MoreVertical } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
-import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
-import { ForbiddenPage } from "@/components/shared/forbidden-page"
+import { Can } from "@/components/shared/can"
 import type { Exam } from "@/lib/api/exams"
 import Link from "next/link"
 
@@ -42,9 +41,6 @@ const statusColors: Record<string, string> = {
 }
 
 export default function ExamsPage() {
-  const canAccess = usePermission('exams:read')
-  const isLoaded = usePermissionsLoaded()
-  if (!canAccess && isLoaded) return <ForbiddenPage />
   const { data, isLoading } = useExams()
   const deleteExam = useDeleteExam()
 
@@ -88,14 +84,16 @@ export default function ExamsPage() {
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader title="Exams" description="Create and manage exam blueprints for your institution">
-          <div className="flex gap-2">
-            <Button asChild>
-              <Link href="/exams/create">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Exam
-              </Link>
-            </Button>
-          </div>
+          <Can permission="exams:write">
+            <div className="flex gap-2">
+              <Button asChild>
+                <Link href="/exams/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Exam
+                </Link>
+              </Button>
+            </div>
+          </Can>
         </PageHeader>
 
         <DynamicDataTable

@@ -21,14 +21,11 @@ import { CreateCourseDialog } from "@/components/courses/create-course-dialog"
 import { ViewCourseDialog } from "@/components/courses/view-course-dialog"
 import { EditCourseDialog } from "@/components/courses/edit-course-dialog"
 import { DeleteCourseDialog } from "@/components/courses/delete-course-dialog"
-import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
-import { ForbiddenPage } from "@/components/shared/forbidden-page"
+import { Can } from "@/components/shared/can"
 import type { Course } from "@/lib/api/courses"
 
 export default function CoursesPage() {
-  const canAccess = usePermission('courses:read')
-  const isLoaded = usePermissionsLoaded()
-  if (!canAccess && isLoaded) return <ForbiddenPage />
+  // Page entry enforced by PagePermissionGate (layout)
   const { data, isLoading } = useCourses()
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -142,15 +139,19 @@ export default function CoursesPage() {
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleEdit(row)}>
-          <Pencil className="mr-2 h-4 w-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(row)}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
+        <Can permission="courses:edit">
+          <DropdownMenuItem onClick={() => handleEdit(row)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+        </Can>
+        <Can permission="courses:delete">
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(row)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </Can>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -175,10 +176,12 @@ export default function CoursesPage() {
       className="space-y-6"
     >
       <PageHeader title="Courses" description="Manage courses offered by your institute">
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Course
-        </Button>
+        <Can permission="courses:write">
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Course
+          </Button>
+        </Can>
       </PageHeader>
 
       {!isLoading && courses.length === 0 ? (

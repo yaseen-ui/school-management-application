@@ -23,8 +23,7 @@ import { InviteStaffButton } from "@/components/teachers/invite-staff-button"
 import { format } from "date-fns"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
-import { ForbiddenPage } from "@/components/shared/forbidden-page"
+import { Can } from "@/components/shared/can"
 
 const EMPLOYEE_TYPES = [
   { value: "all", label: "All Types" },
@@ -40,10 +39,6 @@ const EMPLOYEE_TYPES = [
 ]
 
 export default function TeachersPage() {
-  const canAccess = usePermission('teachers:read')
-  const isLoaded = usePermissionsLoaded()
-  if (!canAccess && isLoaded) return <ForbiddenPage />
-
   const router = useRouter()
   const { data: teacherData, isLoading } = useTeachers()
 
@@ -147,13 +142,15 @@ export default function TeachersPage() {
     <div className="space-y-6">
       <Breadcrumbs />
       <PageHeader title="Staff & Teachers" description="Manage staff, teachers, and other employees">
-        <div className="flex gap-2">
-          <InviteStaffButton selectedTeachers={selectedTeachers} />
-          <Button onClick={() => router.push("/teachers/create")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Staff
-          </Button>
-        </div>
+        <Can permission="teachers:write">
+          <div className="flex gap-2">
+            <InviteStaffButton selectedTeachers={selectedTeachers} />
+            <Button onClick={() => router.push("/teachers/create")}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Staff
+            </Button>
+          </div>
+        </Can>
       </PageHeader>
 
       <div className="flex items-center gap-4">

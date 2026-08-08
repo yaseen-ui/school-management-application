@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { GraduationCap, Eye, Pencil, Trash2, Plus } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
+import { Can } from "@/components/shared/can"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -93,10 +94,12 @@ export default function GradesPage() {
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <PageHeader title="Grades" description="Manage grade levels and academic standards">
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Grade
-          </Button>
+          <Can permission="grades:write">
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Grade
+            </Button>
+          </Can>
         </PageHeader>
 
         {/* Course Filter */}
@@ -162,14 +165,18 @@ export default function GradesPage() {
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleEdit(row)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDelete(row)} className="text-destructive focus:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                <Can permission="grades:edit">
+                  <DropdownMenuItem onClick={() => handleEdit(row)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Can>
+                <Can permission="grades:delete">
+                  <DropdownMenuItem onClick={() => handleDelete(row)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </Can>
               </DropdownMenuContent>
             </DropdownMenu>
           )}

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHeader } from "@/components/shared/page-header"
+import { Can } from "@/components/shared/can"
 import { Breadcrumbs } from "@/components/shared/breadcrumbs"
 import { DynamicDataTable } from "@/components/shared/dynamic-data-table"
 import { CreateVisitorDialog } from "@/components/visitors/create-visitor-dialog"
@@ -172,18 +173,20 @@ export default function VisitorsPage() {
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Visitors" }]} />
       <PageHeader title="Visitors" description="Manage campus visitors and approvals">
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/visitors/manage-purposes">
-              <ShieldQuestion className="h-4 w-4 mr-2" />
-              Manage Purposes
-            </Link>
-          </Button>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Visitor
-          </Button>
-        </div>
+        <Can permission="visitors:write">
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/visitors/manage-purposes">
+                <ShieldQuestion className="h-4 w-4 mr-2" />
+                Manage Purposes
+              </Link>
+            </Button>
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Visitor
+            </Button>
+          </div>
+        </Can>
       </PageHeader>
 
       <div className="flex items-center gap-4">

@@ -22,16 +22,12 @@ import { toast } from "@/components/ui/sonner"
 import { CreateStudentWizard } from "@/components/students/create-student-wizard"
 import { ViewStudentDialog } from "@/components/students/view-student-dialog"
 import { DeleteStudentDialog } from "@/components/students/delete-student-dialog"
-import { usePermission, usePermissionsLoaded } from "@/hooks/use-permission"
-import { ForbiddenPage } from "@/components/shared/forbidden-page"
+import { Can } from "@/components/shared/can"
 import type { Student } from "@/lib/api/students"
 
 export default function StudentsPage() {
-  const canAccess = usePermission('students:read')
-  const isLoaded = usePermissionsLoaded()
+  // Page entry is enforced by PagePermissionGate (layout) via students:read
   const { data, isLoading } = useStudents()
-
-  if (!canAccess && isLoaded) return <ForbiddenPage />
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
@@ -141,15 +137,19 @@ export default function StudentsPage() {
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleEdit(row)}>
-          <Pencil className="mr-2 h-4 w-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(row)}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
+        <Can permission="students:edit">
+          <DropdownMenuItem onClick={() => handleEdit(row)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+        </Can>
+        <Can permission="students:delete">
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(row)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </Can>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -183,10 +183,12 @@ export default function StudentsPage() {
       className="space-y-6"
     >
       <PageHeader title="Students" description="Manage student records and information">
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Student
-        </Button>
+        <Can permission="students:write">
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Student
+          </Button>
+        </Can>
       </PageHeader>
 
       <Card className="p-6">
