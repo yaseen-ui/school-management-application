@@ -12,7 +12,9 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:db:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:rbac": "node scripts/rbac-smoke-test.mjs",
+    "rbac:refresh-roles": "node scripts/refresh-default-role-permissions.cjs"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
