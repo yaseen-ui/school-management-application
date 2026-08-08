@@ -256,10 +256,11 @@ const staffNavGroups: NavGroup[] = [
     title: "Communication",
     icon: MessagesSquare,
     items: [
-      { title: "Notifications", href: "/communications/notifications", icon: Bell, permission: "communication:notifications:write" },
-      { title: "Publications", href: "/communications/publications", icon: Megaphone, permission: "communication:publications:write" },
-      { title: "Automation", href: "/communications/automation", icon: Workflow, permission: "communication:automation:manage" },
-      { title: "Templates", href: "/communications/automation/templates", icon: FileType2, permission: "communication:templates:manage" },
+      // Prefer :read for list/nav visibility; compose/manage actions are gated on the API + page.
+      { title: "Notifications", href: "/communications/notifications", icon: Bell, permission: "communication-notifications:read" },
+      { title: "Publications", href: "/communications/publications", icon: Megaphone, permission: "communication-publications:read" },
+      { title: "Automation", href: "/communications/automation", icon: Workflow, permission: "communication-automation:manage" },
+      { title: "Templates", href: "/communications/automation/templates", icon: FileType2, permission: "communication-templates:manage" },
     ],
   },
   {

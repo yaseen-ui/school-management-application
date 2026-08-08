@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { invokeBackendController } from "@/lib/api/server-adapter";
+import { Guard } from "@/lib/backend/rbac/guards.js";
 import {
   sendWhatsAppTestMessage,
   WhatsappProvider,
@@ -12,6 +13,7 @@ import {
  * Sends a single test WhatsApp template message for the current tenant.
  */
 export async function POST(req: NextRequest) {
+  await Guard.action(req, "communication-channels:manage");
   return invokeBackendController(
     {
       test: async (mockReq: any, res: any) => {
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  await Guard.action(req, "communication-channels:manage");
   return invokeBackendController(
     {
       list: async (_mockReq: any, res: any) => {

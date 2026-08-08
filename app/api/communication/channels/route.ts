@@ -1,8 +1,10 @@
 import { NextRequest } from 'next/server'
 import { invokeBackendController } from '@/lib/api/server-adapter'
 import { prisma } from '@/lib/backend/lib/prisma.js'
+import { Guard } from '@/lib/backend/rbac/guards.js'
 
 export async function GET(req: NextRequest) {
+  await Guard.action(req, 'communication-channels:manage')
   return invokeBackendController({
     getChannels: async (req: any, res: any) => {
       try {
@@ -20,6 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  await Guard.action(req, 'communication-channels:manage')
   return invokeBackendController({
     updateChannels: async (req: any, res: any) => {
       try {
