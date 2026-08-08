@@ -14,7 +14,8 @@
     "prisma:studio": "prisma studio",
     "postinstall": "prisma generate",
     "test:rbac": "node scripts/rbac-smoke-test.mjs",
-    "rbac:refresh-roles": "node scripts/refresh-default-role-permissions.cjs"
+    "rbac:refresh-roles": "node scripts/refresh-default-role-permissions.cjs",
+    "bootstrap:company": "node scripts/bootstrap-company-admin.mjs"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
