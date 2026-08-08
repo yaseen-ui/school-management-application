@@ -9,17 +9,17 @@
 
 **Company users must not enter a tenant** (no school modules, no `x-tenant-id` school workspace).
 
-## Why Express felt stricter than Next.js
+## History (Express → Next)
 
-Legacy Express school routes used:
+The old dual-app setup used Express routers:
 
 ```text
-authenticate → authenticateTenant
+authenticate → authenticateTenant → controller
 ```
 
-`authenticateTenant` rejects anyone who is not `userType === "tenant"` with matching `tenantId`.
+`authenticateTenant` rejected company users on school routes. After the monorepo refactor, the browser hit Next `app/api` → `server-adapter` → the same controllers **without** those Express routers (which allowed company + `x-tenant-id` until #13).
 
-The Next.js App Router path uses `invokeBackendController` → `server-adapter`, which historically allowed company + `x-tenant-id`. That is **closed** as of this change.
+Legacy Express `*.routes.js` / Express-only middlewares were **removed** as dead code. All live traffic uses Next + `server-adapter` + `company-boundary`.
 
 ## Enforcement (current)
 

@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
-// Thin adapter for Next.js App Router to invoke backend controllers/services
-// (backend remains isolated in /backend; no business logic here)
-// Mocks Express req/res for compatibility with existing controllers without changes.
-//
-// Also bridges the Express auth middleware semantics: decodes the Bearer JWT and
-// populates req.user + req.tenantId so controllers that expect those (set by
-// authenticate.js / authenticateTenant.js in the Express path) keep working.
+// Thin adapter for Next.js App Router to invoke backend controllers/services.
+// Controllers keep an Express-style (req, res) shape for historical reasons;
+// this adapter builds that shape from NextRequest and enforces auth context.
 //
 // Company vs tenant (#13): company users never receive school tenant context and
 // cannot call non-platform APIs (see company-boundary.js).
